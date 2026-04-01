@@ -309,6 +309,7 @@ export default function App() {
   const [headlines, setHeadlines] = useState([])
   const [headlinesLoading, setHeadlinesLoading] = useState(false)
   const [headlinesLoaded, setHeadlinesLoaded] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState(null)
   const [entitySignals, setEntitySignals] = useState(null)
   const [deepDive, setDeepDive] = useState(null)
   const [briefingPage, setBriefingPage] = useState(null)
@@ -319,6 +320,13 @@ export default function App() {
   const TOPICS = [
     { id: 'geopolitics', label: 'Geopolitical Briefing', tag: 'WORLD', shortLabel: 'Geopolitics' },
     { id: 'economics', label: 'Economic Briefing', tag: 'MARKETS', shortLabel: 'Economics' },
+  ]
+
+  const THEATERS = [
+    { label: 'US–Iran Military Conflict', query: 'US Iran military conflict war strikes' },
+    { label: 'Russia–Ukraine War', query: 'Russia Ukraine war conflict' },
+    { label: 'Federal Reserve & Interest Rates', query: 'Federal Reserve interest rates monetary policy' },
+    { label: 'China–Taiwan Tensions', query: 'China Taiwan tensions military' },
   ]
 
   useEffect(() => {
@@ -357,6 +365,7 @@ export default function App() {
       const data = await fetchHeadlines()
       setHeadlines(data.stories || [])
       setHeadlinesLoaded(true)
+      setLastUpdated(new Date())
     } catch (err) {
       console.error(err)
     } finally {
@@ -366,9 +375,13 @@ export default function App() {
 
   const dateStr = time.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
   const timeStr = time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+  const lastUpdatedStr = lastUpdated
+    ? lastUpdated.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+    : '—'
 
   return (
     <div style={{ background: C.bg, minHeight: '100vh', color: C.textPrimary }}>
+      {/* ── Global styles ── */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;500&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -379,10 +392,12 @@ export default function App() {
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes pulse { 0%,100% { opacity: 0.2; } 50% { opacity: 1; } }
         @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .headline-item:hover .headline-text { color: ${C.textPrimary} !important; }
-        .entity-item:hover { background: ${C.bgHover} !important; cursor: pointer; }
-        .briefing-pill:hover { background: ${C.textPrimary} !important; color: ${C.bg} !important; }
-        .timeline-row:hover { background: ${C.bgHover} !important; }
+        .headline-item { transition: background 0.15s ease; }
+        .headline-item:hover { background: ${C.bgHover}; }
+        .theater-row:hover { background: ${C.bgHover}; }
+        .briefing-btn { border: 1px solid ${C.borderMid}; background: none; transition: all 0.2s; cursor: pointer; }
+        .briefing-btn:hover { border-color: ${C.silver}; background: ${C.white} !important; color: ${C.bg} !important; }
+        .entity-item:hover { background: ${C.bgHover}; }
       `}</style>
 
       {/* ── Floating header ── */}
@@ -391,212 +406,233 @@ export default function App() {
         <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.55rem', color: C.textSecondary, letterSpacing: '0.1em' }}>{timeStr}</div>
       </div>
 
-      {/* ── Main content ── */}
-      <div style={{ maxWidth: 760, margin: '0 auto', padding: '0 2rem' }}>
+      {/* ── Main content — full width ── */}
+      <div style={{ padding: '0 1.5rem' }}>
 
-        {/* ── Section 1: Greeting ── */}
-        <div style={{ paddingTop: '18vh', paddingBottom: '5vh', animation: 'fadeUp 0.6s ease both' }}>
-          <div style={{ fontFamily: "'Libre Baskerville', serif", fontSize: 'clamp(2rem, 5vw, 3rem)', fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1.1, color: C.textPrimary, marginBottom: '0.5rem' }}>
-            {getGreeting()}.
-          </div>
-          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.62rem', color: C.textSecondary, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-            {dateStr} — {timeStr}
-          </div>
+<header style={{ paddingTop: '15vh', paddingBottom: '8vh', animation: 'fadeUp 0.6s ease' }}>
+  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem', alignItems: 'flex-start' }}>
+    {/* LEFT: greeting + meta */}
+    <div>
+      <div style={{ fontFamily: "'Libre Baskerville', serif", fontSize: 'clamp(2.5rem, 6vw, 4rem)', fontWeight: 700, letterSpacing: '-0.04em', color: C.textPrimary }}>
+        {getGreeting()}.
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginTop: '0.75rem' }}>
+        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.6rem', color: C.textSecondary, letterSpacing: '0.08em' }}>
+          {dateStr.toUpperCase()} — {timeStr}
         </div>
-
-        {/* ── Section 2: Briefing pills ── */}
-        <div style={{ paddingBottom: '5vh', display: 'flex', gap: '0.5rem', animation: 'fadeUp 0.6s ease 0.1s both' }}>
-          {TOPICS.map(topic => (
-            <button
-              key={topic.id}
-              className="briefing-pill"
-              onClick={() => setBriefingPage(topic)}
-              style={{
-                background: 'none',
-                border: `1px solid ${C.borderMid}`,
-                color: C.textSecondary,
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: '0.62rem',
-                letterSpacing: '0.08em',
-                padding: '0.5rem 1.1rem',
-                cursor: 'pointer',
-                transition: 'all 0.15s',
-                textTransform: 'uppercase',
-                borderRadius: '999px',
-              }}
-            >
-              {topic.shortLabel} →
-            </button>
-          ))}
-        </div>
-
-        {/* ── Section 2.5: Timelines ── */}
-        <div style={{ paddingBottom: '5vh', animation: 'fadeUp 0.6s ease 0.15s both' }}>
-          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.55rem', color: C.textSecondary, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '0.75rem' }}>
-            Situation Timelines
-          </div>
-          <div style={{ height: '1px', background: C.border, marginBottom: '0.25rem' }} />
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {[
-              { label: 'US–Iran Military Conflict', query: 'US Iran military conflict war strikes' },
-              { label: 'Russia–Ukraine War', query: 'Russia Ukraine war conflict' },
-              { label: 'Federal Reserve & Interest Rates', query: 'Federal Reserve interest rates monetary policy' },
-              { label: 'China–Taiwan Tensions', query: 'China Taiwan tensions military' },
-            ].map((item, i) => (
-              <div
-                key={i}
-                className="timeline-row"
-                onClick={() => setTimelinePage(item.query)}
-                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.8rem 0.4rem', borderBottom: `1px solid ${C.border}`, cursor: 'pointer', transition: 'background 0.15s', borderRadius: 2 }}
-              >
-                <div style={{ fontFamily: "'Source Serif 4', serif", fontSize: '0.92rem', color: C.textSecondary }}>{item.label}</div>
-                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.52rem', color: C.textMuted }}>VIEW →</div>
-              </div>
-            ))}
-          </div>
-          <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem' }}>
-            <input
-              id="custom-timeline-input"
-              placeholder="Custom timeline: type any topic..."
-              style={{ flex: 1, background: C.bgRaised, border: `1px solid ${C.border}`, color: C.textPrimary, fontFamily: "'Source Serif 4', serif", fontSize: '0.88rem', padding: '0.6rem 0.9rem', outline: 'none', borderRadius: 2, transition: 'border-color 0.15s' }}
-              onFocus={e => e.target.style.borderColor = C.silver}
-              onBlur={e => e.target.style.borderColor = C.border}
-              onKeyDown={e => { if (e.key === 'Enter' && e.target.value.trim()) { setTimelinePage(e.target.value.trim()); e.target.value = '' } }}
-            />
-            <button
-              onClick={() => { const input = document.getElementById('custom-timeline-input'); if (input.value.trim()) { setTimelinePage(input.value.trim()); input.value = '' } }}
-              style={{ background: 'none', border: `1px solid ${C.border}`, color: C.textSecondary, fontFamily: "'JetBrains Mono', monospace", fontSize: '0.58rem', letterSpacing: '0.1em', padding: '0.6rem 1rem', cursor: 'pointer', transition: 'all 0.15s', borderRadius: 2 }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = C.silver; e.currentTarget.style.color = C.textPrimary }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.textSecondary }}
-            >
-              GENERATE →
-            </button>
-          </div>
-        </div>
-
-        {/* ── Section 3: Breaking stories ── */}
-        <div style={{ paddingBottom: '5vh', animation: 'fadeUp 0.6s ease 0.2s both' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <div style={{ width: 6, height: 6, borderRadius: '50%', background: C.red }} />
-              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.55rem', color: C.textSecondary, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Breaking Stories</div>
-            </div>
-            {headlinesLoaded && (
-              <button onClick={loadHeadlines} style={{ background: 'none', border: 'none', color: C.textMuted, fontFamily: "'JetBrains Mono', monospace", fontSize: '0.52rem', letterSpacing: '0.1em', cursor: 'pointer', padding: 0, transition: 'color 0.15s' }}
-                onMouseEnter={e => e.target.style.color = C.textSecondary}
-                onMouseLeave={e => e.target.style.color = C.textMuted}>
-                ↺ Refresh
-              </button>
-            )}
-          </div>
-          <div style={{ height: '1px', background: C.border, marginBottom: '0.25rem' }} />
-
-          {headlinesLoading && (
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', padding: '1.5rem 0' }}>
-              {[0, 1, 2].map(i => <div key={i} style={{ width: 5, height: 5, borderRadius: '50%', background: C.textMuted, animation: `pulse 1.2s ease ${i * 0.2}s infinite` }} />)}
-              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.58rem', color: C.textSecondary, marginLeft: '0.5rem', letterSpacing: '0.08em' }}>Identifying top stories...</span>
-            </div>
-          )}
-
-          {headlines.map((story, i) => (
-            <div
-              key={i}
-              className="headline-item"
-              onClick={() => setDeepDive({ title: story.headline, query: `Give me a comprehensive intelligence deep-dive on this story: "${story.headline}". Cover: what is actually happening beyond the surface narrative, key actors and their motivations, what mainstream media is missing or underreporting, historical parallels, geopolitical implications, and your probability assessments for how this develops. Be direct, analytical, and specific.` })}
-              style={{ padding: '1.1rem 0.4rem', borderBottom: `1px solid ${C.border}`, cursor: 'pointer', animation: `fadeUp 0.4s ease ${i * 0.08}s both`, borderRadius: 2, transition: 'background 0.15s' }}
-              onMouseEnter={e => e.currentTarget.style.background = C.bgHover}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-            >
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
-                    {i === 0 && <div style={{ width: 5, height: 5, borderRadius: '50%', background: C.red, flexShrink: 0 }} />}
-                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.52rem', color: i === 0 ? C.red : C.textSecondary, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-                      {story.topic?.replace('_', ' ')}
-                    </div>
-                  </div>
-                  <div className="headline-text" style={{ fontFamily: "'Libre Baskerville', serif", fontSize: i === 0 ? '1.25rem' : '0.98rem', fontWeight: 700, lineHeight: 1.25, letterSpacing: '-0.01em', color: C.textSecondary, marginBottom: '0.4rem', transition: 'color 0.15s' }}>
-                    {story.headline}
-                  </div>
-                  <div style={{ fontFamily: "'Source Serif 4', serif", fontSize: '0.85rem', color: C.textMuted, lineHeight: 1.6, fontStyle: 'italic' }}>
-                    {story.summary}
-                  </div>
-                </div>
-                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.52rem', color: C.textMuted, flexShrink: 0, marginTop: '0.2rem' }}>→</div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* ── Section 4: Entity tracker ── */}
-        <div style={{ paddingBottom: '8vh', animation: 'fadeUp 0.6s ease 0.3s both' }}>
-          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.55rem', color: C.textSecondary, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '0.75rem' }}>
-            Tracked Entities
-          </div>
-          <div style={{ height: '1px', background: C.border, marginBottom: '0.25rem' }} />
-
-          {!entitySignals && <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.6rem', color: C.textSecondary, padding: '1rem 0' }}>Accumulating data...</div>}
-
-          {entitySignals && (
-            <div>
-              {entitySignals.spikes?.filter(e => e.trend === 'RISING' || e.trend === 'NEW').slice(0, 5).length > 0 && (
-                <div style={{ marginBottom: '1.5rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.6rem 0.4rem', marginBottom: '0.15rem' }}>
-                    <div style={{ width: 5, height: 5, borderRadius: '50%', background: C.red }} />
-                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.5rem', color: C.red, letterSpacing: '0.15em' }}>SURGING</div>
-                  </div>
-                  {entitySignals.spikes.filter(e => e.trend === 'RISING' || e.trend === 'NEW').slice(0, 5).map((e, i) => (
-                    <div
-                      key={i}
-                      className="entity-item"
-                      onClick={() => setDeepDive({ title: `Intelligence Analysis: ${e.entity}`, query: `Give me a comprehensive intelligence analysis of ${e.entity}. Who or what are they, what role are they playing in current geopolitical events, why are they suddenly getting increased attention in the news, what are their motivations and capabilities, and what should we expect from them in the coming weeks? Be specific and analytical.` })}
-                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.55rem 0.4rem', borderBottom: `1px solid ${C.border}`, transition: 'background 0.15s', borderRadius: 2 }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <span style={{ fontSize: '0.9rem', color: C.textPrimary, fontFamily: "'Source Serif 4', serif" }}>{e.entity}</span>
-                        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.48rem', color: C.textMuted, letterSpacing: '0.08em' }}>{e.type}</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.55rem', color: C.silver }}>
-                          {e.trend === 'NEW' ? 'NEW' : `${e.spike_ratio}×`}
-                        </span>
-                        <span style={{ color: C.textMuted, fontSize: '0.7rem' }}>→</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {entitySignals.top_entities?.length > 0 && (
-                <div>
-                  <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.5rem', color: C.textSecondary, letterSpacing: '0.15em', padding: '0.6rem 0.4rem', marginBottom: '0.15rem' }}>MOST DISCUSSED THIS WEEK</div>
-                  {entitySignals.top_entities.slice(0, 8).map((e, i) => (
-                    <div
-                      key={i}
-                      className="entity-item"
-                      onClick={() => setDeepDive({ title: `Intelligence Analysis: ${e.entity}`, query: `Give me a comprehensive intelligence analysis of ${e.entity}. Who or what are they, what role are they currently playing in world events, what are their key actions and motivations right now, and what should we be watching for? Be direct and analytically precise.` })}
-                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0.4rem', borderBottom: `1px solid ${C.border}`, transition: 'background 0.15s', borderRadius: 2 }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.5rem', color: C.textMuted, width: '1rem' }}>{i + 1}</span>
-                        <span style={{ fontSize: '0.88rem', color: C.textSecondary, fontFamily: "'Source Serif 4', serif" }}>{e.entity}</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.52rem', color: C.textMuted }}>{e.mentions}</span>
-                        <span style={{ color: C.textMuted, fontSize: '0.7rem' }}>→</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+        <div style={{ width: '1px', height: '0.8rem', background: C.borderMid }} />
+        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.6rem', color: C.textMuted, letterSpacing: '0.08em' }}>
+          LAST UPDATE: <span style={{ color: C.textSecondary }}>{lastUpdatedStr}</span>
         </div>
       </div>
+    </div>
 
+    {/* RIGHT: briefing buttons */}
+    <div style={{ justifySelf: 'end', maxWidth: 260 }}>
+      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.55rem', color: C.silver, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '0.75rem', textAlign: 'right' }}>
+        Briefing Rooms
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+        {TOPICS.map(topic => (
+          <button
+            key={topic.id}
+            className="briefing-btn"
+            onClick={() => setBriefingPage(topic)}
+            style={{
+              textAlign: 'right',
+              width: '100%',
+              color: C.textSecondary,
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: '0.6rem',
+              padding: '0.6rem 0.8rem',
+              borderRadius: '2px',
+              letterSpacing: '0.05em'
+            }}
+          >
+            {topic.shortLabel.toUpperCase()} <span style={{ marginLeft: '0.4rem', opacity: 0.6 }}>→</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  </div>
+</header>
+
+
+        {/* ── MAIN GRID: Live Stories | Timelines | Sidebar ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 300px', gap: '4rem', alignItems: 'start', paddingBottom: '10vh' }}>
+
+          {/* ── COLUMN 1: Live Stories ── */}
+          <section style={{ animation: 'fadeUp 0.6s ease 0.1s both' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ width: 6, height: 6, borderRadius: '50%', background: C.red, boxShadow: `0 0 8px ${C.red}` }} />
+                <h2 style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.55rem', color: C.silver, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Live Stories</h2>
+              </div>
+              {headlinesLoaded && (
+                <button onClick={loadHeadlines} style={{ background: 'none', border: 'none', color: C.textMuted, fontFamily: "'JetBrains Mono', monospace", fontSize: '0.52rem', letterSpacing: '0.1em', cursor: 'pointer', padding: 0, transition: 'color 0.15s' }}
+                  onMouseEnter={e => e.target.style.color = C.textSecondary}
+                  onMouseLeave={e => e.target.style.color = C.textMuted}>
+                  ↺ Refresh
+                </button>
+              )}
+            </div>
+            <div style={{ height: '1px', background: C.border, marginBottom: '0.25rem' }} />
+
+            {headlinesLoading && (
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', padding: '1.5rem 0' }}>
+                {[0, 1, 2].map(i => <div key={i} style={{ width: 5, height: 5, borderRadius: '50%', background: C.textMuted, animation: `pulse 1.2s ease ${i * 0.2}s infinite` }} />)}
+                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.58rem', color: C.textSecondary, marginLeft: '0.5rem', letterSpacing: '0.08em' }}>Identifying top stories...</span>
+              </div>
+            )}
+
+            {headlines.map((story, i) => (
+              <div
+                key={i}
+                className="headline-item"
+                onClick={() => setDeepDive({ title: story.headline, query: `Give me a comprehensive intelligence deep-dive on this story: "${story.headline}". Cover: what is actually happening beyond the surface narrative, key actors and their motivations, what mainstream media is missing or underreporting, historical parallels, geopolitical implications, and your probability assessments for how this develops. Be direct, analytical, and specific.` })}
+                style={{ padding: '1rem 0.4rem', borderBottom: `1px solid ${C.border}`, cursor: 'pointer', animation: `fadeUp 0.4s ease ${i * 0.08}s both`, borderRadius: 2 }}
+              >
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem' }}>
+                      {i === 0 && <div style={{ width: 5, height: 5, borderRadius: '50%', background: C.red, flexShrink: 0 }} />}
+                      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.5rem', color: i === 0 ? C.red : C.textSecondary, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+                        {story.topic?.replace('_', ' ')}
+                      </div>
+                    </div>
+                    <div style={{ fontFamily: "'Libre Baskerville', serif", fontSize: i === 0 ? '1.05rem' : '0.92rem', fontWeight: 700, lineHeight: 1.25, letterSpacing: '-0.01em', color: C.textSecondary, marginBottom: '0.35rem' }}>
+                      {story.headline}
+                    </div>
+                    <div style={{ fontFamily: "'Source Serif 4', serif", fontSize: '0.8rem', color: C.textMuted, lineHeight: 1.55, fontStyle: 'italic' }}>
+                      {story.summary}
+                    </div>
+                  </div>
+                  <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.5rem', color: C.textMuted, flexShrink: 0, marginTop: '0.15rem' }}>→</div>
+                </div>
+              </div>
+            ))}
+          </section>
+
+          {/* ── COLUMN 2: Timelines ── */}
+<section style={{ animation: 'fadeUp 0.6s ease 0.15s both' }}>
+  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem', alignItems: 'start' }}>
+    {/* Timelines (left) */}
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
+        <h2 style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.55rem', color: C.silver, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Timelines</h2>
+      </div>
+      <div style={{ height: '1px', background: C.border, marginBottom: '0.25rem' }} />
+
+      {THEATERS.map((item, i) => (
+        <div
+          key={i}
+          className="theater-row"
+          onClick={() => setTimelinePage(item.query)}
+          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.85rem 0.4rem', borderBottom: `1px solid ${C.border}`, cursor: 'pointer', borderRadius: 2 }}
+        >
+          <div style={{ fontFamily: "'Source Serif 4', serif", fontSize: '0.92rem', color: C.textSecondary, lineHeight: 1.4 }}>{item.label}</div>
+          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.5rem', color: C.textMuted, flexShrink: 0, marginLeft: '1rem' }}>VIEW →</div>
+        </div>
+      ))}
+
+      <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
+        <input
+          id="custom-timeline-input"
+          placeholder="Custom timeline..."
+          style={{ flex: 1, background: C.bgRaised, border: `1px solid C.border`, color: C.textPrimary, fontFamily: "'Source Serif 4', serif", fontSize: '0.85rem', padding: '0.6rem 0.9rem', outline: 'none', borderRadius: 2 }}
+          onFocus={e => e.target.style.borderColor = C.silver}
+          onBlur={e => e.target.style.borderColor = C.border}
+          onKeyDown={e => { if (e.key === 'Enter' && e.target.value.trim()) { setTimelinePage(e.target.value.trim()); e.target.value = '' } }}
+        />
+        <button
+          onClick={() => { const input = document.getElementById('custom-timeline-input'); if (input.value.trim()) { setTimelinePage(input.value.trim()); input.value = '' } }}
+          style={{ background: 'none', border: `1px solid ${C.border}`, color: C.textSecondary, fontFamily: "'JetBrains Mono', monospace", fontSize: '0.55rem', letterSpacing: '0.1em', padding: '0.6rem 1rem', cursor: 'pointer', borderRadius: 2 }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = C.silver; e.currentTarget.style.color = C.textPrimary }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.textSecondary }}
+        >
+          GENERATE →
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+          {/* ── COLUMN 3: Sidebar ── */}
+          <aside style={{ position: 'sticky', top: '100px', animation: 'fadeUp 0.6s ease 0.2s both' }}>
+
+
+            {/* Tracked Entities */}
+            <div>
+              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.55rem', color: C.silver, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '1rem' }}>Tracked Entities</div>
+              <div style={{ height: '1px', background: C.border, marginBottom: '0.5rem' }} />
+
+              {!entitySignals && (
+                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.58rem', color: C.textMuted, padding: '0.75rem 0' }}>Accumulating data...</div>
+              )}
+
+              {entitySignals && (
+                <div>
+                  {entitySignals.spikes?.filter(e => e.trend === 'RISING' || e.trend === 'NEW').slice(0, 4).length > 0 && (
+                    <div style={{ marginBottom: '1.25rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.3rem', marginBottom: '0.1rem' }}>
+                        <div style={{ width: 4, height: 4, borderRadius: '50%', background: C.red }} />
+                        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.48rem', color: C.red, letterSpacing: '0.15em' }}>SURGING</div>
+                      </div>
+                      {entitySignals.spikes.filter(e => e.trend === 'RISING' || e.trend === 'NEW').slice(0, 4).map((e, i) => (
+                        <div
+                          key={i}
+                          className="entity-item"
+                          onClick={() => setDeepDive({ title: `Intelligence Analysis: ${e.entity}`, query: `Give me a comprehensive intelligence analysis of ${e.entity}. Who or what are they, what role are they playing in current geopolitical events, why are they suddenly getting increased attention in the news, what are their motivations and capabilities, and what should we expect from them in the coming weeks? Be specific and analytical.` })}
+                          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.45rem 0.3rem', borderBottom: `1px solid ${C.border}`, cursor: 'pointer', transition: 'background 0.15s', borderRadius: 2 }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ fontSize: '0.85rem', color: C.textPrimary, fontFamily: "'Source Serif 4', serif" }}>{e.entity}</span>
+                            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.44rem', color: C.textMuted, letterSpacing: '0.06em' }}>{e.type}</span>
+                          </div>
+                          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.52rem', color: C.silver, flexShrink: 0 }}>
+                            {e.trend === 'NEW' ? 'NEW' : `${e.spike_ratio}×`}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {entitySignals.top_entities?.length > 0 && (
+                    <div>
+                      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.48rem', color: C.textSecondary, letterSpacing: '0.12em', padding: '0.4rem 0.3rem', marginBottom: '0.1rem' }}>MOST DISCUSSED</div>
+                      {entitySignals.top_entities.slice(0, 6).map((e, i) => (
+                        <div
+                          key={i}
+                          className="entity-item"
+                          onClick={() => setDeepDive({ title: `Intelligence Analysis: ${e.entity}`, query: `Give me a comprehensive intelligence analysis of ${e.entity}. Who or what are they, what role are they currently playing in world events, what are their key actions and motivations right now, and what should we be watching for? Be direct and analytically precise.` })}
+                          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.45rem 0.3rem', borderBottom: `1px solid ${C.border}`, cursor: 'pointer', transition: 'background 0.15s', borderRadius: 2 }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.48rem', color: C.textMuted, width: '0.9rem' }}>{i + 1}</span>
+                            <span style={{ fontSize: '0.85rem', color: C.textSecondary, fontFamily: "'Source Serif 4', serif" }}>{e.entity}</span>
+                          </div>
+                          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.5rem', color: C.textMuted, flexShrink: 0 }}>{e.mentions}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+          </aside>
+        </div>
+        {/* ── /MAIN GRID ── */}
+
+      </div>
+      {/* ── /Main content ── */}
+
+      {/* ── Overlay pages (position: fixed, outside container) ── */}
       {deepDive && <DeepDive title={deepDive.title} query={deepDive.query} onClose={() => setDeepDive(null)} />}
       {briefingPage && <BriefingPage topic={briefingPage} onClose={() => setBriefingPage(null)} />}
       {timelinePage && <TimelinePage query={timelinePage} onClose={() => setTimelinePage(null)} />}
+
     </div>
   )
 }

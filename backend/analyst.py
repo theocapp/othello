@@ -1,11 +1,11 @@
-import anthropic
+from groq import Groq
 import os
 from datetime import date
 
-client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+MODEL = "llama-3.3-70b-versatile"  # best free model on Groq
 
-SYSTEM_PROMPT = """You are an elite intelligence analyst providing briefings in the style of a 
-senior analyst at a top-tier geopolitical research firm.
+SYSTEM_PROMPT = """You are an intelligence analyst providing briefings in the style of a geopolitical research firm.
 
 When given a set of news articles, provide a structured intelligence briefing. You MUST use 
 exactly these section headers, in plain text with no markdown symbols like # or ##:
@@ -33,7 +33,7 @@ WHAT TO WATCH:
 
 SOURCE CONTRADICTIONS:
 [If contradiction data is provided, highlight the most significant contradictions and what 
-they reveal about narrative bias. If no contradiction data is provided, omit this section.]
+they reveal about narrative bias. Quote directly and give examples. If no contradiction data is provided, omit this section.]
 
 Rules:
 - Use exactly the section headers above, nothing else
@@ -55,7 +55,6 @@ Summary: {article['description']}
 URL: {article['url']}
 """
 
-    # Build extra context
     extra_context = ""
     if signals:
         extra_context += f"\n\n{signals}"
@@ -69,14 +68,16 @@ URL: {article['url']}
 Today's date is {date.today().strftime('%B %d, %Y')}.
 """
 
-    message = client.messages.create(
-        model="claude-haiku-4-5-20251001",
+    response = client.chat.completions.create(
+        model=MODEL,
         max_tokens=1500,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": prompt}]
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": prompt}
+        ]
     )
 
-    return message.content[0].text
+    return response.choices[0].message.content
 
 
 def answer_query(question: str, context_articles: list[dict] = None) -> str:
@@ -101,14 +102,16 @@ Answer with the depth and precision of a senior intelligence analyst. Be direct 
 If the news articles above are relevant, cite them by source name.
 Acknowledge uncertainty with probability estimates where relevant."""
 
-    message = client.messages.create(
-        model="claude-haiku-4-5-20251001",
+    response = client.chat.completions.create(
+        model=MODEL,
         max_tokens=1000,
-        system="""You are an elite intelligence analyst with deep expertise in geopolitics,
+        messages=[
+            {"role": "system", "content": """You are an elite intelligence analyst with deep expertise in geopolitics,
 US politics, and economics. Answer questions with precision and depth. Be direct, cite
 specific actors and data, use probability estimates for uncertain claims. Never be vague.
-When live news articles are provided, prioritize that information and cite sources.""",
-        messages=[{"role": "user", "content": prompt}]
+When live news articles are provided, prioritize that information and cite sources."""},
+            {"role": "user", "content": prompt}
+        ]
     )
 
-    return message.content[0].text
+    return response.choices[0].message.content
