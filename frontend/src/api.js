@@ -1,19 +1,12 @@
 import axios from 'axios'
 
 function defaultApiBaseUrl() {
-  if (typeof window !== 'undefined') {
-    const host = window.location.hostname
-    const isLocal =
-      host === 'localhost' ||
-      host === '127.0.0.1' ||
-      host === '::1'
-
-    if (isLocal) return 'http://127.0.0.1:8001'
-  }
-  return 'http://127.0.0.1:8001'
+  if (typeof window === 'undefined') return 'http://127.0.0.1:8001'
+  if (import.meta.env.DEV) return 'http://127.0.0.1:8001'
+  return ''
 }
 
-const baseURL = (import.meta.env.VITE_API_BASE_URL || defaultApiBaseUrl()).replace(/\/+$/, '')
+const baseURL = (import.meta.env.VITE_API_BASE_URL ?? defaultApiBaseUrl()).replace(/\/+$/, '')
 
 const api = axios.create({
   baseURL,

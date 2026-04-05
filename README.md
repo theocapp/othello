@@ -1,6 +1,6 @@
 # Othello V2
 
-Othello V2 is now structured as an ingestion-first intelligence dashboard rather than a startup-fetch news app.
+Othello V2 is an ingestion-first intelligence dashboard rather than a startup-fetch news app.
 
 ## Architecture
 
@@ -35,6 +35,9 @@ The homepage no longer assumes startup warmup created a temporary cache. It is d
 
 ## Environment
 
+Backend examples live in `backend/.env.example`.
+Frontend examples live in `frontend/.env.example`.
+
 Required for full analyst generation:
 
 - `GROQ_API_KEY`
@@ -47,15 +50,13 @@ Optional:
 - `OTHELLO_SOURCE_PROVIDER`
 - `OTHELLO_ADMIN_API_KEY`
 - `OTHELLO_CORS_ORIGINS`
-
-Frontend:
-
 - `VITE_API_BASE_URL`
 
 Notes:
 
 - GDELT is the primary ingestion source and does not require an API key.
 - NewsAPI is retained as a fallback adapter.
+- In production, the frontend now works cleanly with a same-origin API when `VITE_API_BASE_URL` is unset.
 
 ## Frontend
 
@@ -111,5 +112,21 @@ Frontend:
 cd frontend
 npm run dev
 ```
+
+Or use the root Makefile shortcuts:
+
+```bash
+make backend
+make worker
+make frontend
+make test
+```
+
+## CI
+
+GitHub Actions now runs:
+
+- backend smoke tests
+- frontend production build
 
 For non-local clients, write/refresh routes require `X-API-Key: <OTHELLO_ADMIN_API_KEY>`.
