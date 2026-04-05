@@ -1,7 +1,6 @@
 import os
 import re
 from pathlib import Path
-from threading import Lock
 
 from dotenv import load_dotenv
 
@@ -149,14 +148,6 @@ WORKER_ENABLE_ANALYTICS = os.getenv("OTHELLO_WORKER_ENABLE_ANALYTICS", "false").
 # API key / admin
 # ---------------------------------------------------------------------------
 ADMIN_API_KEY = os.getenv("OTHELLO_ADMIN_API_KEY", "").strip()
-
-# ---------------------------------------------------------------------------
-# Locks (shared across services)
-# ---------------------------------------------------------------------------
-INGEST_JOB_LOCK = Lock()
-BACKFILL_JOB_LOCK = Lock()
-HISTORICAL_FETCH_JOB_LOCK = Lock()
-STORY_MATERIALIZATION_JOB_LOCK = Lock()
 
 # ---------------------------------------------------------------------------
 # Query stopwords
