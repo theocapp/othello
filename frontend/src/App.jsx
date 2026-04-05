@@ -307,7 +307,7 @@ function WorldHotspotMap({ data, error, loading, selectedHotspotId, onWindowChan
 
   // Load world topology
   useEffect(() => {
-    fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json')
+    fetch('/world/countries-110m.json')
       .then(r => r.json())
       .then(topo => {
         setWorldData({
