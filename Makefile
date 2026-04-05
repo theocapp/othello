@@ -8,5 +8,5 @@ frontend:
 	cd frontend && npm run dev
 
 test:
-	cd backend && python -m unittest test_api_smoke -v
+	cd backend && python -m unittest discover -p "test_*.py" -v
 	cd frontend && npm run build

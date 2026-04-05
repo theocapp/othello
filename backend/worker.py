@@ -2,26 +2,33 @@ import signal
 import sys
 import time
 
-from bootstrap import initialize_runtime
-from core.config import (
+from main import (
+    build_worker_scheduler,
+    bootstrap_from_legacy_cache,
+    ingest_all_topics,
+    init_cache_db,
+    init_corpus_db,
+    refresh_acled_events,
+    refresh_direct_feed_layer,
+    refresh_recent_translations,
+    refresh_official_updates,
+    run_incremental_gdelt_backfill,
+    runtime_status,
+    seed_sources,
+    sync_registry_mirror,
     WORKER_BOOTSTRAP_MODE,
     WORKER_ENABLE_INGESTION,
     WORKER_ENABLE_TRANSLATIONS,
 )
-from core.scheduler import build_worker_scheduler
-from services.ingest_service import (
-    ingest_all_topics,
-    refresh_acled_events,
-    refresh_direct_feed_layer,
-    refresh_official_updates,
-    refresh_recent_translations,
-    run_incremental_gdelt_backfill,
-    sync_registry_mirror,
-)
 
 
 def initialize_worker_state() -> None:
-    initialize_runtime()
+    init_cache_db()
+    init_corpus_db()
+    seed_sources()
+    state = runtime_status()
+    if state["corpus"]["total_articles"] == 0:
+        bootstrap_from_legacy_cache()
 
 
 def main() -> int:
