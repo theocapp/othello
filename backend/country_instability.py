@@ -63,31 +63,45 @@ _SNAPSHOT_TREND_WINDOW = 24 * 3600  # compare against 24h ago
 
 # ── Country name normalization ───────────────────────────────────────────────
 
-_COUNTRY_ALIASES = {
-    "united states of america": "united states",
-    "usa": "united states",
-    "us": "united states",
-    "uk": "united kingdom",
-    "great britain": "united kingdom",
-    "republic of korea": "south korea",
-    "dprk": "north korea",
-    "democratic republic of the congo": "dr congo",
-    "democratic republic of congo": "dr congo",
-    "drc": "dr congo",
-    "turkiye": "turkey",
-    "türkiye": "turkey",
-    "ivory coast": "cote d'ivoire",
-    "myanmar (burma)": "myanmar",
-    "occupied palestinian territory": "palestine",
-    "state of palestine": "palestine",
+_COUNTRY_MAPPINGS = {
+    "united states": ["united states of america", "usa", "us", "u.s.", "u.s.a.", "washington"],
+    "united kingdom": ["uk", "u.k.", "great britain", "britain", "england", "london"],
+    "russia": ["russian federation", "moscow", "ru"],
+    "ukraine": ["kyiv", "kiev", "ua"],
+    "china": ["people's republic of china", "prc", "beijing"],
+    "taiwan": ["republic of china", "roc", "taipei"],
+    "south korea": ["republic of korea", "rok", "seoul"],
+    "north korea": ["democratic people's republic of korea", "dprk", "pyongyang"],
+    "dr congo": ["democratic republic of the congo", "democratic republic of congo", "drc", "zaire", "kinshasa"],
+    "congo": ["republic of the congo", "brazzaville"],
+    "turkey": ["turkiye", "türkiye", "ankara"],
+    "cote d'ivoire": ["ivory coast", "côte d'ivoire", "yamoussoukro", "abidjan"],
+    "myanmar": ["burma", "naypyidaw", "yangon"],
+    "palestine": ["occupied palestinian territory", "state of palestine", "gaza", "west bank", "ramallah"],
+    "israel": ["tel aviv", "jerusalem"],
+    "iran": ["islamic republic of iran", "tehran"],
+    "syria": ["syrian arab republic", "damascus"],
+    "central african republic": ["car", "bangui"],
+    "united arab emirates": ["uae", "abu dhabi", "dubai"],
+    "saudi arabia": ["ksa", "kingdom of saudi arabia", "riyadh"],
+    "afghanistan": ["islamic emirate of afghanistan", "kabul"],
 }
 
+
+_COUNTRY_ALIASES = {}
+for target_country, aliases in _COUNTRY_MAPPINGS.items():
+    for alias in aliases:
+        _COUNTRY_ALIASES[alias] = target_country
 
 def _normalize_country(name: str | None) -> str | None:
     if not name:
         return None
-    key = name.strip().lower()
-    return _COUNTRY_ALIASES.get(key, key)
+    cleaned = re.split(r'[\(\-\:]', name)[0].strip().lower()
+    if cleaned.startswith("the "):
+        cleaned = cleaned[4:]
+    if cleaned in _COUNTRY_ALIASES:
+        return _COUNTRY_ALIASES[cleaned]
+    return cleaned
 
 
 # ── Sigmoid-style normalization ──────────────────────────────────────────────
