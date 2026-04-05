@@ -10,4 +10,5 @@ psycopg[binary]
 requests
 spacy
 sentence-transformers
+transformers
 uvicorn
