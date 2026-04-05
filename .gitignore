@@ -27,3 +27,5 @@ chroma_db/
 
 # Local launchd / machine-specific service definitions
 backend/launchd/*.plist
+.claude/
+othello_v2/
