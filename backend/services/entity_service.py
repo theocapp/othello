@@ -1,9 +1,10 @@
 from fastapi import HTTPException
 
+from core.config import TOPICS
+
 
 def entity_signals_payload(topic: str):
     from entities import get_entity_frequencies, get_top_entities
-    from main import TOPICS
     if topic not in TOPICS:
         raise HTTPException(status_code=400, detail=f"Topic must be one of {TOPICS}")
     return {"topic": topic, "spikes": get_entity_frequencies(topic=topic), "top_entities": get_top_entities(topic=topic)}

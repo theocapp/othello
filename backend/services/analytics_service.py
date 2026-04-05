@@ -1,16 +1,19 @@
 from fastapi import HTTPException
 
+from core.config import INTERNAL_SCHEDULER_ENABLED, TOPICS
+from core.runtime import latest_entity_telemetry, runtime_status, topic_counts, topic_summary
+
 
 def get_root_payload():
     from chroma import get_collection_stats
-    from main import runtime_status
     return {"status": "Othello V2 API is running", "runtime": runtime_status(), "collection": get_collection_stats()}
 
 
 def get_health_payload():
     from corpus import get_source_registry, get_warehouse_counts, load_ingestion_state
     from entities import get_entity_model_capabilities
-    from main import INTERNAL_SCHEDULER_ENABLED, _latest_entity_telemetry, _topic_counts, runtime_status, scheduler
+    from core.scheduler import get_scheduler
+    scheduler = get_scheduler()
     promotion_states = {
         "analytic_global": load_ingestion_state("analytic-ingest-global"),
         "analytic_geopolitics": load_ingestion_state("analytic-ingest-geopolitics"),
@@ -23,9 +26,9 @@ def get_health_payload():
     }
     return {
         "runtime": runtime_status(),
-        "scheduler_running": scheduler.running,
+        "scheduler_running": scheduler.running if scheduler else False,
         "internal_scheduler_enabled": INTERNAL_SCHEDULER_ENABLED,
-        "topic_counts": _topic_counts(),
+        "topic_counts": topic_counts(),
         "registry_sources": len(get_source_registry()),
         "warehouse": get_warehouse_counts(),
         "promotion_pipeline": promotion_states,
@@ -37,7 +40,7 @@ def get_health_payload():
         },
         "entity_pipeline": {
             "installed_models": get_entity_model_capabilities(),
-            "latest_usage": _latest_entity_telemetry(),
+            "latest_usage": latest_entity_telemetry(),
         },
     }
 
@@ -46,8 +49,16 @@ def get_system_overview_payload():
     from chroma import get_collection_stats
     from corpus import get_source_registry, get_sources, get_warehouse_counts
     from datetime import datetime, timezone
-    from main import TOPICS, _topic_counts, _topic_summary, runtime_status
-    return {"runtime": runtime_status(), "sources": get_sources(), "source_registry": get_source_registry(), "warehouse": get_warehouse_counts(), "topic_counts": _topic_counts(), "topics": [_topic_summary(topic) for topic in TOPICS], "collection": get_collection_stats(), "generated_at": datetime.now(timezone.utc).isoformat()}
+    return {
+        "runtime": runtime_status(),
+        "sources": get_sources(),
+        "source_registry": get_source_registry(),
+        "warehouse": get_warehouse_counts(),
+        "topic_counts": topic_counts(),
+        "topics": [topic_summary(topic) for topic in TOPICS],
+        "collection": get_collection_stats(),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
 
 
 def get_instability_payload(days: int = 3):
