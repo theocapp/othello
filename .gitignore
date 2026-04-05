@@ -1,11 +1,26 @@
-backend/.env
-backend/venv/
-__pycache__/
-*.pyc
 .DS_Store
 
+# Local environment and secrets
+.env
+*.env
+backend/.env
+.vscode/
+
+# Python environments and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# Node dependencies and build output
 node_modules/
 dist/
-frontend/dist/
+
+# Local database and vector store artifacts
 *.db
+*.db-journal
+*.db-shm
+*.db-wal
+backend/othello_api_smoke_*/
+backend/chroma_db/
 chroma_db/

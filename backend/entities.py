@@ -1,12 +1,197 @@
+import importlib.util
+import os
 import spacy
 import sqlite3
 from datetime import datetime, timedelta
-from collections import defaultdict
-import os
 
 # ─── Model ────────────────────────────────────────────────────────────────────
-# Install: python3 -m spacy download en_core_web_lg
-nlp = spacy.load("en_core_web_lg")
+# Install: python3 -m spacy download en_core_web_sm
+_NLP_CACHE = {}
+_MODEL_NAME_CACHE = {}
+
+LANGUAGE_MODEL_CANDIDATES = {
+    "en": ["en_core_web_sm", "en_core_web_md", "en_core_web_lg"],
+    "fr": ["fr_core_news_sm", "fr_core_news_md", "fr_core_news_lg"],
+    "es": ["es_core_news_lg", "es_core_news_md", "es_core_news_sm"],
+    "de": ["de_core_news_lg", "de_core_news_md", "de_core_news_sm"],
+    "pt": ["pt_core_news_lg", "pt_core_news_md", "pt_core_news_sm"],
+    "it": ["it_core_news_lg", "it_core_news_md", "it_core_news_sm"],
+    "nl": ["nl_core_news_lg", "nl_core_news_md", "nl_core_news_sm"],
+    "ca": ["ca_core_news_lg", "ca_core_news_md", "ca_core_news_sm"],
+    "zh": ["zh_core_web_lg", "zh_core_web_md", "zh_core_web_sm"],
+    "ja": ["ja_core_news_lg", "ja_core_news_md", "ja_core_news_sm"],
+}
+MULTILINGUAL_MODEL_CANDIDATES = ["xx_ent_wiki_sm"]
+
+
+def _language_key(language: str | None) -> str:
+    value = (language or "").strip().lower()
+    if not value:
+        return "en"
+    aliases = {
+        "english": "en",
+        "en-us": "en",
+        "en-gb": "en",
+        "french": "fr",
+        "spanish": "es",
+        "german": "de",
+        "portuguese": "pt",
+        "italian": "it",
+        "dutch": "nl",
+        "catalan": "ca",
+        "chinese": "zh",
+        "japanese": "ja",
+    }
+    if value in aliases:
+        return aliases[value]
+    for code in LANGUAGE_MODEL_CANDIDATES:
+        if value == code or value.startswith(f"{code}-") or value.startswith(f"{code}_"):
+            return code
+    return value.split("-")[0].split("_")[0]
+
+
+def _candidate_models(language: str | None, include_english_fallback: bool = True) -> list[str]:
+    key = _language_key(language)
+    candidates = list(LANGUAGE_MODEL_CANDIDATES.get(key, []))
+    if key != "en":
+        candidates.extend(MULTILINGUAL_MODEL_CANDIDATES)
+    if include_english_fallback and not any(c.startswith("en_core_web") for c in candidates):
+        candidates.extend(["en_core_web_sm", "en_core_web_md", "en_core_web_lg"])
+    return candidates
+
+
+def _resolve_model_name(language: str | None, include_english_fallback: bool = True) -> str:
+    key = _language_key(language)
+    cached = _MODEL_NAME_CACHE.get(key)
+    if cached:
+        if include_english_fallback:
+            return cached
+        if not cached.startswith("en_core_web"):
+            return cached
+
+    last_error = None
+    for model_name in _candidate_models(language, include_english_fallback=include_english_fallback):
+        try:
+            model = spacy.load(model_name)
+            _NLP_CACHE[key] = model
+            _MODEL_NAME_CACHE[key] = model_name
+            return model_name
+        except OSError as exc:
+            last_error = exc
+
+    if include_english_fallback:
+        raise RuntimeError(
+            "No compatible spaCy model is available for entity extraction. "
+            "Install at minimum: python3 -m spacy download en_core_web_sm"
+        ) from last_error
+    raise RuntimeError(f"No non-English spaCy model is available for language '{key}'.") from last_error
+
+
+def get_nlp(language: str | None = None):
+    key = _language_key(language)
+    if key in _NLP_CACHE:
+        return _NLP_CACHE[key]
+
+    model_name = _resolve_model_name(language)
+    return _NLP_CACHE[key]
+
+
+def has_native_language_model(language: str | None) -> bool:
+    key = _language_key(language)
+    if key == "en":
+        return True
+    model_name = _MODEL_NAME_CACHE.get(key)
+    if model_name:
+        return not model_name.startswith("en_core_web")
+    try:
+        _resolve_model_name(language, include_english_fallback=False)
+        return True
+    except RuntimeError:
+        return False
+
+
+def _classify_model_path(model_name: str | None) -> str:
+    if not model_name or model_name.startswith("en_core_web"):
+        return "english_default"
+    if model_name in MULTILINGUAL_MODEL_CANDIDATES:
+        return "multilingual_fallback"
+    return "native_specific"
+
+
+def _find_installed_model(language: str | None, include_english_fallback: bool = True) -> str | None:
+    key = _language_key(language)
+    cached = _MODEL_NAME_CACHE.get(key)
+    if cached:
+        return cached
+
+    for model_name in _candidate_models(language, include_english_fallback=include_english_fallback):
+        if importlib.util.find_spec(model_name):
+            return model_name
+    return None
+
+
+def describe_entity_extraction(article: dict) -> dict:
+    article_language = article.get("translation_source_language") or article.get("language") or "en"
+    normalized_language = _language_key(article_language)
+    has_translation = bool(article.get("translated_title") or article.get("translated_description"))
+
+    if has_native_language_model(article_language):
+        model_name = _resolve_model_name(article_language, include_english_fallback=False)
+        extraction_language = article_language
+        path = _classify_model_path(model_name)
+        text_source = "original"
+    elif has_translation:
+        model_name = _resolve_model_name("en")
+        extraction_language = "en"
+        path = "translated_english"
+        text_source = "translated"
+    else:
+        model_name = _resolve_model_name(article_language)
+        extraction_language = article_language
+        path = _classify_model_path(model_name)
+        text_source = "original"
+
+    return {
+        "article_language": normalized_language,
+        "extraction_language": _language_key(extraction_language),
+        "model_name": model_name,
+        "path": path,
+        "text_source": text_source,
+    }
+
+
+def get_entity_model_capabilities() -> dict:
+    tracked_languages = ["en", "fr", "es", "de", "pt", "it", "zh", "ar", "uk", "tr", "he"]
+    language_support = {}
+    path_totals = {
+        "native_specific": 0,
+        "multilingual_fallback": 0,
+        "english_default": 0,
+    }
+
+    for language in tracked_languages:
+        if language == "en":
+            model_name = _find_installed_model("en")
+            path = _classify_model_path(model_name)
+            supported = bool(model_name)
+        else:
+            model_name = _find_installed_model(language, include_english_fallback=False)
+            path = _classify_model_path(model_name) if model_name else "unavailable"
+            supported = bool(model_name)
+
+        language_support[language] = {
+            "supported": supported,
+            "model_name": model_name,
+            "path": path,
+        }
+        if path in path_totals and supported:
+            path_totals[path] += 1
+
+    return {
+        "tracked_languages": tracked_languages,
+        "language_support": language_support,
+        "path_totals": path_totals,
+    }
 
 # ─── Config ───────────────────────────────────────────────────────────────────
 RELEVANT_TYPES = {"PERSON", "GPE", "ORG", "NORP"}
@@ -113,10 +298,23 @@ ALIASES = {
 }
 
 DB_PATH = "./entities.db"
+SQLITE_TIMEOUT_SECONDS = float(os.getenv("OTHELLO_SQLITE_TIMEOUT_SECONDS", "30"))
+
+
+def _connect():
+    conn = sqlite3.connect(DB_PATH, timeout=SQLITE_TIMEOUT_SECONDS)
+    conn.execute("PRAGMA busy_timeout=30000")
+    try:
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA synchronous=NORMAL")
+    except sqlite3.OperationalError as exc:
+        if "locked" not in str(exc).lower():
+            raise
+    return conn
 
 # ─── DB init ──────────────────────────────────────────────────────────────────
 def init_db():
-    conn = sqlite3.connect(DB_PATH)
+    conn = _connect()
     c = conn.cursor()
 
     c.execute("""
@@ -145,6 +343,14 @@ def init_db():
     c.execute("CREATE INDEX IF NOT EXISTS idx_mentioned_at ON entity_mentions(mentioned_at)")
     c.execute("CREATE INDEX IF NOT EXISTS idx_cooc_a ON entity_cooccurrences(entity_a)")
     c.execute("CREATE INDEX IF NOT EXISTS idx_cooc_b ON entity_cooccurrences(entity_b)")
+    c.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_entity_mention
+        ON entity_mentions(topic, article_url, entity)
+    """)
+    c.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_entity_cooccurrence
+        ON entity_cooccurrences(topic, article_url, entity_a, entity_b)
+    """)
 
     conn.commit()
     conn.close()
@@ -194,9 +400,9 @@ def normalize_entity(text: str) -> str | None:
 
 
 # ─── Extraction ───────────────────────────────────────────────────────────────
-def extract_entities(text: str) -> list[dict]:
-    """Extract and normalize named entities from text using spaCy lg model."""
-    doc = nlp(text)
+def extract_entities(text: str, language: str | None = None) -> list[dict]:
+    """Extract and normalize named entities from text using the best available spaCy model."""
+    doc = get_nlp(language)(text)
     entities = []
     seen = set()
 
@@ -223,22 +429,59 @@ def extract_entities(text: str) -> list[dict]:
 # ─── Storage ──────────────────────────────────────────────────────────────────
 def store_entity_mentions(articles: list[dict], topic: str):
     """Extract entities, store mentions and co-occurrences."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = _connect()
     c = conn.cursor()
     now = datetime.now().isoformat()
     total_mentions = 0
     total_cooc = 0
+    path_counts = {}
+    model_counts = {}
+    language_counts = {}
+    language_paths = {}
 
     for article in articles:
-        text = f"{article['title']}. {article.get('description', '')}"
-        entities = extract_entities(text)
+        extraction = describe_entity_extraction(article)
+        article_language = extraction["article_language"]
+        path = extraction["path"]
+        model_name = extraction["model_name"]
+
+        if extraction["text_source"] == "original":
+            title = article.get("original_title") or article.get("title") or ""
+            description = article.get("original_description") or article.get("description") or ""
+        else:
+            title = article.get("translated_title") or article.get("title") or article.get("original_title") or ""
+            description = article.get("translated_description") or article.get("description") or article.get("original_description") or ""
+        extraction_language = extraction["extraction_language"]
+        text = f"{title}. {description}"
+        entities = extract_entities(text, language=extraction_language)
+
+        language_counts[article_language] = language_counts.get(article_language, 0) + 1
+        path_counts[path] = path_counts.get(path, 0) + 1
+        if model_name:
+            model_counts[model_name] = model_counts.get(model_name, 0) + 1
+        language_entry = language_paths.setdefault(
+            article_language,
+            {
+                "articles": 0,
+                "path_counts": {},
+                "model_counts": {},
+                "text_sources": {},
+            },
+        )
+        language_entry["articles"] += 1
+        language_entry["path_counts"][path] = language_entry["path_counts"].get(path, 0) + 1
+        if model_name:
+            language_entry["model_counts"][model_name] = language_entry["model_counts"].get(model_name, 0) + 1
+        text_source = extraction["text_source"]
+        language_entry["text_sources"][text_source] = language_entry["text_sources"].get(text_source, 0) + 1
 
         for entity in entities:
             c.execute("""
                 INSERT INTO entity_mentions (entity, entity_type, topic, article_url, mentioned_at)
                 VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(topic, article_url, entity) DO NOTHING
             """, (entity["entity"], entity["type"], topic, article["url"], now))
-            total_mentions += 1
+            total_mentions += c.rowcount
 
         for i in range(len(entities)):
             for j in range(i + 1, len(entities)):
@@ -249,12 +492,23 @@ def store_entity_mentions(articles: list[dict], topic: str):
                 c.execute("""
                     INSERT INTO entity_cooccurrences (entity_a, entity_b, topic, article_url, mentioned_at)
                     VALUES (?, ?, ?, ?, ?)
+                    ON CONFLICT(topic, article_url, entity_a, entity_b) DO NOTHING
                 """, (a, b, topic, article["url"], now))
-                total_cooc += 1
+                total_cooc += c.rowcount
 
     conn.commit()
     conn.close()
     print(f"[entities] Stored {total_mentions} mentions, {total_cooc} co-occurrences for '{topic}'")
+    return {
+        "topic": topic,
+        "articles_processed": len(articles),
+        "mentions_written": total_mentions,
+        "cooccurrences_written": total_cooc,
+        "path_counts": path_counts,
+        "model_counts": model_counts,
+        "language_counts": language_counts,
+        "language_paths": language_paths,
+    }
 
 # ─── Frequency / spike detection ─────────────────────────────────────────────
 def get_entity_frequencies(days_recent: int = 2, days_baseline: int = 7, topic: str = None) -> list[dict]:
@@ -263,7 +517,7 @@ def get_entity_frequencies(days_recent: int = 2, days_baseline: int = 7, topic: 
     Applies tier-based thresholds — high-frequency entities need a bigger
     spike to be considered signal.
     """
-    conn = sqlite3.connect(DB_PATH)
+    conn = _connect()
     c = conn.cursor()
 
     now = datetime.now()
@@ -331,7 +585,7 @@ def get_entity_frequencies(days_recent: int = 2, days_baseline: int = 7, topic: 
 
 def get_top_entities(topic: str = None, days: int = 7, limit: int = 10) -> list[dict]:
     """Get most mentioned entities over a time period, deduplicated by name."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = _connect()
     c = conn.cursor()
 
     cutoff = (datetime.now() - timedelta(days=days)).isoformat()
@@ -355,7 +609,7 @@ def get_top_entities(topic: str = None, days: int = 7, limit: int = 10) -> list[
 # ─── Co-occurrence / relationships ───────────────────────────────────────────
 def get_entity_relationships(entity: str, days: int = 7, limit: int = 10) -> list[dict]:
     """Get entities most frequently co-mentioned with a given entity."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = _connect()
     c = conn.cursor()
 
     cutoff = (datetime.now() - timedelta(days=days)).isoformat()
@@ -378,7 +632,7 @@ def get_entity_relationships(entity: str, days: int = 7, limit: int = 10) -> lis
 
 def get_relationship_graph(days: int = 7, min_cooccurrences: int = 2, topic: str = None) -> dict:
     """Return full entity relationship graph for visualization."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = _connect()
     c = conn.cursor()
 
     cutoff = (datetime.now() - timedelta(days=days)).isoformat()

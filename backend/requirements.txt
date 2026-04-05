@@ -1,0 +1,13 @@
+anthropic
+apscheduler
+chromadb
+fastapi
+httpx
+groq
+newsapi-python
+python-dotenv
+psycopg[binary]
+requests
+spacy
+sentence-transformers
+uvicorn
