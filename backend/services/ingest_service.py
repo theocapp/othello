@@ -65,10 +65,6 @@ from core.config import (
     HISTORICAL_FETCH_DOMAIN_INTERVAL_SECONDS,
     HISTORICAL_FETCH_MAX_ATTEMPTS,
     HISTORICAL_FETCH_WRITE_BATCH_SIZE,
-    INGEST_JOB_LOCK,
-    BACKFILL_JOB_LOCK,
-    HISTORICAL_FETCH_JOB_LOCK,
-    STORY_MATERIALIZATION_JOB_LOCK,
     MIN_TOPIC_ARTICLES,
     NARRATIVE_DRIFT_TOP_SUBJECTS,
     REQUEST_ENABLE_CHROMA_INGEST,
@@ -79,6 +75,12 @@ from core.config import (
     TRANSLATION_REMOTE_FALLBACK_SCORE,
 )
 from core.auth import run_exclusive, run_exclusive_or_skip
+from core.locks import (
+    BACKFILL_JOB_LOCK,
+    HISTORICAL_FETCH_JOB_LOCK,
+    INGEST_JOB_LOCK,
+    STORY_MATERIALIZATION_JOB_LOCK,
+)
 from core.runtime import parse_timestamp, topic_counts
 
 

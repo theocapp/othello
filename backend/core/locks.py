@@ -1,0 +1,6 @@
+from threading import Lock
+
+INGEST_JOB_LOCK = Lock()
+BACKFILL_JOB_LOCK = Lock()
+HISTORICAL_FETCH_JOB_LOCK = Lock()
+STORY_MATERIALIZATION_JOB_LOCK = Lock()
