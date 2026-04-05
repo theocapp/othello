@@ -70,6 +70,40 @@ def _normalize_event(record: dict) -> dict:
     if source_url:
         source_urls.append(source_url)
     notes = record.get("notes") or ""
+
+    # Build a meaningful summary even when ACLED notes field is empty
+    if notes.strip():
+        summary = notes[:400]
+    else:
+        et = (record.get("event_type") or "Incident").strip()
+        sub = (record.get("sub_event_type") or "").strip()
+        loc = (record.get("location") or "").strip()
+        admin1 = (record.get("admin1") or "").strip()
+        country = (record.get("country") or "").strip()
+        a1 = (record.get("actor1") or "").strip()
+        a2 = (record.get("actor2") or "").strip()
+        fatalities = int(record["fatalities"]) if record.get("fatalities") not in (None, "") else 0
+
+        # Use sub_event_type for specificity when available
+        action = sub if sub and sub.lower() != et.lower() else et
+        place = loc or admin1 or country or "an unspecified location"
+        place_in = f"in {loc}" if loc else (f"in {admin1}" if admin1 else (f"in {country}" if country else ""))
+
+        parts = []
+        if a1 and a2:
+            parts.append(f"{action} involving {a1} and {a2} {place_in}".strip())
+        elif a1:
+            parts.append(f"{action} involving {a1} {place_in}".strip())
+        else:
+            parts.append(f"{action} reported {place_in}".strip())
+
+        if fatalities:
+            parts.append(f"{fatalities} fatalities reported")
+        if event_date:
+            parts.append(f"on {event_date}")
+
+        summary = ". ".join(parts) + "."
+
     return {
         "event_id": f"acled-{record.get('event_id_cnty') or record.get('event_id_no_cnty') or record.get('event_id')}",
         "dataset": "acled",
@@ -89,7 +123,7 @@ def _normalize_event(record: dict) -> dict:
         "fatalities": int(record["fatalities"]) if record.get("fatalities") not in (None, "") else None,
         "source_count": int(record["source_scale"]) if str(record.get("source_scale", "")).isdigit() else None,
         "source_urls": source_urls,
-        "summary": notes[:400] if notes else None,
+        "summary": summary,
         "payload": record,
         "first_ingested_at": time.time(),
         "last_ingested_at": time.time(),

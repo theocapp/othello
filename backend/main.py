@@ -80,8 +80,11 @@ from foresight import extract_predictions_from_briefing, load_early_signal_archi
 from fetch_historical_queue import fetch_historical_queue
 from geo_constants import COUNTRY_CENTROIDS, STORY_REGION_CENTROIDS
 from story_materialization import rebuild_materialized_story_clusters
+from country_instability import compute_country_instability
+from correlation_engine import compute_correlations
+from tiered_cache import cache as tiered_cache, TTL_FAST, TTL_MEDIUM, TTL_SLOW
 
-load_dotenv(Path(__file__).with_name(".env"))
+load_dotenv(Path(__file__).with_name(".env"), override=True)
 
 
 def _split_csv_env(value: str | None) -> list[str]:
@@ -488,51 +491,122 @@ def _hotspot_event_weight(event: dict, now: datetime, window_hours: int) -> tupl
     return round(weight, 4), event_dt
 
 
+def _dedup_location_string(text: str) -> str:
+    """Remove redundant segments and resolve raw codes from GDELT-style location strings.
+    e.g. 'Tehran, Tehran, Iran' → 'Tehran, Iran'
+         'California, United States, United States' → 'California, United States'
+         'IR, Iran' → 'Iran'
+    """
+    from gdelt_gkg_ingestion import COUNTRY_CODE_TO_NAME as _CC
+    parts = [p.strip() for p in text.split(",") if p.strip()]
+    # Resolve 2-letter country codes in individual segments
+    resolved = []
+    for p in parts:
+        if len(p) == 2 and p.isupper() and p in _CC:
+            resolved.append(_CC[p])
+        else:
+            resolved.append(p)
+    deduped = []
+    seen_lower: set[str] = set()
+    for part in resolved:
+        key = part.lower()
+        if key not in seen_lower:
+            deduped.append(part)
+            seen_lower.add(key)
+    return ", ".join(deduped)
+
+
 def _acled_hotspot_event_copy(event: dict) -> dict:
     """Human-readable summary/title for map tooltips when DB summary is empty."""
     raw_summary = (event.get("summary") or "").strip()
     et = (event.get("event_type") or "Incident").strip()
-    sub = (event.get("sub_event_type") or "").strip()
-    loc = (event.get("location") or "").strip()
+    sub_raw = (event.get("sub_event_type") or "").strip()
+    # Ignore raw CAMEO numeric codes (e.g. "190", "172") and GDELT admin codes as sub-types
+    sub = sub_raw if sub_raw and not sub_raw.isdigit() and not re.match(r"^[A-Z]{2}[A-Z0-9]{0,4}$", sub_raw) else ""
+    loc = _dedup_location_string(re.sub(r"\s*\(general\)", "", (event.get("location") or "").strip()))
     admin1 = (event.get("admin1") or "").strip()
+    # Skip raw GDELT admin/country codes (e.g. "IS00", "USCA", "IS", "UK", "AS")
+    if admin1 and re.match(r"^[A-Z]{2}[A-Z0-9]{0,4}$", admin1):
+        admin1 = ""
     country = (event.get("country") or "").strip()
+    # Resolve 2-letter GDELT/FIPS country codes to full names
+    if country and len(country) <= 2 and country.isupper():
+        from gdelt_gkg_ingestion import COUNTRY_CODE_TO_NAME
+        country = COUNTRY_CODE_TO_NAME.get(country, country)
     a1 = (event.get("actor_primary") or "").strip()
     a2 = (event.get("actor_secondary") or "").strip()
     payload = event.get("payload") or {}
     fatal = int(event.get("fatalities") or 0)
+    event_date = (event.get("event_date") or "").strip()
+
+    # Strip CAMEO jargon and GDELT artifacts from old summaries
     if raw_summary:
+        raw_summary = re.sub(r"\s*\(CAMEO\s+\d+,?\s*root\s+\d+\)", "", raw_summary).strip()
+        raw_summary = re.sub(r"\s*\[?\d{3}\]?\s*$", "", raw_summary).strip()  # trailing CAMEO codes
+        raw_summary = re.sub(r"\s*\(general\)", "", raw_summary).strip()  # GDELT qualifier
+        raw_summary = raw_summary.rstrip(",").strip()
+        raw_summary = _dedup_location_string(raw_summary)  # deduplicate location parts
+    # Check if summary has actual narrative content (not just a location string)
+    _summary_has_narrative = (
+        raw_summary and len(raw_summary) > 30
+        and any(kw in raw_summary.lower() for kw in (
+            "reported", "involving", "attack", "strike", "killed", "injured", "protest",
+            "clash", "fighting", "bomb", "explosion", "arrest", "ceasefire", "sanction",
+            "election", "diplomat", "military", "troops", "forces", "violence",
+            "offensive", "defensive", "siege", "raid", "detain", "fatalities",
+            "incident", "development", "escalat", "de-escalat", "tension",
+        ))
+    )
+    if _summary_has_narrative:
         summary = raw_summary
     else:
-        place = loc or admin1 or country
-        head = sub if sub and sub.lower() != et.lower() else et
-        parts = [head]
-        actor_bits = []
-        if a1:
-            actor_bits.append(a1)
-        if a2:
-            actor_bits.append(a2)
-        if actor_bits:
-            parts.append(f"({' vs '.join(actor_bits[:2])})")
+        # Build a full narrative sentence instead of terse fragments
+        action = sub if sub and sub.lower() != et.lower() else et
+
+        # Place detail — avoid redundant country when already in location string
         if loc and loc.lower() != country.lower():
-            parts.append(f"near {loc}")
+            if country and country.lower() not in loc.lower():
+                place_detail = f"in {loc}, {country}"
+            else:
+                place_detail = f"in {loc}"
         elif admin1 and admin1.lower() != country.lower():
-            parts.append(f"in {admin1}")
+            place_detail = f"in {admin1}, {country}" if country else f"in {admin1}"
         elif country:
-            parts.append(f"in {country}")
-        code = (payload.get("event_code") or payload.get("root_code") or "").strip()
-        if code and code not in " ".join(parts):
-            parts.append(f"[{code}]")
+            place_detail = f"in {country}"
+        else:
+            place_detail = "at an unspecified location"
+
+        # Actor detail
+        if a1 and a2:
+            actor_detail = f" involving {a1} and {a2}"
+        elif a1:
+            actor_detail = f" involving {a1}"
+        else:
+            actor_detail = ""
+
+        # Assemble narrative
+        summary = f"{action} reported {place_detail}{actor_detail}"
+        if event_date:
+            summary += f" on {event_date}"
+        summary += "."
         if fatal:
-            parts.append(f"({fatal} fatalities reported)")
-        summary = " ".join(parts)
-        if summary.strip() == head or summary.strip() == et:
-            summary = f"{head} ({place or 'location unknown'})".strip()
+            summary += f" {fatal} fatalities reported."
+        # Append raw_summary if it exists but was too short to use alone
+        if raw_summary and raw_summary not in summary:
+            summary += f" {raw_summary}"
+
+    # Build a descriptive title
     place_for_title = loc or admin1 or country or "Unknown"
-    detail_bits = [x for x in (sub if sub and sub != et else None, a1 or None) if x]
-    title_core = f"{et}: {place_for_title}"
-    if detail_bits:
-        title_core = f"{et} ({detail_bits[0]}) — {place_for_title}"
-    title = title_core
+    if a1 and a2:
+        title = f"{et}: {a1} vs {a2} — {place_for_title}"
+    elif a1:
+        title = f"{et} involving {a1} — {place_for_title}"
+    else:
+        detail = sub if sub and sub != et else None
+        if detail:
+            title = f"{et} ({detail}) — {place_for_title}"
+        else:
+            title = f"{et} — {place_for_title}"
     if fatal and "fatal" not in title.lower():
         title = f"{title} · {fatal} fatalities"
     return {"summary": summary, "title": title[:220]}
@@ -552,15 +626,39 @@ def _map_headline_for_structured_cluster(cluster: dict, primary_country: str) ->
             first = first[:165].rsplit(" ", 1)[0] + "…"
         return first or summary[:168]
 
+    # Fallback: build a meaningful narrative headline from cluster metadata
     pet = (cluster.get("primary_event_type") or "").strip() or "Incident"
     sub = (cluster.get("primary_sub_event_type") or "").strip()
     base = sub if sub and sub.lower() != pet.lower() else pet
     actors = [str(a).strip() for a in (cluster.get("entity_focus") or []) if str(a).strip()]
-    if len(actors) >= 2:
-        return f"{base} in {primary_country}: {actors[0]} vs {actors[1]}"
-    if len(actors) == 1:
-        return f"{base} in {primary_country} ({actors[0]})"
-    return f"{base} in {primary_country}"
+    locations = [str(loc).strip() for loc in (cluster.get("location_focus") or []) if str(loc).strip()]
+    event_count = int(cluster.get("structured_event_count") or 0)
+    fatalities = int(cluster.get("fatality_total") or 0)
+
+    # Build place detail
+    if locations:
+        place = locations[0] if locations[0].lower() != primary_country.lower() else primary_country
+        if len(locations) >= 2 and locations[0].lower() != primary_country.lower():
+            place = f"{locations[0]} and nearby areas"
+    else:
+        place = primary_country
+
+    # Build the headline with as much context as possible
+    parts = [base]
+    if actors and len(actors) >= 2:
+        parts.append(f"involving {actors[0]} and {actors[1]}")
+    elif actors:
+        parts.append(f"involving {actors[0]}")
+    elif event_count > 1:
+        parts.append(f"({event_count} incidents)")
+    parts.append(f"in {place}")
+    if fatalities:
+        parts.append(f"— {fatalities} fatalities reported")
+
+    headline = " ".join(parts)
+    if len(headline) > 168:
+        headline = headline[:165].rsplit(" ", 1)[0] + "…"
+    return headline
 
 
 def _development_aspect_from_structured_cluster(cluster: dict) -> str:
@@ -644,10 +742,23 @@ def _incident_hotspots_from_semantic_clusters(
             lon_acc += float(ev["longitude"]) * w
             edt = _event_datetime_for_hotspot(ev.get("event_date"))
             recency_vals.append(_hotspot_recency_factor(edt, now, hours))
+
+            # Resolve country codes and filter out raw admin codes for display
+            ev_country = " ".join(str(ev.get("country") or "").split()).strip()
+            if ev_country and len(ev_country) == 2 and ev_country.isupper():
+                from gdelt_gkg_ingestion import COUNTRY_CODE_TO_NAME
+                ev_country = COUNTRY_CODE_TO_NAME.get(ev_country, ev_country)
+            ev_admin1 = " ".join(str(ev.get("admin1") or "").split()).strip()
+            if ev_admin1 and re.match(r"^[A-Z]{2}[A-Z0-9]{0,4}$", ev_admin1):
+                ev_admin1 = ""  # Skip raw GDELT admin/country codes like IS00, USCA, IS, UK
+
+            ev_location = _dedup_location_string(
+                re.sub(r"\s*\(general\)", "", " ".join(str(ev.get("location") or "").split()).strip())
+            )
             for label, counter in (
-                (ev.get("location"), location_counts),
-                (ev.get("country"), country_counts),
-                (ev.get("admin1"), admin1_counts),
+                (ev_location, location_counts),
+                (ev_country, country_counts),
+                (ev_admin1, admin1_counts),
                 (ev.get("event_type"), event_type_counts),
             ):
                 clean = " ".join(str(label or "").split()).strip()
@@ -661,6 +772,10 @@ def _incident_hotspots_from_semantic_clusters(
         attention_score = round(base_priority * (0.32 + 0.68 * avg_recency), 2)
 
         primary_country = max(country_counts.items(), key=lambda item: (item[1], item[0]))[0] if country_counts else "Unknown country"
+        # Resolve any remaining 2-letter country codes
+        if primary_country and len(primary_country) == 2 and primary_country.isupper():
+            from gdelt_gkg_ingestion import COUNTRY_CODE_TO_NAME
+            primary_country = COUNTRY_CODE_TO_NAME.get(primary_country, primary_country)
         primary_location = (
             max(location_counts.items(), key=lambda item: (item[1], item[0]))[0]
             if location_counts
@@ -712,7 +827,7 @@ def _incident_hotspots_from_semantic_clusters(
                 "hotspot_id": hotspot_id,
                 "label": headline,
                 "headline": headline,
-                "cluster_label": (cluster.get("label") or "").strip() or None,
+                "cluster_label": (cluster.get("label") or "").strip() or headline,
                 "country": primary_country,
                 "admin1": primary_admin1,
                 "location": primary_location,
@@ -1067,14 +1182,27 @@ def _build_story_hotspots(window: str, now: datetime) -> tuple[list[dict], int]:
         if centroid_lat is None or centroid_lon is None:
             continue
 
-        headline = " ".join(str(row.get("label") or "").split()).strip() or primary_location or "Story cluster"
+        raw_label = " ".join(str(row.get("label") or "").split()).strip()
         summary_text = " ".join(str(row.get("summary") or "").split()).strip()
+
+        # Try to extract a meaningful headline from the summary first
+        headline = ""
         if summary_text:
             first_sent = summary_text.split(".")[0].strip()
             if len(first_sent) >= 28:
                 if len(first_sent) > 168:
                     first_sent = first_sent[:165].rsplit(" ", 1)[0] + "…"
                 headline = first_sent
+        if not headline:
+            headline = raw_label
+        if not headline or headline == primary_location or headline == primary_country:
+            # Last resort: build a descriptive headline from the topic and location
+            topic_label = "Economic development" if primary_topic == "economics" else "Political development" if primary_topic == "geopolitics" else "Development"
+            article_count = len(urls)
+            if article_count > 1:
+                headline = f"{topic_label} in {primary_location or primary_country} ({article_count} sources)"
+            else:
+                headline = f"{topic_label} reported in {primary_location or primary_country}"
         primary_topic = (row.get("topic") or "").strip().lower() or None
         aspect = _story_hotspot_type(
             {
@@ -1121,6 +1249,7 @@ def _build_story_hotspots(window: str, now: datetime) -> tuple[list[dict], int]:
             )
 
         if not sample_events and urls:
+            fallback_summary = (row.get("summary") or headline)[:280] or headline
             for url in urls[:4]:
                 sample_events.append(
                     {
@@ -1133,8 +1262,8 @@ def _build_story_hotspots(window: str, now: datetime) -> tuple[list[dict], int]:
                         "fatalities": 0,
                         "source_count": 1,
                         "source_urls": [url] if url else [],
-                        "title": None,
-                        "summary": (row.get("summary") or headline)[:280] or None,
+                        "title": headline,
+                        "summary": fallback_summary,
                     }
                 )
 
@@ -3525,6 +3654,32 @@ def get_region_attention(window: str = "24h"):
 @app.get("/coverage/map")
 def get_hotspot_attention_map(window: str = "24h"):
     return _build_hotspot_attention_map(window=window)
+
+
+# ── Country Instability Index ────────────────────────────────────────────────
+
+@app.get("/instability")
+def get_country_instability(days: int = 3):
+    return tiered_cache.get(
+        f"cii:{days}",
+        lambda: compute_country_instability(days=days),
+        ttl=TTL_MEDIUM,
+    )
+
+
+@app.get("/instability/{country}")
+def get_country_instability_detail(country: str, days: int = 3):
+    result = compute_country_instability(days=days)
+    normalized = country.strip().lower()
+    for entry in result.get("countries", []):
+        if entry["country"] == normalized or (entry.get("label") or "").lower() == normalized:
+            return entry
+    raise HTTPException(status_code=404, detail=f"No instability data for '{country}'")
+
+
+@app.get("/correlations")
+def get_correlations(days: int = 3):
+    return compute_correlations(days=days)
 
 
 @app.get("/events/materialized")

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { fetchBeforeNewsArchive, fetchBriefing, fetchEntityReference, fetchEntitySignals, fetchEvents, fetchHeadlines, fetchHealth, fetchPredictionLedger, fetchRegionAttention, fetchTimeline, sendQuery } from './api'
+import { fetchBeforeNewsArchive, fetchBriefing, fetchCorrelations, fetchEntityReference, fetchEntitySignals, fetchEvents, fetchHeadlines, fetchHealth, fetchInstability, fetchPredictionLedger, fetchRegionAttention, fetchTimeline, sendQuery } from './api'
 import ReactMarkdown from 'react-markdown'
 import * as d3 from 'd3'
 import * as topojson from 'topojson-client'
@@ -731,14 +731,37 @@ function hotspotEventTitle(ev) {
   const t = (ev?.title || '').trim()
   if (t) return t
   const et = (ev?.event_type || 'Event').trim()
+  const sub = (ev?.sub_event_type || '').trim()
   const place = (ev?.location || ev?.admin1 || ev?.country || '').trim()
-  return place ? `${et}: ${place}` : et
+  const action = (sub && sub.toLowerCase() !== et.toLowerCase()) ? sub : et
+  const a1 = (ev?.actor_primary || '').trim()
+  const a2 = (ev?.actor_secondary || '').trim()
+  if (a1 && a2 && place) return `${action}: ${a1} vs ${a2} — ${place}`
+  if (a1 && place) return `${action} involving ${a1} — ${place}`
+  return place ? `${action} — ${place}` : action
 }
 
 function hotspotEventDescription(ev) {
   const s = (ev?.summary || '').trim()
-  if (s) return s
-  return hotspotEventTitle(ev)
+  if (s && s.length > 20) return s
+  // Build a meaningful description from available fields
+  const et = (ev?.event_type || 'Event').trim()
+  const sub = (ev?.sub_event_type || '').trim()
+  const action = (sub && sub.toLowerCase() !== et.toLowerCase()) ? sub : et
+  const place = (ev?.location || ev?.admin1 || ev?.country || '').trim()
+  const a1 = (ev?.actor_primary || '').trim()
+  const a2 = (ev?.actor_secondary || '').trim()
+  const date = (ev?.event_date || '').trim()
+  const fatalities = ev?.fatalities || 0
+  let desc = `${action} reported`
+  if (place) desc += ` in ${place}`
+  if (a1 && a2) desc += ` involving ${a1} and ${a2}`
+  else if (a1) desc += ` involving ${a1}`
+  if (date) desc += ` on ${date}`
+  desc += '.'
+  if (fatalities) desc += ` ${fatalities} fatalities reported.`
+  if (s) desc += ` ${s}`
+  return desc
 }
 
 function MapSummaryPanel({ data, hotspot, onOpenBriefing, onAnalyzeCluster }) {
@@ -983,6 +1006,171 @@ function MapSummaryPanel({ data, hotspot, onOpenBriefing, onAnalyzeCluster }) {
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+const LEVEL_COLORS = { critical: '#ef4444', high: '#f97316', elevated: '#fbbf24', low: '#4ade80' }
+const TREND_ARROWS = { rising: '▲', falling: '▼', stable: '—', new: '●' }
+const TREND_COLORS = { rising: '#ef4444', falling: '#4ade80', stable: '#7d8794', new: '#60a5fa' }
+
+function InstabilityPanel({ data, loading, error, onAnalyze }) {
+  const countries = data?.countries || []
+  const topCountries = countries.slice(0, 12)
+
+  return (
+    <div style={{ border: `1px solid ${C.border}`, background: C.bgRaised, padding: '1rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#f97316' }} />
+          <h2 style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.55rem', color: C.silver, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Country Instability Index</h2>
+        </div>
+        {data && (
+          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.44rem', color: C.textMuted, letterSpacing: '0.06em' }}>
+            {data.country_count} COUNTRIES · {data.window_days}D WINDOW
+          </div>
+        )}
+      </div>
+      <div style={{ height: '1px', background: C.border, marginBottom: '0.5rem' }} />
+
+      {loading && (
+        <div>
+          {[0, 1, 2, 3, 4].map(i => (
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.55rem 0.2rem', borderBottom: `1px solid ${C.border}` }}>
+              <div className="skeleton" style={{ height: '0.75rem', width: '50%' }} />
+              <div className="skeleton" style={{ height: '0.75rem', width: '12%' }} />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!loading && error && (
+        <div style={{ padding: '0.8rem 0.2rem', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.56rem', color: C.textSecondary }}>
+          {error}
+        </div>
+      )}
+
+      {!loading && !error && topCountries.length === 0 && (
+        <div style={{ padding: '0.8rem 0.2rem', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.56rem', color: C.textSecondary }}>
+          No instability data available yet — structured events may still be ingesting.
+        </div>
+      )}
+
+      {!loading && !error && topCountries.map((country, i) => (
+        <div
+          key={country.country}
+          className="theater-row"
+          onClick={() => onAnalyze && onAnalyze(country)}
+          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.55rem 0.2rem', borderBottom: `1px solid ${C.border}`, cursor: 'pointer', borderRadius: 2 }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0 }}>
+            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.46rem', color: C.textMuted, width: '1rem', textAlign: 'right', flexShrink: 0 }}>{i + 1}</div>
+            <div style={{ fontFamily: "'Source Serif 4', serif", fontSize: '0.88rem', color: C.textSecondary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{country.label}</div>
+            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.42rem', color: LEVEL_COLORS[country.level] || C.textMuted, letterSpacing: '0.1em', textTransform: 'uppercase', flexShrink: 0 }}>{country.level}</div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexShrink: 0 }}>
+            <div style={{ width: 60, height: 4, background: C.bg, borderRadius: 2, overflow: 'hidden' }}>
+              <div style={{ width: `${Math.min(100, country.score)}%`, height: '100%', background: LEVEL_COLORS[country.level] || C.textMuted, borderRadius: 2 }} />
+            </div>
+            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.56rem', color: C.textPrimary, width: '2rem', textAlign: 'right' }}>{country.score}</div>
+            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.52rem', color: TREND_COLORS[country.trend] || C.textMuted, width: '0.8rem', textAlign: 'center' }}>
+              {TREND_ARROWS[country.trend] || '—'}
+            </div>
+          </div>
+        </div>
+      ))}
+
+      {!loading && !error && countries.length > 12 && (
+        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.44rem', color: C.textMuted, padding: '0.6rem 0.2rem', letterSpacing: '0.06em' }}>
+          + {countries.length - 12} more countries tracked
+        </div>
+      )}
+    </div>
+  )
+}
+
+const CONVERGENCE_COLORS = {
+  crisis_escalation: '#ef4444',
+  military_escalation: '#f97316',
+  information_crisis: '#a855f7',
+  conflict_spotlight: '#ef4444',
+  emerging_situation: '#fbbf24',
+  narrative_instability: '#8b5cf6',
+  multi_signal: '#60a5fa',
+}
+
+function CorrelationPanel({ data, loading, error, onAnalyze }) {
+  const cards = data?.cards || []
+
+  return (
+    <div style={{ border: `1px solid ${C.border}`, background: C.bgRaised, padding: '1rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#a855f7' }} />
+          <h2 style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.55rem', color: C.silver, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Signal Convergence</h2>
+        </div>
+        {data && (
+          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.44rem', color: C.textMuted, letterSpacing: '0.06em' }}>
+            {data.card_count} CONVERGENCES
+          </div>
+        )}
+      </div>
+      <div style={{ height: '1px', background: C.border, marginBottom: '0.5rem' }} />
+
+      {loading && (
+        <div>
+          {[0, 1, 2].map(i => (
+            <div key={i} style={{ padding: '0.75rem 0.2rem', borderBottom: `1px solid ${C.border}` }}>
+              <div className="skeleton" style={{ height: '0.8rem', width: '70%', marginBottom: '0.35rem' }} />
+              <div className="skeleton" style={{ height: '0.55rem', width: '90%' }} />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!loading && error && (
+        <div style={{ padding: '0.8rem 0.2rem', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.56rem', color: C.textSecondary }}>
+          {error}
+        </div>
+      )}
+
+      {!loading && !error && cards.length === 0 && (
+        <div style={{ padding: '0.8rem 0.2rem', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.56rem', color: C.textSecondary }}>
+          No cross-domain convergences detected in the current window.
+        </div>
+      )}
+
+      {!loading && !error && cards.slice(0, 8).map((card) => (
+        <div
+          key={card.country}
+          className="theater-row"
+          onClick={() => onAnalyze && onAnalyze(card)}
+          style={{ padding: '0.7rem 0.2rem', borderBottom: `1px solid ${C.border}`, cursor: 'pointer', borderRadius: 2 }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ fontFamily: "'Source Serif 4', serif", fontSize: '0.92rem', color: C.textPrimary }}>{card.label}</span>
+              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.42rem', color: CONVERGENCE_COLORS[card.convergence_type] || C.textMuted, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                {card.convergence_type.replace(/_/g, ' ')}
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
+              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.54rem', color: C.textPrimary }}>{card.score}</span>
+              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.48rem', color: TREND_COLORS[card.trend] || C.textMuted }}>
+                {TREND_ARROWS[card.trend] || '—'}
+              </span>
+            </div>
+          </div>
+          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.44rem', color: C.textMuted, lineHeight: 1.6 }}>
+            {card.domain_count} domains active: {card.active_domains.map(d => d.replace(/_/g, ' ')).join(' · ')}
+          </div>
+          {card.convergence_description && (
+            <div style={{ fontFamily: "'Source Serif 4', serif", fontSize: '0.78rem', color: C.textSecondary, marginTop: '0.25rem', lineHeight: 1.5 }}>
+              {card.convergence_description}
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   )
 }
@@ -2082,6 +2270,12 @@ export default function App() {
   const [foresightPage, setForesightPage] = useState(null)
   const [healthSnapshot, setHealthSnapshot] = useState(null)
   const [healthFetchError, setHealthFetchError] = useState(null)
+  const [instabilityData, setInstabilityData] = useState(null)
+  const [instabilityLoading, setInstabilityLoading] = useState(true)
+  const [instabilityError, setInstabilityError] = useState(null)
+  const [correlationData, setCorrelationData] = useState(null)
+  const [correlationLoading, setCorrelationLoading] = useState(true)
+  const [correlationError, setCorrelationError] = useState(null)
   const lastScrollY = useRef(0)
   const localTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
 
@@ -2176,7 +2370,37 @@ export default function App() {
       })
     loadMapAttention('24h')
     loadHeadlines()
+    loadInstability()
+    loadCorrelations()
   }, [])
+
+  async function loadInstability() {
+    setInstabilityLoading(true)
+    setInstabilityError(null)
+    try {
+      const data = await fetchInstability(3)
+      setInstabilityData(data)
+    } catch (err) {
+      console.error(err)
+      setInstabilityError(friendlyErrorMessage(err, 'instability index'))
+    } finally {
+      setInstabilityLoading(false)
+    }
+  }
+
+  async function loadCorrelations() {
+    setCorrelationLoading(true)
+    setCorrelationError(null)
+    try {
+      const data = await fetchCorrelations(3)
+      setCorrelationData(data)
+    } catch (err) {
+      console.error(err)
+      setCorrelationError(friendlyErrorMessage(err, 'signal correlations'))
+    } finally {
+      setCorrelationLoading(false)
+    }
+  }
 
   async function loadHeadlines(next = {}) {
     const sortBy = next.sortBy || headlineSort
@@ -2423,6 +2647,30 @@ export default function App() {
           <section style={{ gridArea: 'lower', animation: 'fadeUp 0.6s ease 0.2s both' }}>
             <div style={{ marginBottom: '1rem' }}>
               <BriefingLaunchPanel topics={TOPICS} onOpenBriefing={setBriefingPage} onOpenForesight={setForesightPage} />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '1.25rem', marginBottom: '1rem' }}>
+              <InstabilityPanel
+                data={instabilityData}
+                loading={instabilityLoading}
+                error={instabilityError}
+                onAnalyze={(country) => setDeepDive({
+                  title: `Instability Analysis: ${country.label}`,
+                  query: `Analyze the current instability situation in ${country.label}. The country scores ${country.score}/100 on the instability index (level: ${country.level}). Break down: what conflict events are occurring, what's driving media attention, are there contradictory narratives across sources, what entities are most active, and what should we watch for in the coming days? Components: conflict=${country.components?.conflict}, media=${country.components?.media_attention}, contradictions=${country.components?.contradiction}, severity=${country.components?.event_severity}. Be analytically precise.`,
+                  queryTopic: 'geopolitics',
+                  regionContext: country.country,
+                })}
+              />
+              <CorrelationPanel
+                data={correlationData}
+                loading={correlationLoading}
+                error={correlationError}
+                onAnalyze={(card) => setDeepDive({
+                  title: `Signal Convergence: ${card.label}`,
+                  query: `Analyze the signal convergence detected in ${card.label} (score: ${card.score}/100, type: ${card.convergence_type.replace(/_/g, ' ')}). Active domains: ${card.active_domains.join(', ')}. Domain scores: ${Object.entries(card.domain_scores).map(([k, v]) => `${k}=${v}`).join(', ')}. What is driving this multi-domain convergence? What does the intersection of these signals suggest about the developing situation? What should analysts watch for? Be specific and analytical.`,
+                  queryTopic: 'geopolitics',
+                  regionContext: card.country,
+                })}
+              />
             </div>
             <div className="lower-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.06fr) minmax(0, 0.94fr)', gap: '1.25rem', alignItems: 'start' }}>
               <div style={{ border: `1px solid ${C.border}`, background: C.bgRaised, padding: '1rem' }}>

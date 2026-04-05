@@ -93,3 +93,13 @@ export async function triggerIngest(topic = null) {
   const response = await api.post('/ingest', null, { params: topic ? { topic } : {} })
   return response.data
 }
+
+export async function fetchInstability(days = 3) {
+  const response = await api.get('/instability', { params: { days } })
+  return response.data
+}
+
+export async function fetchCorrelations(days = 3) {
+  const response = await api.get('/correlations', { params: { days } })
+  return response.data
+}

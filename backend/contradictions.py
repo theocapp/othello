@@ -736,11 +736,11 @@ def cluster_articles(articles: list[dict], topic: str | None = None) -> list[dic
         source_profiles = {}
         region_counts: dict[str, int] = {}
         for article in cluster:
-            key = (article.get("source") or article.get("source_domain") or "unknown").strip().lower()
-            if key and key not in source_profiles:
+            key = (article.get("source") or article.get("source_domain") or "unknown").strip().lower() or "unknown"
+            if key not in source_profiles:
                 source_profiles[key] = _source_profile(article, topic=topic)
-                region = (source_profiles[key].get("region") or "global").strip().lower()
-                region_counts[region] = region_counts.get(region, 0) + 1
+            region = (source_profiles[key].get("region") or "global").strip().lower()
+            region_counts[region] = region_counts.get(region, 0) + 1
         counters = _cluster_consensus_counters([signatures[i] for i in group])
         event_entities = {}
         for i in group:
@@ -891,10 +891,6 @@ def _event_key(event: dict) -> str:
         ]
     )
     return hashlib.sha256(material.encode("utf-8")).hexdigest()
-
-
-def event_cluster_key(event: dict) -> str:
-    return _event_key(event)
 
 
 def event_cluster_key(event: dict) -> str:

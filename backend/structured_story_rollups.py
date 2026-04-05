@@ -148,14 +148,30 @@ def _shorten_summary(text: str | None, limit: int = 220) -> str:
 
 
 def _cluster_label(country: str, event_type: str, sub_event_type: str, actors: list[str], locations: list[str]) -> str:
-    base = sub_event_type or event_type or "Structured event cluster"
+    # Skip CAMEO numeric codes as sub-event types
+    base = (sub_event_type if sub_event_type and not sub_event_type.isdigit() else None) or event_type or "Incident"
+    # Build a narrative-style label rather than a generic "EventType in Country"
+    def _needs_country(loc: str) -> bool:
+        return country.lower() not in loc.lower() and loc.lower() != country.lower()
+
+    location_detail = ""
+    if locations:
+        if len(locations) >= 3:
+            suffix = f" in {country}" if _needs_country(locations[0]) else ""
+            location_detail = f" across {locations[0]}, {locations[1]}, and {len(locations) - 2} other locations{suffix}"
+        elif len(locations) == 2:
+            suffix = f", {country}" if _needs_country(locations[0]) and _needs_country(locations[1]) else ""
+            location_detail = f" in {locations[0]} and {locations[1]}{suffix}"
+        else:
+            location_detail = f" in {locations[0]}, {country}" if _needs_country(locations[0]) else f" in {locations[0]}"
+    else:
+        location_detail = f" in {country}"
+
     if actors:
         if len(actors) >= 2:
-            return f"{base} in {country}: {actors[0]} vs {actors[1]}"
-        return f"{base} in {country}: {actors[0]}"
-    if locations:
-        return f"{base} in {country}: {locations[0]}"
-    return f"{base} in {country}"
+            return f"{base} involving {actors[0]} and {actors[1]}{location_detail}"
+        return f"{base} involving {actors[0]}{location_detail}"
+    return f"{base} reported{location_detail}"
 
 
 def _cluster_summary(
@@ -175,15 +191,69 @@ def _cluster_summary(
             item.get("event_date") or "",
         ),
     )
-    location_note = ""
-    if locations:
-        location_note = f" across {min(len(locations), 4)} locations in {country}"
-    fatality_note = f" Reported fatalities: {fatalities}." if fatalities else ""
-    sample_text = _shorten_summary(sample.get("summary"))
     incident_count = len(cluster)
+    raw_sample_text = _clean_text(sample.get("summary"))
+    # Strip CAMEO jargon from old GDELT summaries
+    raw_sample_text = re.sub(r"\s*\(CAMEO\s+\d+,?\s*root\s+\d+\)", "", raw_sample_text).strip()
+    raw_sample_text = re.sub(r"\s*\[?\d{3}\]?\s*$", "", raw_sample_text).strip().rstrip(",").strip()
+    sample_text = _shorten_summary(raw_sample_text)
+
+    # Build location context — avoid appending country if it's already in the location string
+    def _loc_needs_country(loc: str, ctry: str) -> bool:
+        return ctry.lower() not in loc.lower() and loc.lower() != ctry.lower()
+
+    if locations:
+        if len(locations) >= 3:
+            suffix = f" in {country}" if _loc_needs_country(locations[0], country) else ""
+            location_note = f" across {locations[0]}, {locations[1]}, and {len(locations) - 2} other areas{suffix}"
+        elif len(locations) == 2:
+            suffix = f", {country}" if _loc_needs_country(locations[0], country) and _loc_needs_country(locations[1], country) else ""
+            location_note = f" in {locations[0]} and {locations[1]}{suffix}"
+        else:
+            if _loc_needs_country(locations[0], country):
+                location_note = f" in {locations[0]}, {country}"
+            else:
+                location_note = f" in {locations[0]}"
+    else:
+        location_note = f" in {country}"
+
+    # Build actor context from the best sample event
+    actor_note = ""
+    a1 = _clean_text(sample.get("actor_primary"))
+    a2 = _clean_text(sample.get("actor_secondary"))
+    if a1 and a2:
+        actor_note = f" involving {a1} and {a2}"
+    elif a1:
+        actor_note = f" involving {a1}"
+
+    fatality_note = f" {fatalities} fatalities reported." if fatalities else ""
+
+    # Build date context
+    dates = sorted(
+        (item.get("event_date") for item in cluster if item.get("event_date")),
+    )
+    date_note = ""
+    if dates:
+        if len(dates) >= 2 and dates[0] != dates[-1]:
+            date_note = f" between {dates[0]} and {dates[-1]}"
+        else:
+            date_note = f" on {dates[0]}"
+
+    # Use the best sample's summary if available; otherwise construct a narrative
+    if sample_text and len(sample_text) > 30:
+        return (
+            f"{incident_count} {dataset_label} incidents{location_note} tied to "
+            f"{event_type.lower() if event_type else 'conflict activity'}{date_note}.{fatality_note} {sample_text}"
+        ).strip()
+
+    # No good sample text — build a full narrative from metadata
+    activity = event_type.lower() if event_type else "conflict activity"
+    sub = _clean_text(sample.get("sub_event_type"))
+    # Skip raw CAMEO numeric codes (e.g. "190", "172") — not human-readable
+    if sub and not sub.isdigit() and sub.lower() != activity:
+        activity = f"{sub.lower()} ({activity})"
     return (
-        f"{incident_count} {dataset_label} incidents{location_note} tied to "
-        f"{event_type.lower() if event_type else 'conflict activity'}.{fatality_note} {sample_text}"
+        f"{incident_count} incidents of {activity}{actor_note}{location_note}{date_note}.{fatality_note}"
     ).strip()
 
 
@@ -251,20 +321,57 @@ def build_structured_story_clusters(
         cluster.sort(key=lambda item: (item.get("event_date") or "", int(item.get("fatalities") or 0)), reverse=True)
         sigs = [signatures[i] for i in group]
 
-        country_counter = Counter(_clean_text(item.get("country")) for item in cluster if item.get("country"))
+        # Resolve GDELT/FIPS 2-letter country codes to full names for display
+        _resolved_countries = []
+        for item in cluster:
+            c = _clean_text(item.get("country"))
+            if c and len(c) == 2 and c.isupper():
+                try:
+                    from gdelt_gkg_ingestion import COUNTRY_CODE_TO_NAME
+                    c = COUNTRY_CODE_TO_NAME.get(c, c)
+                except ImportError:
+                    pass
+            if c:
+                _resolved_countries.append(c)
+        country_counter = Counter(_resolved_countries)
         event_type_counter = Counter(_clean_text(item.get("event_type")) for item in cluster if item.get("event_type"))
-        sub_event_counter = Counter(_clean_text(item.get("sub_event_type")) for item in cluster if item.get("sub_event_type"))
+        # Filter out raw CAMEO numeric codes from sub_event_type counts
+        sub_event_counter = Counter(
+            _clean_text(item.get("sub_event_type"))
+            for item in cluster
+            if item.get("sub_event_type") and not str(item.get("sub_event_type")).strip().isdigit()
+        )
         actor_counter = Counter(
             actor
             for sig in sigs
             for actor in sig["actor_labels"]
             if actor
         )
+        # Filter and clean location values: remove admin codes, country codes, GDELT qualifiers, and dedup
+        def _clean_location_value(raw: str) -> str:
+            """Clean a raw location/admin value for display."""
+            v = _clean_text(raw)
+            if not v or re.match(r"^[A-Z]{2}[A-Z0-9]{0,4}$", v):
+                return ""  # Raw GDELT admin/country code (IS, IS00, USCA, etc.)
+            # Remove GDELT "(general)" qualifier
+            v = re.sub(r"\s*\(general\)", "", v).strip()
+            # Deduplicate comma-separated segments (e.g. "Tehran, Tehran, Iran" → "Tehran, Iran")
+            parts = [p.strip() for p in v.split(",") if p.strip()]
+            seen = set()
+            deduped = []
+            for p in parts:
+                key = p.lower()
+                if key not in seen:
+                    deduped.append(p)
+                    seen.add(key)
+            return ", ".join(deduped)
+
         location_counter = Counter(
-            value
+            cleaned
             for item in cluster
-            for value in (_clean_text(item.get("location")), _clean_text(item.get("admin2")), _clean_text(item.get("admin1")))
-            if value
+            for raw in (_clean_text(item.get("location")), _clean_text(item.get("admin2")), _clean_text(item.get("admin1")))
+            for cleaned in [_clean_location_value(raw)]
+            if cleaned
         )
         source_counter = Counter(
             _clean_text((item.get("payload") or {}).get("source"))

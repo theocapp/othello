@@ -26,10 +26,9 @@ def _ensure_initialized():
         conn.execute("SELECT 1 FROM briefing_cache LIMIT 1")
         conn.execute("SELECT 1 FROM headlines_cache LIMIT 1")
     except sqlite3.OperationalError:
-        conn.close()
         init_db()
-        return
-    conn.close()
+    finally:
+        conn.close()
 
 
 def _column_exists(conn: sqlite3.Connection, table: str, column: str) -> bool:

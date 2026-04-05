@@ -24,3 +24,6 @@ dist/
 backend/othello_api_smoke_*/
 backend/chroma_db/
 chroma_db/
+
+# Local launchd / machine-specific service definitions
+backend/launchd/*.plist

@@ -27,9 +27,9 @@ import urllib3
 from corpus import upsert_structured_events
 
 # GDELT's data.gdeltproject.org has a hostname mismatch on its cert;
-# disable verification just as the existing news.py GDELT fetcher does.
-_VERIFY_SSL = os.getenv("OTHELLO_ALLOW_INSECURE_GDELT", "true").lower() != "true"
-if not _VERIFY_SSL:
+# disable verification when OTHELLO_ALLOW_INSECURE_GDELT is true (same as news.py).
+_ALLOW_INSECURE_GDELT = os.getenv("OTHELLO_ALLOW_INSECURE_GDELT", "true").lower() == "true"
+if _ALLOW_INSECURE_GDELT:
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 GDELT_EVENTS_BASE = "https://data.gdeltproject.org/gdeltv2"
@@ -68,6 +68,39 @@ _CAMEO_ROOT_TO_EVENT_TYPE = {
     "20": "Violence against civilians",    # Use unconventional mass violence
 }
 
+# Human-readable sub-event descriptions for common CAMEO event codes
+_CAMEO_CODE_TO_SUB_EVENT: dict[str, str] = {
+    "130": "Threaten", "131": "Threaten to boycott", "132": "Threaten with sanctions",
+    "133": "Threaten to aid rebel forces", "134": "Threaten with military force",
+    "135": "Threaten with unconventional weapons", "136": "Threaten to harm civilians",
+    "137": "Threaten to restrict movement", "138": "Threaten with coercion",
+    "139": "Threaten with unspecified measures",
+    "140": "Protest", "141": "Demonstrate for political change",
+    "142": "Conduct hunger strike", "143": "Conduct strike or boycott",
+    "144": "Obstruct passage", "145": "Protest violently or riot",
+    "150": "Exhibit military posture", "151": "Increase military alert status",
+    "152": "Mobilize armed forces", "153": "Mobilize police forces",
+    "154": "Conduct naval display", "155": "Nuclear posturing",
+    "160": "Reduce diplomatic relations", "161": "Reduce or sever diplomatic relations",
+    "162": "Reduce or stop material aid", "163": "Impose embargo or sanctions",
+    "164": "Halt negotiations", "165": "Cut diplomatic communications",
+    "166": "Expel or deport individuals",
+    "170": "Coerce", "171": "Seize or damage property",
+    "172": "Impose administrative sanctions", "173": "Arrest or detain",
+    "174": "Expel or deport", "175": "Use tactics of repression",
+    "180": "Assault", "181": "Abduct or kidnap", "182": "Engage in physical assault",
+    "183": "Conduct armed attack", "184": "Occupy territory",
+    "185": "Engage in armed battle", "186": "Conduct suicide or car bombing",
+    "190": "Fight", "191": "Engage in armed battle", "192": "Engage in guerrilla warfare",
+    "193": "Fight with artillery and tanks", "194": "Employ aerial weapons",
+    "195": "Use chemical, biological, or radiological weapons",
+    "200": "Use unconventional mass violence", "201": "Engage in mass killings",
+    "202": "Engage in ethnic cleansing", "203": "Use weapons of mass destruction",
+    "204": "Use unconventional violence",
+}
+
+# Maps ISO 3166-1 alpha-2 codes to country names, plus FIPS 10-4 overrides.
+# GDELT uses FIPS codes (e.g. IS=Israel, IR=Iran, TU=Turkey) which differ from ISO.
 COUNTRY_CODE_TO_NAME: dict[str, str] = {
     "AF": "Afghanistan", "AL": "Albania", "DZ": "Algeria", "AO": "Angola",
     "AR": "Argentina", "AM": "Armenia", "AU": "Australia", "AT": "Austria",
@@ -106,10 +139,45 @@ COUNTRY_CODE_TO_NAME: dict[str, str] = {
     "YE": "Yemen", "ZM": "Zambia", "ZW": "Zimbabwe",
 }
 
+# FIPS 10-4 codes used by GDELT that differ from ISO 3166-1 alpha-2
+# These override/supplement the ISO codes above for GDELT compatibility
+_FIPS_OVERRIDES: dict[str, str] = {
+    "IS": "Israel", "TU": "Turkey", "AG": "Algeria", "AJ": "Azerbaijan",
+    "AS": "Australia", "BK": "Bosnia and Herzegovina", "BL": "Bolivia",
+    "BN": "Benin", "BO": "Belarus", "BU": "Bulgaria", "CB": "Cambodia",
+    "CD": "DR Congo", "CF": "Congo", "CG": "DR Congo", "CH": "China",
+    "CI": "Chile", "CK": "Cook Islands", "CS": "Costa Rica", "CT": "Central African Republic",
+    "DA": "Denmark", "DR": "Dominican Republic", "EI": "Ireland", "EN": "Estonia",
+    "EZ": "Czech Republic", "FI": "Finland", "FR": "France", "GA": "Gambia",
+    "GG": "Georgia", "GJ": "Grenada", "GM": "Germany", "GR": "Greece",
+    "GY": "Guyana", "HA": "Haiti", "HO": "Honduras", "HU": "Hungary",
+    "IC": "Iceland", "IO": "British Indian Ocean Territory", "IZ": "Iraq",
+    "JA": "Japan", "JN": "Jan Mayen", "KN": "North Korea", "KS": "South Korea",
+    "KU": "Kuwait", "KZ": "Kazakhstan", "LE": "Lebanon", "LG": "Latvia",
+    "LH": "Lithuania", "LI": "Liberia", "LO": "Slovakia", "LY": "Libya",
+    "MA": "Madagascar", "MC": "Macau", "MG": "Mongolia", "MI": "Malawi",
+    "MK": "North Macedonia", "MO": "Morocco", "MP": "Mauritius",
+    "MU": "Oman", "MX": "Mexico", "MY": "Malaysia", "MZ": "Mozambique",
+    "NI": "Nigeria", "NK": "Niue", "NL": "Netherlands", "NO": "Norway",
+    "NP": "Nepal", "NS": "Suriname", "NU": "Nicaragua", "PA": "Paraguay",
+    "PE": "Peru", "PK": "Pakistan", "PL": "Poland", "PM": "Panama",
+    "PO": "Portugal", "PP": "Papua New Guinea", "QA": "Qatar",
+    "RI": "Serbia", "RM": "Marshall Islands", "RO": "Romania", "RP": "Philippines",
+    "RS": "Russia", "RW": "Rwanda", "SA": "Saudi Arabia", "SE": "Seychelles",
+    "SF": "South Africa", "SG": "Senegal", "SI": "Slovenia", "SL": "Sierra Leone",
+    "SN": "Singapore", "SO": "Somalia", "SP": "Spain", "SU": "Sudan",
+    "SW": "Sweden", "SZ": "Switzerland", "TD": "Trinidad and Tobago",
+    "TH": "Thailand", "TI": "Tajikistan", "TS": "Tunisia", "TX": "Turkmenistan",
+    "UG": "Uganda", "UK": "United Kingdom", "UP": "Ukraine", "US": "United States",
+    "UV": "Burkina Faso", "UZ": "Uzbekistan", "VE": "Venezuela", "VM": "Vietnam",
+    "WA": "Namibia", "WZ": "Eswatini", "YM": "Yemen",
+}
+COUNTRY_CODE_TO_NAME.update(_FIPS_OVERRIDES)
+
 
 def _get_recent_update_urls(count: int = 4) -> list[str]:
     """Fetch the GDELT last-update manifest and build a list of export CSV URLs."""
-    resp = requests.get(GDELT_LASTUPDATE_URL, timeout=15, verify=_VERIFY_SSL)
+    resp = requests.get(GDELT_LASTUPDATE_URL, timeout=15, verify=not _ALLOW_INSECURE_GDELT)
     resp.raise_for_status()
 
     export_url: str | None = None
@@ -182,10 +250,39 @@ def _parse_events_csv(zip_bytes: bytes) -> list[dict]:
 
                 country_code = row[_C_ACTION_GEO_COUNTRY].strip()
                 country = COUNTRY_CODE_TO_NAME.get(country_code, country_code) or "Unknown"
-                loc_name = row[_C_ACTION_GEO_FULLNAME].strip() or country
-                admin1 = row[_C_ACTION_GEO_ADM1].strip() or None
+                raw_loc_name = row[_C_ACTION_GEO_FULLNAME].strip() or country
+                raw_admin1 = row[_C_ACTION_GEO_ADM1].strip() or None
                 event_code = row[_C_EVENT_CODE].strip()
                 event_type = _CAMEO_ROOT_TO_EVENT_TYPE.get(root_code, "Strategic developments")
+
+                # Clean up GDELT location names — resolve codes, strip qualifiers
+                # If GEO_FULLNAME is just a 2-letter code, resolve it to a country name
+                if raw_loc_name and len(raw_loc_name) <= 3 and raw_loc_name.upper() == raw_loc_name:
+                    loc_name = COUNTRY_CODE_TO_NAME.get(raw_loc_name, country)
+                else:
+                    # Remove "(general)" qualifier and deduplicate segments
+                    loc_name = re.sub(r"\s*\(general\)", "", raw_loc_name).strip()
+                    # Deduplicate comma-separated parts (e.g. "Tehran, Tehran, Iran" → "Tehran, Iran")
+                    parts = [p.strip() for p in loc_name.split(",") if p.strip()]
+                    seen = set()
+                    deduped = []
+                    for p in parts:
+                        # Resolve 2-letter codes in segments
+                        resolved = COUNTRY_CODE_TO_NAME.get(p, p) if len(p) == 2 and p.isupper() else p
+                        key = resolved.lower()
+                        if key not in seen:
+                            deduped.append(resolved)
+                            seen.add(key)
+                    loc_name = ", ".join(deduped) if deduped else country
+
+                # GDELT admin codes: "IS00", "USCA", "UKH9", or bare "IS", "UK" — not human-readable
+                if raw_admin1 and re.match(r"^[A-Z]{2}[A-Z0-9]{0,4}$", raw_admin1):
+                    admin1 = None
+                else:
+                    admin1 = raw_admin1
+
+                # Get human-readable sub-event type from CAMEO code
+                sub_event_type = _CAMEO_CODE_TO_SUB_EVENT.get(event_code, event_type)
 
                 try:
                     goldstein = float(row[_C_GOLDSTEIN]) if row[_C_GOLDSTEIN].strip() else 0.0
@@ -199,9 +296,24 @@ def _parse_events_csv(zip_bytes: bytes) -> list[dict]:
                 material = f"gdelt_events|{event_id_raw}|{lat:.4f}|{lon:.4f}"
                 event_id = "gevt-" + hashlib.sha256(material.encode()).hexdigest()[:18]
 
-                summary_line = f"{event_type} — {loc_name} (CAMEO {event_code}, root {root_code})"
-                if country and country not in summary_line:
-                    summary_line = f"{summary_line}, {country}"
+                # Build a human-readable summary instead of raw CAMEO codes
+                if loc_name and loc_name.lower() != country.lower() and country.lower() not in loc_name.lower():
+                    place_detail = f"{loc_name}, {country}"
+                else:
+                    place_detail = loc_name or country
+                goldstein_desc = ""
+                if goldstein <= -5.0:
+                    goldstein_desc = " (high-intensity conflict event)"
+                elif goldstein <= -2.0:
+                    goldstein_desc = " (escalatory event)"
+                elif goldstein >= 5.0:
+                    goldstein_desc = " (cooperative development)"
+                mention_desc = ""
+                if num_mentions >= 10:
+                    mention_desc = f" Covered by {num_articles} sources with {num_mentions} mentions."
+                elif num_articles >= 3:
+                    mention_desc = f" Reported by {num_articles} sources."
+                summary_line = f"{event_type} reported in {place_detail} on {event_date}.{goldstein_desc}{mention_desc}"
 
                 events.append({
                     "event_id": event_id,
@@ -216,7 +328,7 @@ def _parse_events_csv(zip_bytes: bytes) -> list[dict]:
                     "latitude": lat,
                     "longitude": lon,
                     "event_type": event_type,
-                    "sub_event_type": event_code,
+                    "sub_event_type": sub_event_type,
                     "actor_primary": None,
                     "actor_secondary": None,
                     "fatalities": None,
@@ -260,7 +372,7 @@ def fetch_gdelt_gkg_events(hours: int = 24) -> tuple[list[dict], dict]:
 
     for url in urls:
         try:
-            resp = requests.get(url, timeout=30, verify=_VERIFY_SSL)
+            resp = requests.get(url, timeout=30, verify=not _ALLOW_INSECURE_GDELT)
             if resp.status_code == 404:
                 continue
             resp.raise_for_status()
