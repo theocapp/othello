@@ -1186,6 +1186,7 @@ def _build_story_hotspots(window: str, now: datetime) -> tuple[list[dict], int]:
         summary_text = " ".join(str(row.get("summary") or "").split()).strip()
 
         # Try to extract a meaningful headline from the summary first
+        primary_topic = (row.get("topic") or "").strip().lower() or None
         headline = ""
         if summary_text:
             first_sent = summary_text.split(".")[0].strip()
@@ -1203,7 +1204,6 @@ def _build_story_hotspots(window: str, now: datetime) -> tuple[list[dict], int]:
                 headline = f"{topic_label} in {primary_location or primary_country} ({article_count} sources)"
             else:
                 headline = f"{topic_label} reported in {primary_location or primary_country}"
-        primary_topic = (row.get("topic") or "").strip().lower() or None
         aspect = _story_hotspot_type(
             {
                 "topic": primary_topic,
