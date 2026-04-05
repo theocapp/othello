@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import {
   fetchBeforeNewsArchive,
   fetchCorrelations,
@@ -19,12 +19,13 @@ import {
   normalizeStoryTopicForQuery,
   totalNarrativeFlags,
 } from './lib/hotspots'
-import DeepDive from './pages/DeepDive'
-import BriefingPage from './pages/BriefingPage'
-import ConflictBriefingPage from './pages/ConflictBriefingPage'
-import ContradictionOverlay from './pages/ContradictionOverlay'
-import TimelinePage from './pages/TimelinePage'
-import ForesightPage from './pages/ForesightPage'
+
+const DeepDive = lazy(() => import('./pages/DeepDive'))
+const BriefingPage = lazy(() => import('./pages/BriefingPage'))
+const ConflictBriefingPage = lazy(() => import('./pages/ConflictBriefingPage'))
+const ContradictionOverlay = lazy(() => import('./pages/ContradictionOverlay'))
+const TimelinePage = lazy(() => import('./pages/TimelinePage'))
+const ForesightPage = lazy(() => import('./pages/ForesightPage'))
 
 const TOPICS = [
   {
@@ -59,6 +60,19 @@ const THEATERS = [
   { label: 'Federal Reserve & Interest Rates', query: 'Federal Reserve interest rates monetary policy' },
   { label: 'China–Taiwan Tensions', query: 'China Taiwan tensions military' },
 ]
+
+function OverlayFallback() {
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: C.bg,
+        zIndex: 200,
+      }}
+    />
+  )
+}
 
 export default function App() {
   const [time, setTime] = useState(new Date())
@@ -366,46 +380,57 @@ export default function App() {
       />
 
       {deepDive && (
-        <DeepDive
-          {...deepDive}
-          entityName={deepDive.entityName || deepDive.entity}
-          onClose={() => setDeepDive(null)}
-        />
+        <Suspense fallback={<OverlayFallback />}>
+          <DeepDive
+            {...deepDive}
+            entityName={deepDive.entityName || deepDive.entity}
+            onClose={() => setDeepDive(null)}
+          />
+        </Suspense>
       )}
 
-      {briefingPage &&
-        (briefingPage.kind === 'conflict' ? (
-          <ConflictBriefingPage
-            topic={briefingPage}
-            hotspot={selectedHotspot}
-            hotspots={mapAttention?.hotspots || []}
-            contradictionEvents={contradictionEvents}
-            windowId={mapAttentionWindow}
-            onClose={() => setBriefingPage(null)}
-            onOpenContradiction={event => setSelectedContradiction(event)}
-          />
-        ) : (
-          <BriefingPage topic={briefingPage} onClose={() => setBriefingPage(null)} />
-        ))}
+      {briefingPage && (
+        <Suspense fallback={<OverlayFallback />}>
+          {briefingPage.kind === 'conflict' ? (
+            <ConflictBriefingPage
+              topic={briefingPage}
+              hotspot={selectedHotspot}
+              hotspots={mapAttention?.hotspots || []}
+              contradictionEvents={contradictionEvents}
+              windowId={mapAttentionWindow}
+              onClose={() => setBriefingPage(null)}
+              onOpenContradiction={event => setSelectedContradiction(event)}
+            />
+          ) : (
+            <BriefingPage topic={briefingPage} onClose={() => setBriefingPage(null)} />
+          )}
+        </Suspense>
+      )}
 
       {selectedContradiction && (
-        <ContradictionOverlay
-          event={selectedContradiction}
-          onClose={() => setSelectedContradiction(null)}
-        />
+        <Suspense fallback={<OverlayFallback />}>
+          <ContradictionOverlay
+            event={selectedContradiction}
+            onClose={() => setSelectedContradiction(null)}
+          />
+        </Suspense>
       )}
 
       {timelinePage && (
-        <TimelinePage query={timelinePage} onClose={() => setTimelinePage(null)} />
+        <Suspense fallback={<OverlayFallback />}>
+          <TimelinePage query={timelinePage} onClose={() => setTimelinePage(null)} />
+        </Suspense>
       )}
 
       {foresightPage && (
-        <ForesightPage
-          mode={foresightPage}
-          records={foresightPage === 'predictions' ? predictionLedger : beforeNewsArchive}
-          error={foresightPage === 'predictions' ? predictionLedgerError : beforeNewsError}
-          onClose={() => setForesightPage(null)}
-        />
+        <Suspense fallback={<OverlayFallback />}>
+          <ForesightPage
+            mode={foresightPage}
+            records={foresightPage === 'predictions' ? predictionLedger : beforeNewsArchive}
+            error={foresightPage === 'predictions' ? predictionLedgerError : beforeNewsError}
+            onClose={() => setForesightPage(null)}
+          />
+        </Suspense>
       )}
     </div>
   )

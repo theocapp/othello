@@ -1,12 +1,15 @@
+import { Suspense, lazy } from 'react'
 import BriefingLaunchPanel from './BriefingLaunchPanel'
 import CorrelationPanel from './CorrelationPanel'
 import InstabilityPanel from './InstabilityPanel'
 import MapSummaryPanel from './MapSummaryPanel'
 import NewsColumn from './NewsColumn'
-import WorldHotspotMap from './WorldHotspotMap'
 import { C } from '../constants/theme'
 import { formatClock, formatDateLabel, formatDateTime, formatRelativeUpdate } from '../lib/formatters'
 import { totalNarrativeFlags } from '../lib/hotspots'
+
+const WorldHotspotMap = lazy(() => import('./WorldHotspotMap'))
+
 
 export default function HomeDashboard({
   time,
@@ -84,7 +87,16 @@ export default function HomeDashboard({
         {!healthFetchError && healthSnapshot?.runtime && (!healthSnapshot.runtime.llm_ready || !healthSnapshot.runtime.contradiction_ready) && <div style={{ marginBottom: '1rem', border: `1px solid rgba(251,191,36,0.35)`, background: 'rgba(251,191,36,0.06)', padding: '0.75rem 1rem', animation: 'fadeUp 0.4s ease both' }}><div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.5rem', color: '#fbbf24', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '0.28rem' }}>Partial capability</div><div style={{ fontFamily: "'Source Serif 4', serif", fontSize: '0.86rem', color: C.textSecondary, lineHeight: 1.55 }}>{!healthSnapshot.runtime.llm_ready && 'LLM-backed answers and briefings may use fallbacks (set GROQ_API_KEY on the API). '}{!healthSnapshot.runtime.contradiction_ready && 'Narrative fracture mining is limited without ANTHROPIC_API_KEY. '}</div></div>}
         <div className="home-shell" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.45fr) 360px', gridTemplateAreas: '"map sidebar" "lower sidebar"', gap: '1.25rem', alignItems: 'start', paddingBottom: '10vh' }}>
           <section style={{ gridArea: 'map', animation: 'fadeUp 0.6s ease 0.08s both' }}>
-            <WorldHotspotMap data={mapAttention} error={mapAttentionError} loading={mapAttentionLoading} selectedHotspotId={selectedMapHotspot} onWindowChange={loadMapAttention} onSelectHotspot={handleMapHotspotSelect} />
+            <Suspense fallback={<div style={{ minHeight: 520, border: `1px solid ${C.border}`, background: C.bgRaised }} />}>
+  <WorldHotspotMap
+    data={mapAttention}
+    error={mapAttentionError}
+    loading={mapAttentionLoading}
+    selectedHotspotId={selectedMapHotspot}
+    onWindowChange={loadMapAttention}
+    onSelectHotspot={handleMapHotspotSelect}
+  />
+</Suspense>
           </section>
           <aside style={{ gridArea: 'sidebar', display: 'flex', flexDirection: 'column', gap: '1rem', animation: 'fadeUp 0.6s ease 0.14s both' }}>
             <MapSummaryPanel data={mapAttention} hotspot={selectedHotspot} onOpenBriefing={setBriefingPage} onAnalyzeCluster={openHotspotClusterAnalysis} />
