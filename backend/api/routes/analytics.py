@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends, Header, Request
+from fastapi import APIRouter, Depends
 
+from api.deps import require_write_access_dep
 from services.analytics_service import narrative_drift_payload, source_reliability_payload
 from services.ingest_service import (
     acled_refresh_payload,
@@ -14,11 +15,6 @@ from services.ingest_service import (
 )
 
 router = APIRouter()
-
-
-def require_write_access_dep(request: Request, x_api_key: str | None = Header(default=None, alias="X-API-Key")):
-    from main import require_write_access
-    return require_write_access(request, x_api_key)
 
 
 @router.post("/ingest")

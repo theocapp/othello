@@ -10,7 +10,10 @@ from cache import clear_headlines, init_db as init_cache_db
 from chroma import store_articles
 from corpus import init_db as init_corpus_db
 from corpus import migrate_sqlite_to_current_backend, upsert_articles
-from main import TOPICS, _store_entity_mentions_with_translation, build_topic_briefing, rebuild_headlines_cache
+from core.config import TOPICS
+from services.ingest_service import _store_entity_mentions_with_translation
+from services.briefing_service import build_topic_briefing
+from services.headlines_service import rebuild_headlines_cache
 from news import infer_article_topics
 
 
