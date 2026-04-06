@@ -25,6 +25,7 @@ from core.config import (
     MAX_MAP_STRUCTURED_DAYS,
     POLITICAL_TEXT_PATTERNS,
 )
+from core.map_state import MAP_ATTENTION_CACHE, STORY_LOCATION_INDEX_CACHE
 from core.runtime import parse_timestamp as _parse_timestamp
 
 from corpus import (
@@ -39,10 +40,10 @@ from geo_constants import COUNTRY_CENTROIDS
 from structured_story_rollups import build_map_structured_story_clusters
 
 # ---------------------------------------------------------------------------
-# Module-level caches (same semantics as the original main.py globals)
+# Backwards-compatible aliases for legacy imports and tests
 # ---------------------------------------------------------------------------
-_MAP_ATTENTION_CACHE: dict[str, tuple[float, dict]] = {}
-_STORY_LOCATION_INDEX_CACHE: dict[int, tuple[float, dict[str, dict]]] = {}
+_MAP_ATTENTION_CACHE = MAP_ATTENTION_CACHE
+_STORY_LOCATION_INDEX_CACHE = STORY_LOCATION_INDEX_CACHE
 
 
 # ---------------------------------------------------------------------------
@@ -587,7 +588,7 @@ def _incident_hotspots_from_semantic_clusters(
         fatality_density = round((int(h["fatality_total"]) / max(max_fatalities, 1)), 4) if max_fatalities else 0.0
         cloud_radius = round(34.0 + (intensity * 42.0) + (event_density * 10.0), 2)
         cloud_density = round(min(1.0, 0.3 + (intensity * 0.45) + (event_density * 0.35)), 3)
-        share = round((float(h["attention_score"]) / total_cluster_weight), 4) if total_cluster_weight else 0.0
+        share = round((float(h["attention_score"] ) / total_cluster_weight), 4) if total_cluster_weight else 0.0
         h["intensity"] = intensity
         h["event_density"] = event_density
         h["fatality_density"] = fatality_density
