@@ -70,9 +70,8 @@ class TestAPISmoke(unittest.TestCase):
         self.assertIn("paths", response.json())
 
     def test_root_without_loading_chroma(self):
-        with patch.object(
-            main_module,
-            "get_collection_stats",
+        with patch(
+            "chroma.get_collection_stats",
             return_value={"total_articles": 0, "collection": "signal_articles"},
         ):
             with TestClient(main_module.app) as client:

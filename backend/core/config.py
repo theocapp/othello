@@ -4,7 +4,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=True)
+load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=False)
 
 
 def split_csv_env(value: str | None) -> list[str]:
