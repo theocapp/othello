@@ -10,10 +10,12 @@ The system is split into four layers:
    GDELT-first source adapter with NewsAPI fallback.
 2. `corpus.py`
    Durable article store and ingestion history.
-3. `main.py` + analysis modules
-   Derived intelligence layer for events, headlines, briefings, timelines, and entity signals.
+3. `app_factory.py` + `bootstrap.py` + `core/` + `services/`
+   API wiring, runtime initialization, scheduling, and derived intelligence services.
 4. `frontend/`
    Presentation layer that reads the corpus-derived intelligence view.
+
+`main.py` is now a thin entrypoint that constructs the FastAPI app.
 
 ## Backend flow
 
@@ -29,7 +31,7 @@ The homepage no longer assumes startup warmup created a temporary cache. It is d
 
 - ingestion runs every 15 minutes
 - snapshots refresh every hour
-- if the corpus is empty at startup, Othello attempts an initial ingest
+- if the corpus is empty at startup, Othello initializes storage, seeds sources, and attempts a bootstrap from any legacy cache data already present
 - if `GROQ_API_KEY` is missing, the site still works with deterministic fallbacks
 - if `ANTHROPIC_API_KEY` is missing, contradiction analysis is skipped
 
@@ -100,7 +102,7 @@ This runs ingestion, translations, and scheduled refresh jobs outside the API pr
 Default worker behavior is intentionally lean:
 
 - `OTHELLO_WORKER_ENABLE_INGESTION=true` keeps the corpus/feed refresh loop on
-- `OTHELLO_WORKER_BOOTSTRAP_MODE=none` avoids the heaviest startup burst while still letting scheduled ingestion continue
+- `OTHELLO_WORKER_BOOTSTRAP_MODE=ingest` performs the light startup ingest path by default
 - `OTHELLO_WORKER_ENABLE_TRANSLATIONS=false` keeps local translation models out of the always-on worker
 - `OTHELLO_WORKER_ENABLE_ANALYTICS=false` keeps heavy narrative/foresight/source-reliability jobs out of the always-on worker
 
@@ -126,7 +128,7 @@ make test
 
 GitHub Actions now runs:
 
-- backend smoke tests
+- backend smoke tests and runtime wiring tests
 - frontend production build
 
 For non-local clients, write/refresh routes require `X-API-Key: <OTHELLO_ADMIN_API_KEY>`.
