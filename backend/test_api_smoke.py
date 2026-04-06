@@ -41,7 +41,8 @@ import cache as _cache_module
 
 _cache_module.DB_PATH = Path(_TEST_HOME) / "othello_cache.db"
 
-import corpus  # noqa: F401 — triggers init_db() against othello_corpus.db in _TEST_HOME
+import corpus
+corpus.init_db()  # explicitly init DB against othello_corpus.db in _TEST_HOME
 from corpus import upsert_structured_events
 
 import main as main_module

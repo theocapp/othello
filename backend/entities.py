@@ -688,6 +688,3 @@ def format_signals_for_briefing(topic: str) -> str:
             lines.append(f"  - {e['entity']} ({e['type']}): {e['mentions']} mentions")
 
     return "\n".join(lines)
-
-# ─── Init ─────────────────────────────────────────────────────────────────────
-init_db()

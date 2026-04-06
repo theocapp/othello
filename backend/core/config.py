@@ -136,6 +136,12 @@ TRANSLATION_MIN_SCORE = int(os.getenv("OTHELLO_TRANSLATION_MIN_SCORE", "7"))
 TRANSLATION_REMOTE_FALLBACK_SCORE = int(os.getenv("OTHELLO_TRANSLATION_REMOTE_FALLBACK_SCORE", "9"))
 
 # ---------------------------------------------------------------------------
+# Articles v2 migration flags
+# ---------------------------------------------------------------------------
+ARTICLES_V2_DUAL_WRITE = os.getenv("OTHELLO_ARTICLES_V2_DUAL_WRITE", "false").lower() == "true"
+ARTICLES_V2_READS = os.getenv("OTHELLO_ARTICLES_V2_READS", "false").lower() == "true"
+
+# ---------------------------------------------------------------------------
 # Scheduler / worker flags
 # ---------------------------------------------------------------------------
 INTERNAL_SCHEDULER_ENABLED = os.getenv("OTHELLO_INTERNAL_SCHEDULER", "false").lower() == "true"

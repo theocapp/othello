@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 from analyst import translate_article
 from chroma import store_articles
 from corpus import init_db, record_ingestion_run, save_article_translation, upsert_articles
-from entities import store_entity_mentions
+from entities import init_db as init_entities_db, store_entity_mentions
 from news import fetch_gdelt_historic_articles, is_english_article, probe_gdelt_window
 
 TOPICS = ("geopolitics", "economics")
@@ -141,6 +141,7 @@ def main():
         raise SystemExit("--end-date must be after --start-date")
 
     init_db()
+    init_entities_db()
 
     topics = TOPICS if args.topic == "all" else (args.topic,)
     if args.probe_only:

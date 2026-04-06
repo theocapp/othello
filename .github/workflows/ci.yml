@@ -23,7 +23,7 @@ jobs:
         env:
           OTHELLO_INTERNAL_SCHEDULER: 'false'
           OTHELLO_DATABASE_URL: ''
-        run: python -m unittest test_api_smoke test_runtime_wiring -v
+        run: python -m unittest test_api_smoke test_runtime_wiring test_ingestion -v
 
   frontend:
     runs-on: ubuntu-latest

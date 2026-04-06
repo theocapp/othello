@@ -397,5 +397,170 @@ class TestTranslationModelLRU(unittest.TestCase):
         self.assertIn("de", analyst._translation_pipelines)
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# 6. Articles v2 dual-write
+# ─────────────────────────────────────────────────────────────────────────────
+class TestArticlesV2CoerceTimestamptz(unittest.TestCase):
+    """Unit tests for the _coerce_timestamptz helper."""
+
+    def test_iso_with_z_suffix(self):
+        from corpus import _coerce_timestamptz
+        result = _coerce_timestamptz("2024-06-01T12:00:00Z")
+        self.assertEqual(result, "2024-06-01T12:00:00+00:00")
+
+    def test_iso_with_offset(self):
+        from corpus import _coerce_timestamptz
+        result = _coerce_timestamptz("2024-06-01T12:00:00+03:00")
+        self.assertEqual(result, "2024-06-01T12:00:00+03:00")
+
+    def test_bare_datetime_gets_utc(self):
+        from corpus import _coerce_timestamptz
+        result = _coerce_timestamptz("2024-06-01T12:00:00")
+        self.assertEqual(result, "2024-06-01T12:00:00+00:00")
+
+    def test_empty_string_returns_now(self):
+        from corpus import _coerce_timestamptz
+        result = _coerce_timestamptz("")
+        self.assertTrue(result.endswith("+00:00") or "+" in result)
+
+
+class TestArticlesV2DualWriteFlag(unittest.TestCase):
+    """Verify upsert_articles respects the dual-write flag."""
+
+    def setUp(self):
+        self.tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        self.db_path = self.tmp.name
+        self.tmp.close()
+
+        import corpus
+        self._orig_sqlite_path = corpus.SQLITE_DB_PATH
+        corpus.SQLITE_DB_PATH = self.db_path
+        self._corpus = corpus
+        self._orig_database_url = corpus._database_url
+        corpus._database_url = lambda: None
+        corpus.init_db()
+
+    def tearDown(self):
+        self._corpus.SQLITE_DB_PATH = self._orig_sqlite_path
+        self._corpus._database_url = self._orig_database_url
+        os.unlink(self.db_path)
+
+    def test_sqlite_path_unaffected_by_dual_write_flag(self):
+        """When using SQLite, dual-write flag should have no effect."""
+        articles = [
+            {
+                "url": "https://example.com/v2-test-1",
+                "title": "V2 dual-write test",
+                "description": "Testing dual-write",
+                "source": "Test Source",
+                "published_at": "2024-06-01T12:00:00Z",
+            }
+        ]
+        with patch("core.config.ARTICLES_V2_DUAL_WRITE", True):
+            inserted = self._corpus.upsert_articles(articles, topic="geopolitics", provider="test")
+        self.assertEqual(inserted, 1)
+
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        row = conn.execute("SELECT * FROM articles WHERE url = ?", ("https://example.com/v2-test-1",)).fetchone()
+        conn.close()
+        self.assertIsNotNone(row)
+        self.assertEqual(row["title"], "V2 dual-write test")
+
+    def test_v2_records_not_accumulated_on_sqlite(self):
+        """On SQLite, v2_records list should stay empty (no Postgres branch)."""
+        articles = [
+            {
+                "url": "https://example.com/v2-test-2",
+                "title": "V2 test 2",
+                "source": "Test Source",
+                "published_at": "2024-06-01T12:00:00Z",
+            }
+        ]
+        with patch("core.config.ARTICLES_V2_DUAL_WRITE", True):
+            with patch.object(self._corpus, "_bulk_upsert_articles_pg") as mock_bulk:
+                self._corpus.upsert_articles(articles, topic="geopolitics", provider="test")
+                mock_bulk.assert_not_called()
+
+
+class TestBulkUpsertArticlesPg(unittest.TestCase):
+    """Test _bulk_upsert_articles_pg with a real SQLite stand-in for logic, plus integration-ready shape."""
+
+    def test_returns_record_count(self):
+        """_bulk_upsert_articles_pg should return the count of records passed in."""
+        import corpus
+        # Build normalized-shaped records
+        records = [
+            {
+                "url": f"https://example.com/bulk-{i}",
+                "canonical_url": f"https://example.com/bulk-{i}",
+                "title": f"Bulk article {i}",
+                "description": f"Description {i}",
+                "source": "Test Source",
+                "source_domain": "example.com",
+                "published_at": "2024-06-01T12:00:00Z",
+                "language": "en",
+                "provider": "test",
+                "content_hash": f"hash{i}",
+                "payload": {"title": f"Bulk article {i}"},
+            }
+            for i in range(5)
+        ]
+
+        # Create a mock connection that simulates the COPY + merge
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_copy_ctx = MagicMock()
+        mock_copy_ctx.__enter__ = MagicMock(return_value=mock_copy_ctx)
+        mock_copy_ctx.__exit__ = MagicMock(return_value=False)
+        mock_cursor.copy.return_value = mock_copy_ctx
+        mock_conn.cursor.return_value = mock_cursor
+        mock_conn.execute.return_value.fetchone.return_value = {"cnt": 0}
+
+        now_iso = datetime.now(timezone.utc).isoformat()
+        result = corpus._bulk_upsert_articles_pg(mock_conn, records, ["geopolitics"], now_iso)
+        self.assertEqual(result, 5)
+
+    def test_empty_records_returns_zero(self):
+        import corpus
+        mock_conn = MagicMock()
+        result = corpus._bulk_upsert_articles_pg(mock_conn, [], ["geopolitics"], "2024-01-01T00:00:00+00:00")
+        self.assertEqual(result, 0)
+        mock_conn.execute.assert_not_called()
+
+    def test_no_topics_skips_topic_staging(self):
+        """When topics list is empty, topic staging should be skipped."""
+        import corpus
+        records = [
+            {
+                "url": "https://example.com/no-topic",
+                "canonical_url": "https://example.com/no-topic",
+                "title": "No topic",
+                "description": "Desc",
+                "source": "Src",
+                "source_domain": "example.com",
+                "published_at": "2024-06-01T12:00:00Z",
+                "language": "en",
+                "provider": "test",
+                "content_hash": "abc",
+                "payload": {},
+            }
+        ]
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_copy_ctx = MagicMock()
+        mock_copy_ctx.__enter__ = MagicMock(return_value=mock_copy_ctx)
+        mock_copy_ctx.__exit__ = MagicMock(return_value=False)
+        mock_cursor.copy.return_value = mock_copy_ctx
+        mock_conn.cursor.return_value = mock_cursor
+        mock_conn.execute.return_value.fetchone.return_value = {"cnt": 0}
+
+        corpus._bulk_upsert_articles_pg(mock_conn, records, [], "2024-01-01T00:00:00+00:00")
+        # Should NOT have created _stg_article_topics_v2
+        sql_calls = [str(c) for c in mock_conn.execute.call_args_list]
+        topic_staging = [s for s in sql_calls if "_stg_article_topics_v2" in s]
+        self.assertEqual(len(topic_staging), 0, "Should not create topic staging table when topics is empty")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
