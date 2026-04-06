@@ -4,13 +4,14 @@ from services.analytics_service import (
     get_correlations_payload,
     get_instability_detail_payload,
     get_instability_payload,
-)
+}
 from services.events_service import (
+    get_event_intelligence_payload,
     get_events_payload,
     get_materialized_story_clusters_payload,
     get_structured_events_payload,
     get_topic_events_payload,
-)
+}
 from services.map_service import get_hotspot_attention_map_payload, get_region_attention_payload
 
 router = APIRouter()
@@ -21,9 +22,15 @@ def get_events(limit: int = 12):
     return get_events_payload(limit=limit)
 
 
+
 @router.get("/events/structured")
 def get_structured_events(days: int = 3, limit: int = 12, country: str | None = None, event_type: str | None = None):
     return get_structured_events_payload(days=days, limit=limit, country=country, event_type=event_type)
+
+
+@router.get("/events/intelligence")
+def get_event_intelligence(days: int = 3, limit: int = 24, country: str | None = None, event_type: str | None = None):
+    return get_event_intelligence_payload(days=days, limit=limit, country=country, event_type=event_type)
 
 
 @router.get("/coverage/regions")
@@ -34,6 +41,7 @@ def get_region_attention(window: str = "24h"):
 @router.get("/coverage/map")
 def get_hotspot_attention_map(window: str = "24h"):
     return get_hotspot_attention_map_payload(window)
+
 
 
 @router.get("/instability")

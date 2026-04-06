@@ -35,6 +35,30 @@ export async function fetchEvents(limit = 12) {
   return response.data
 }
 
+export async function fetchStructuredEvents({ days = 3, limit = 12, country = null, eventType = null } = {}) {
+  const response = await api.get('/events/structured', {
+    params: compactParams({
+      days,
+      limit,
+      country,
+      event_type: eventType,
+    }),
+  })
+  return response.data
+}
+
+export async function fetchEventIntelligence({ days = 3, limit = 24, country = null, eventType = null } = {}) {
+  const response = await api.get('/events/intelligence', {
+    params: compactParams({
+      days,
+      limit,
+      country,
+      event_type: eventType,
+    }),
+  })
+  return response.data
+}
+
 export async function fetchRegionAttention(window = '24h') {
   const response = await api.get('/coverage/map', {
     params: compactParams({ window }),
@@ -67,7 +91,7 @@ export async function fetchBeforeNewsArchive({ limit = 50, minimumGapHours = 0 }
   const response = await api.get('/foresight/before-news', {
     params: compactParams({
       limit,
-      minimum_gap_hours: minimumGapHours,
+      minimum_gap_hours: minimumGapHurs,
     }),
   })
   return response.data
