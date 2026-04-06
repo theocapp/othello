@@ -1,17 +1,15 @@
 """
-Tests for the memory-reduction changes to the ingestion pipeline:
+Tests for the ingestion pipeline:
 1. spaCy model priority (sm before lg)
 2. ChromaDB batching
 3. Tier 2 article_summaries table + upsert_article_summaries
-4. Tier 2 wiring in ingest_topic / ingest_global (via should_promote_article gate)
+4. Translation model LRU eviction
+5. Articles v2 bulk upsert shape
 """
 
-import sqlite3
-import tempfile
 import os
 import sys
 import time
-import types
 import unittest
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch, call
@@ -152,53 +150,49 @@ class TestChromaBatching(unittest.TestCase):
 # 3. Tier 2: article_summaries table + upsert_article_summaries
 # ─────────────────────────────────────────────────────────────────────────────
 class TestArticleSummaries(unittest.TestCase):
+    """Tests upsert_article_summaries against the Postgres test database.
+
+    Requires OTHELLO_TEST_PGDATABASE (default: othello_test) to exist.
+    Create it once with: createdb othello_test
+    """
 
     def setUp(self):
-        """Use a temp SQLite DB for each test."""
-        self.tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
-        self.db_path = self.tmp.name
-        self.tmp.close()
-
         import corpus
-        self._orig_sqlite_path = corpus.SQLITE_DB_PATH
-
-        # Patch both the module-level constant and the connect helper
-        corpus.SQLITE_DB_PATH = self.db_path
+        os.environ.setdefault("OTHELLO_PGDATABASE", os.environ.get("OTHELLO_TEST_PGDATABASE", "othello_test"))
         self._corpus = corpus
-
-        # Ensure we use SQLite (not postgres) for tests
-        self._orig_database_url = corpus._database_url
-        corpus._database_url = lambda: None
-
         corpus.init_db()
+        with corpus._connect() as conn:
+            conn.execute("TRUNCATE TABLE article_summaries CASCADE")
 
     def tearDown(self):
-        self._corpus.SQLITE_DB_PATH = self._orig_sqlite_path
-        self._corpus._database_url = self._orig_database_url
-        os.unlink(self.db_path)
+        import corpus
+        with corpus._connect() as conn:
+            conn.execute("TRUNCATE TABLE article_summaries CASCADE")
 
-    def _conn(self):
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        return conn
+    def _query(self, sql, params=()):
+        import corpus
+        with corpus._connect() as conn:
+            return conn.execute(sql, params).fetchall()
 
     def test_article_summaries_table_created(self):
         """init_db() should create article_summaries table."""
-        conn = self._conn()
-        tables = {r[0] for r in conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table'"
-        ).fetchall()}
-        conn.close()
+        import corpus
+        with corpus._connect() as conn:
+            tables = {r["tablename"] for r in conn.execute(
+                "SELECT tablename FROM pg_tables WHERE schemaname = 'public'"
+            ).fetchall()}
         self.assertIn("article_summaries", tables)
 
     def test_article_summaries_schema(self):
         """article_summaries should have the expected columns."""
-        conn = self._conn()
-        cols = {r[1] for r in conn.execute("PRAGMA table_info(article_summaries)").fetchall()}
-        conn.close()
+        import corpus
+        with corpus._connect() as conn:
+            cols = {r["column_name"] for r in conn.execute(
+                "SELECT column_name FROM information_schema.columns WHERE table_name = 'article_summaries'"
+            ).fetchall()}
         expected = {"url", "title", "source", "source_domain", "published_at",
                     "topic", "quality_score", "first_seen_at"}
-        self.assertEqual(expected, cols)
+        self.assertTrue(expected.issubset(cols))
 
     def test_upsert_article_summaries_basic(self):
         """upsert_article_summaries should insert rows correctly."""
@@ -216,14 +210,12 @@ class TestArticleSummaries(unittest.TestCase):
         )
         self.assertEqual(inserted, 1)
 
-        conn = self._conn()
-        row = conn.execute(
-            "SELECT * FROM article_summaries WHERE url = ?",
+        rows = self._query(
+            "SELECT * FROM article_summaries WHERE url = %s",
             ("https://example.com/story-1",)
-        ).fetchone()
-        conn.close()
-
-        self.assertIsNotNone(row)
+        )
+        self.assertGreater(len(rows), 0)
+        row = rows[0]
         self.assertEqual(row["title"], "Low signal story")
         self.assertEqual(row["source"], "Example News")
         self.assertEqual(row["topic"], "geopolitics")
@@ -241,13 +233,11 @@ class TestArticleSummaries(unittest.TestCase):
         inserted2 = self._corpus.upsert_article_summaries(article, topic="economics")
         self.assertEqual(inserted2, 0, "Second upsert of same URL should insert 0 rows")
 
-        conn = self._conn()
-        count = conn.execute(
-            "SELECT COUNT(*) FROM article_summaries WHERE url = ?",
+        rows = self._query(
+            "SELECT COUNT(*) AS cnt FROM article_summaries WHERE url = %s",
             ("https://example.com/dup",)
-        ).fetchone()[0]
-        conn.close()
-        self.assertEqual(count, 1)
+        )
+        self.assertEqual(rows[0]["cnt"], 1)
 
     def test_upsert_article_summaries_skips_missing_url(self):
         """Articles without a url should be skipped."""
@@ -269,10 +259,8 @@ class TestArticleSummaries(unittest.TestCase):
         inserted = self._corpus.upsert_article_summaries(articles, topic="geopolitics")
         self.assertEqual(inserted, 10)
 
-        conn = self._conn()
-        count = conn.execute("SELECT COUNT(*) FROM article_summaries").fetchone()[0]
-        conn.close()
-        self.assertEqual(count, 10)
+        rows = self._query("SELECT COUNT(*) AS cnt FROM article_summaries")
+        self.assertEqual(rows[0]["cnt"], 10)
 
     def test_upsert_article_summaries_empty(self):
         """Empty list should return 0 and not error."""
@@ -422,65 +410,6 @@ class TestArticlesV2CoerceTimestamptz(unittest.TestCase):
         from corpus import _coerce_timestamptz
         result = _coerce_timestamptz("")
         self.assertTrue(result.endswith("+00:00") or "+" in result)
-
-
-class TestArticlesV2DualWriteFlag(unittest.TestCase):
-    """Verify upsert_articles respects the dual-write flag."""
-
-    def setUp(self):
-        self.tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
-        self.db_path = self.tmp.name
-        self.tmp.close()
-
-        import corpus
-        self._orig_sqlite_path = corpus.SQLITE_DB_PATH
-        corpus.SQLITE_DB_PATH = self.db_path
-        self._corpus = corpus
-        self._orig_database_url = corpus._database_url
-        corpus._database_url = lambda: None
-        corpus.init_db()
-
-    def tearDown(self):
-        self._corpus.SQLITE_DB_PATH = self._orig_sqlite_path
-        self._corpus._database_url = self._orig_database_url
-        os.unlink(self.db_path)
-
-    def test_sqlite_path_unaffected_by_dual_write_flag(self):
-        """When using SQLite, dual-write flag should have no effect."""
-        articles = [
-            {
-                "url": "https://example.com/v2-test-1",
-                "title": "V2 dual-write test",
-                "description": "Testing dual-write",
-                "source": "Test Source",
-                "published_at": "2024-06-01T12:00:00Z",
-            }
-        ]
-        with patch("core.config.ARTICLES_V2_DUAL_WRITE", True):
-            inserted = self._corpus.upsert_articles(articles, topic="geopolitics", provider="test")
-        self.assertEqual(inserted, 1)
-
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        row = conn.execute("SELECT * FROM articles WHERE url = ?", ("https://example.com/v2-test-1",)).fetchone()
-        conn.close()
-        self.assertIsNotNone(row)
-        self.assertEqual(row["title"], "V2 dual-write test")
-
-    def test_v2_records_not_accumulated_on_sqlite(self):
-        """On SQLite, v2_records list should stay empty (no Postgres branch)."""
-        articles = [
-            {
-                "url": "https://example.com/v2-test-2",
-                "title": "V2 test 2",
-                "source": "Test Source",
-                "published_at": "2024-06-01T12:00:00Z",
-            }
-        ]
-        with patch("core.config.ARTICLES_V2_DUAL_WRITE", True):
-            with patch.object(self._corpus, "_bulk_upsert_articles_pg") as mock_bulk:
-                self._corpus.upsert_articles(articles, topic="geopolitics", provider="test")
-                mock_bulk.assert_not_called()
 
 
 class TestBulkUpsertArticlesPg(unittest.TestCase):

@@ -6,6 +6,9 @@ from services.analytics_service import (
     get_instability_payload,
 )
 from services.events_service import (
+    get_canonical_event_payload,
+    get_canonical_events_payload,
+    get_event_perspectives_payload,
     get_events_payload,
     get_materialized_story_clusters_payload,
     get_structured_events_payload,
@@ -54,6 +57,21 @@ def get_correlations(days: int = 3):
 @router.get("/events/materialized")
 def get_materialized_story_clusters(topic: str | None = None, window_hours: int | None = None, limit: int = 40):
     return get_materialized_story_clusters_payload(topic=topic, window_hours=window_hours, limit=limit)
+
+
+@router.get("/events/canonical")
+def get_canonical_events_route(topic: str | None = None, status: str | None = None, limit: int = 40):
+    return get_canonical_events_payload(topic=topic, status=status, limit=limit)
+
+
+@router.get("/events/canonical/{event_id}/perspectives")
+def get_event_perspectives_route(event_id: str):
+    return get_event_perspectives_payload(event_id)
+
+
+@router.get("/events/canonical/{event_id}")
+def get_canonical_event_route(event_id: str):
+    return get_canonical_event_payload(event_id)
 
 
 @router.get("/events/{topic}")

@@ -1,7 +1,6 @@
 import hashlib
 import json
 import os
-import sqlite3
 import time
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
@@ -13,24 +12,7 @@ import psycopg
 from dotenv import load_dotenv
 from psycopg.rows import dict_row
 
-SQLITE_DB_PATH = "othello_corpus.db"
-
 load_dotenv(Path(__file__).with_name(".env"))
-
-SQLITE_TIMEOUT_SECONDS = float(os.getenv("OTHELLO_SQLITE_TIMEOUT_SECONDS", "30"))
-
-
-def _configure_sqlite_connection(conn: sqlite3.Connection) -> sqlite3.Connection:
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA busy_timeout=30000")
-    conn.execute("PRAGMA foreign_keys=ON")
-    try:
-        conn.execute("PRAGMA journal_mode=WAL")
-        conn.execute("PRAGMA synchronous=NORMAL")
-    except sqlite3.OperationalError as exc:
-        if "locked" not in str(exc).lower():
-            raise
-    return conn
 
 
 def _database_url() -> str | None:
@@ -56,23 +38,9 @@ def _database_url() -> str | None:
     return f"postgresql://{auth}@{host}:{port}/{dbname}"
 
 
-def using_postgres() -> bool:
-    return bool(_database_url())
-
-
 @contextmanager
 def _connect():
-    if using_postgres():
-        conn = psycopg.connect(_database_url(), row_factory=dict_row)
-        try:
-            yield conn
-            conn.commit()
-        finally:
-            conn.close()
-        return
-
-    conn = sqlite3.connect(SQLITE_DB_PATH, timeout=SQLITE_TIMEOUT_SECONDS)
-    _configure_sqlite_connection(conn)
+    conn = psycopg.connect(_database_url(), row_factory=dict_row)
     try:
         yield conn
         conn.commit()
@@ -82,498 +50,556 @@ def _connect():
 
 def init_db():
     with _connect() as conn:
-        if using_postgres():
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS articles (
-                    url TEXT PRIMARY KEY,
-                    canonical_url TEXT NOT NULL,
-                    title TEXT NOT NULL,
-                    description TEXT,
-                    source TEXT NOT NULL,
-                    source_domain TEXT,
-                    published_at TEXT NOT NULL,
-                    language TEXT,
-                    provider TEXT NOT NULL,
-                    content_hash TEXT NOT NULL,
-                    first_ingested_at DOUBLE PRECISION NOT NULL,
-                    last_ingested_at DOUBLE PRECISION NOT NULL,
-                    payload JSONB NOT NULL
-                )
-                """
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS articles (
+                url TEXT PRIMARY KEY,
+                canonical_url TEXT NOT NULL,
+                title TEXT NOT NULL,
+                description TEXT,
+                source TEXT NOT NULL,
+                source_domain TEXT,
+                published_at TEXT NOT NULL,
+                language TEXT,
+                provider TEXT NOT NULL,
+                content_hash TEXT NOT NULL,
+                first_ingested_at DOUBLE PRECISION NOT NULL,
+                last_ingested_at DOUBLE PRECISION NOT NULL,
+                payload JSONB NOT NULL
             )
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS article_topics (
-                    article_url TEXT NOT NULL REFERENCES articles(url) ON DELETE CASCADE,
-                    topic TEXT NOT NULL,
-                    assigned_at DOUBLE PRECISION NOT NULL,
-                    PRIMARY KEY (article_url, topic)
-                )
-                """
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS article_topics (
+                article_url TEXT NOT NULL REFERENCES articles(url) ON DELETE CASCADE,
+                topic TEXT NOT NULL,
+                assigned_at DOUBLE PRECISION NOT NULL,
+                PRIMARY KEY (article_url, topic)
             )
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS article_translations (
-                    article_url TEXT PRIMARY KEY REFERENCES articles(url) ON DELETE CASCADE,
-                    source_language TEXT,
-                    target_language TEXT NOT NULL,
-                    translated_title TEXT NOT NULL,
-                    translated_description TEXT,
-                    translation_provider TEXT NOT NULL,
-                    translated_at DOUBLE PRECISION NOT NULL
-                )
-                """
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS article_translations (
+                article_url TEXT PRIMARY KEY REFERENCES articles(url) ON DELETE CASCADE,
+                source_language TEXT,
+                target_language TEXT NOT NULL,
+                translated_title TEXT NOT NULL,
+                translated_description TEXT,
+                translation_provider TEXT NOT NULL,
+                translated_at DOUBLE PRECISION NOT NULL
             )
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS historical_url_queue (
-                    url TEXT PRIMARY KEY,
-                    canonical_url TEXT NOT NULL,
-                    title TEXT,
-                    source_name TEXT,
-                    source_domain TEXT,
-                    published_at TEXT,
-                    language TEXT,
-                    discovered_via TEXT NOT NULL,
-                    topic_guess TEXT,
-                    gdelt_query TEXT,
-                    gdelt_window_start TEXT,
-                    gdelt_window_end TEXT,
-                    fetch_status TEXT NOT NULL,
-                    last_attempt_at DOUBLE PRECISION,
-                    attempt_count INTEGER NOT NULL DEFAULT 0,
-                    payload JSONB NOT NULL,
-                    created_at DOUBLE PRECISION NOT NULL,
-                    updated_at DOUBLE PRECISION NOT NULL
-                )
-                """
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS historical_url_queue (
+                url TEXT PRIMARY KEY,
+                canonical_url TEXT NOT NULL,
+                title TEXT,
+                source_name TEXT,
+                source_domain TEXT,
+                published_at TEXT,
+                language TEXT,
+                discovered_via TEXT NOT NULL,
+                topic_guess TEXT,
+                gdelt_query TEXT,
+                gdelt_window_start TEXT,
+                gdelt_window_end TEXT,
+                fetch_status TEXT NOT NULL,
+                last_attempt_at DOUBLE PRECISION,
+                attempt_count INTEGER NOT NULL DEFAULT 0,
+                payload JSONB NOT NULL,
+                created_at DOUBLE PRECISION NOT NULL,
+                updated_at DOUBLE PRECISION NOT NULL
             )
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS ingestion_runs (
-                    id BIGSERIAL PRIMARY KEY,
-                    topic TEXT NOT NULL,
-                    provider TEXT NOT NULL,
-                    article_count INTEGER NOT NULL,
-                    started_at DOUBLE PRECISION NOT NULL,
-                    completed_at DOUBLE PRECISION NOT NULL,
-                    status TEXT NOT NULL,
-                    error TEXT
-                )
-                """
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS ingestion_runs (
+                id BIGSERIAL PRIMARY KEY,
+                topic TEXT NOT NULL,
+                provider TEXT NOT NULL,
+                article_count INTEGER NOT NULL,
+                started_at DOUBLE PRECISION NOT NULL,
+                completed_at DOUBLE PRECISION NOT NULL,
+                status TEXT NOT NULL,
+                error TEXT
             )
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS ingestion_state (
-                    state_key TEXT PRIMARY KEY,
-                    topic TEXT NOT NULL,
-                    provider TEXT NOT NULL,
-                    cursor_start TEXT,
-                    cursor_end TEXT,
-                    status TEXT NOT NULL,
-                    error TEXT,
-                    updated_at DOUBLE PRECISION NOT NULL,
-                    payload JSONB
-                )
-                """
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS ingestion_state (
+                state_key TEXT PRIMARY KEY,
+                topic TEXT NOT NULL,
+                provider TEXT NOT NULL,
+                cursor_start TEXT,
+                cursor_end TEXT,
+                status TEXT NOT NULL,
+                error TEXT,
+                updated_at DOUBLE PRECISION NOT NULL,
+                payload JSONB
             )
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS source_registry (
-                    source_id TEXT PRIMARY KEY,
-                    source_name TEXT NOT NULL,
-                    source_domain TEXT,
-                    source_type TEXT NOT NULL,
-                    trust_tier TEXT NOT NULL,
-                    region TEXT,
-                    language TEXT,
-                    active BOOLEAN NOT NULL DEFAULT TRUE,
-                    metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
-                    created_at DOUBLE PRECISION NOT NULL,
-                    updated_at DOUBLE PRECISION NOT NULL
-                )
-                """
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS source_registry (
+                source_id TEXT PRIMARY KEY,
+                source_name TEXT NOT NULL,
+                source_domain TEXT,
+                source_type TEXT NOT NULL,
+                trust_tier TEXT NOT NULL,
+                region TEXT,
+                language TEXT,
+                active BOOLEAN NOT NULL DEFAULT TRUE,
+                metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+                created_at DOUBLE PRECISION NOT NULL,
+                updated_at DOUBLE PRECISION NOT NULL
             )
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS raw_source_documents (
-                    document_id TEXT PRIMARY KEY,
-                    source_id TEXT NOT NULL REFERENCES source_registry(source_id) ON DELETE CASCADE,
-                    external_id TEXT,
-                    url TEXT,
-                    title TEXT,
-                    published_at TEXT,
-                    fetched_at DOUBLE PRECISION NOT NULL,
-                    language TEXT,
-                    source_type TEXT NOT NULL,
-                    trust_tier TEXT NOT NULL,
-                    content_hash TEXT NOT NULL,
-                    payload JSONB NOT NULL,
-                    normalized_ref TEXT,
-                    UNIQUE (source_id, content_hash)
-                )
-                """
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS raw_source_documents (
+                document_id TEXT PRIMARY KEY,
+                source_id TEXT NOT NULL REFERENCES source_registry(source_id) ON DELETE CASCADE,
+                external_id TEXT,
+                url TEXT,
+                title TEXT,
+                published_at TEXT,
+                fetched_at DOUBLE PRECISION NOT NULL,
+                language TEXT,
+                source_type TEXT NOT NULL,
+                trust_tier TEXT NOT NULL,
+                content_hash TEXT NOT NULL,
+                payload JSONB NOT NULL,
+                normalized_ref TEXT,
+                UNIQUE (source_id, content_hash)
             )
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS structured_events (
-                    event_id TEXT PRIMARY KEY,
-                    dataset TEXT NOT NULL,
-                    dataset_event_id TEXT,
-                    event_date TEXT NOT NULL,
-                    country TEXT,
-                    region TEXT,
-                    admin1 TEXT,
-                    admin2 TEXT,
-                    location TEXT,
-                    latitude DOUBLE PRECISION,
-                    longitude DOUBLE PRECISION,
-                    event_type TEXT,
-                    sub_event_type TEXT,
-                    actor_primary TEXT,
-                    actor_secondary TEXT,
-                    fatalities INTEGER,
-                    source_count INTEGER,
-                    source_urls JSONB NOT NULL,
-                    summary TEXT,
-                    payload JSONB NOT NULL,
-                    first_ingested_at DOUBLE PRECISION NOT NULL,
-                    last_ingested_at DOUBLE PRECISION NOT NULL
-                )
-                """
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS structured_events (
+                event_id TEXT PRIMARY KEY,
+                dataset TEXT NOT NULL,
+                dataset_event_id TEXT,
+                event_date TEXT NOT NULL,
+                country TEXT,
+                region TEXT,
+                admin1 TEXT,
+                admin2 TEXT,
+                location TEXT,
+                latitude DOUBLE PRECISION,
+                longitude DOUBLE PRECISION,
+                event_type TEXT,
+                sub_event_type TEXT,
+                actor_primary TEXT,
+                actor_secondary TEXT,
+                fatalities INTEGER,
+                source_count INTEGER,
+                source_urls JSONB NOT NULL,
+                summary TEXT,
+                payload JSONB NOT NULL,
+                first_ingested_at DOUBLE PRECISION NOT NULL,
+                last_ingested_at DOUBLE PRECISION NOT NULL
             )
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS materialized_story_clusters (
-                    cluster_key TEXT PRIMARY KEY,
-                    topic TEXT NOT NULL,
-                    computed_at DOUBLE PRECISION NOT NULL,
-                    window_hours INTEGER NOT NULL,
-                    label TEXT NOT NULL,
-                    summary TEXT,
-                    earliest_published_at TEXT,
-                    latest_published_at TEXT,
-                    article_urls JSONB NOT NULL,
-                    linked_structured_event_ids JSONB NOT NULL,
-                    event_payload JSONB NOT NULL
-                )
-                """
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS materialized_story_clusters (
+                cluster_key TEXT PRIMARY KEY,
+                topic TEXT NOT NULL,
+                computed_at DOUBLE PRECISION NOT NULL,
+                window_hours INTEGER NOT NULL,
+                label TEXT NOT NULL,
+                summary TEXT,
+                earliest_published_at TEXT,
+                latest_published_at TEXT,
+                article_urls JSONB NOT NULL,
+                linked_structured_event_ids JSONB NOT NULL,
+                event_payload JSONB NOT NULL
             )
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS official_updates (
-                    update_id TEXT PRIMARY KEY,
-                    issuing_body TEXT NOT NULL,
-                    update_type TEXT NOT NULL,
-                    title TEXT NOT NULL,
-                    url TEXT,
-                    published_at TEXT,
-                    fetched_at DOUBLE PRECISION NOT NULL,
-                    region TEXT,
-                    language TEXT,
-                    trust_tier TEXT NOT NULL,
-                    content_hash TEXT NOT NULL,
-                    payload JSONB NOT NULL,
-                    summary TEXT
-                )
-                """
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS official_updates (
+                update_id TEXT PRIMARY KEY,
+                issuing_body TEXT NOT NULL,
+                update_type TEXT NOT NULL,
+                title TEXT NOT NULL,
+                url TEXT,
+                published_at TEXT,
+                fetched_at DOUBLE PRECISION NOT NULL,
+                region TEXT,
+                language TEXT,
+                trust_tier TEXT NOT NULL,
+                content_hash TEXT NOT NULL,
+                payload JSONB NOT NULL,
+                summary TEXT
             )
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS monitored_channels (
-                    channel_record_id TEXT PRIMARY KEY,
-                    channel_key TEXT NOT NULL,
-                    channel_name TEXT NOT NULL,
-                    platform TEXT NOT NULL,
-                    message_id TEXT,
-                    message_url TEXT,
-                    author_name TEXT,
-                    posted_at TEXT,
-                    ingested_at DOUBLE PRECISION NOT NULL,
-                    language TEXT,
-                    region TEXT,
-                    verification_status TEXT NOT NULL,
-                    trust_tier TEXT NOT NULL,
-                    content_hash TEXT NOT NULL,
-                    text_content TEXT,
-                    payload JSONB NOT NULL,
-                    UNIQUE (channel_key, content_hash)
-                )
-                """
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS monitored_channels (
+                channel_record_id TEXT PRIMARY KEY,
+                channel_key TEXT NOT NULL,
+                channel_name TEXT NOT NULL,
+                platform TEXT NOT NULL,
+                message_id TEXT,
+                message_url TEXT,
+                author_name TEXT,
+                posted_at TEXT,
+                ingested_at DOUBLE PRECISION NOT NULL,
+                language TEXT,
+                region TEXT,
+                verification_status TEXT NOT NULL,
+                trust_tier TEXT NOT NULL,
+                content_hash TEXT NOT NULL,
+                text_content TEXT,
+                payload JSONB NOT NULL,
+                UNIQUE (channel_key, content_hash)
             )
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS evidence_links (
-                    evidence_id BIGSERIAL PRIMARY KEY,
-                    topic TEXT,
-                    entity_key TEXT,
-                    evidence_type TEXT NOT NULL,
-                    article_url TEXT REFERENCES articles(url) ON DELETE CASCADE,
-                    structured_event_id TEXT REFERENCES structured_events(event_id) ON DELETE CASCADE,
-                    official_update_id TEXT REFERENCES official_updates(update_id) ON DELETE CASCADE,
-                    channel_record_id TEXT REFERENCES monitored_channels(channel_record_id) ON DELETE CASCADE,
-                    source_id TEXT REFERENCES source_registry(source_id) ON DELETE SET NULL,
-                    linked_at DOUBLE PRECISION NOT NULL,
-                    metadata JSONB NOT NULL DEFAULT '{}'::jsonb
-                )
-                """
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS evidence_links (
+                evidence_id BIGSERIAL PRIMARY KEY,
+                topic TEXT,
+                entity_key TEXT,
+                evidence_type TEXT NOT NULL,
+                article_url TEXT REFERENCES articles(url) ON DELETE CASCADE,
+                structured_event_id TEXT REFERENCES structured_events(event_id) ON DELETE CASCADE,
+                official_update_id TEXT REFERENCES official_updates(update_id) ON DELETE CASCADE,
+                channel_record_id TEXT REFERENCES monitored_channels(channel_record_id) ON DELETE CASCADE,
+                source_id TEXT REFERENCES source_registry(source_id) ON DELETE SET NULL,
+                linked_at DOUBLE PRECISION NOT NULL,
+                metadata JSONB NOT NULL DEFAULT '{}'::jsonb
             )
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS contradiction_records (
-                    event_key TEXT PRIMARY KEY,
-                    topic TEXT,
-                    event_label TEXT NOT NULL,
-                    latest_update TEXT,
-                    article_urls JSONB NOT NULL,
-                    contradictions JSONB NOT NULL,
-                    contradiction_count INTEGER NOT NULL,
-                    generated_at DOUBLE PRECISION NOT NULL
-                )
-                """
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS contradiction_records (
+                event_key TEXT PRIMARY KEY,
+                topic TEXT,
+                event_label TEXT NOT NULL,
+                latest_update TEXT,
+                article_urls JSONB NOT NULL,
+                contradictions JSONB NOT NULL,
+                contradiction_count INTEGER NOT NULL,
+                generated_at DOUBLE PRECISION NOT NULL
             )
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS contradiction_history (
-                    id BIGSERIAL PRIMARY KEY,
-                    event_key TEXT NOT NULL,
-                    topic TEXT,
-                    event_label TEXT NOT NULL,
-                    latest_update TEXT,
-                    article_urls JSONB NOT NULL,
-                    contradictions JSONB NOT NULL,
-                    contradiction_count INTEGER NOT NULL,
-                    generated_at DOUBLE PRECISION NOT NULL,
-                    content_hash TEXT NOT NULL
-                )
-                """
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS contradiction_history (
+                id BIGSERIAL PRIMARY KEY,
+                event_key TEXT NOT NULL,
+                topic TEXT,
+                event_label TEXT NOT NULL,
+                latest_update TEXT,
+                article_urls JSONB NOT NULL,
+                contradictions JSONB NOT NULL,
+                contradiction_count INTEGER NOT NULL,
+                generated_at DOUBLE PRECISION NOT NULL,
+                content_hash TEXT NOT NULL
             )
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS article_framing_signals (
-                    article_url TEXT NOT NULL REFERENCES articles(url) ON DELETE CASCADE,
-                    subject_key TEXT NOT NULL,
-                    subject_label TEXT NOT NULL,
-                    topic TEXT,
-                    source TEXT,
-                    published_at TEXT,
-                    dominant_frame TEXT,
-                    frame_counts JSONB NOT NULL,
-                    matched_terms JSONB NOT NULL,
-                    payload JSONB NOT NULL,
-                    analyzed_at DOUBLE PRECISION NOT NULL,
-                    PRIMARY KEY (article_url, subject_key)
-                )
-                """
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS article_framing_signals (
+                article_url TEXT NOT NULL REFERENCES articles(url) ON DELETE CASCADE,
+                subject_key TEXT NOT NULL,
+                subject_label TEXT NOT NULL,
+                topic TEXT,
+                source TEXT,
+                published_at TEXT,
+                dominant_frame TEXT,
+                frame_counts JSONB NOT NULL,
+                matched_terms JSONB NOT NULL,
+                payload JSONB NOT NULL,
+                analyzed_at DOUBLE PRECISION NOT NULL,
+                PRIMARY KEY (article_url, subject_key)
             )
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS narrative_drift_snapshots (
-                    id BIGSERIAL PRIMARY KEY,
-                    snapshot_key TEXT NOT NULL,
-                    subject_key TEXT NOT NULL,
-                    subject_label TEXT NOT NULL,
-                    topic TEXT,
-                    window_days INTEGER NOT NULL,
-                    article_count INTEGER NOT NULL,
-                    earliest_published_at TEXT,
-                    latest_published_at TEXT,
-                    snapshot_hash TEXT NOT NULL,
-                    payload JSONB NOT NULL,
-                    generated_at DOUBLE PRECISION NOT NULL
-                )
-                """
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS narrative_drift_snapshots (
+                id BIGSERIAL PRIMARY KEY,
+                snapshot_key TEXT NOT NULL,
+                subject_key TEXT NOT NULL,
+                subject_label TEXT NOT NULL,
+                topic TEXT,
+                window_days INTEGER NOT NULL,
+                article_count INTEGER NOT NULL,
+                earliest_published_at TEXT,
+                latest_published_at TEXT,
+                snapshot_hash TEXT NOT NULL,
+                payload JSONB NOT NULL,
+                generated_at DOUBLE PRECISION NOT NULL
             )
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS claim_resolution_records (
-                    claim_record_key TEXT PRIMARY KEY,
-                    snapshot_key TEXT NOT NULL,
-                    event_key TEXT,
-                    topic TEXT,
-                    event_label TEXT,
-                    source_name TEXT NOT NULL,
-                    claim_text TEXT NOT NULL,
-                    opposing_claim_text TEXT,
-                    conflict_type TEXT,
-                    resolution_status TEXT NOT NULL,
-                    confidence DOUBLE PRECISION,
-                    evidence_url TEXT,
-                    published_at TEXT,
-                    payload JSONB NOT NULL,
-                    generated_at DOUBLE PRECISION NOT NULL
-                )
-                """
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS claim_resolution_records (
+                claim_record_key TEXT PRIMARY KEY,
+                snapshot_key TEXT NOT NULL,
+                event_key TEXT,
+                topic TEXT,
+                event_label TEXT,
+                source_name TEXT NOT NULL,
+                claim_text TEXT NOT NULL,
+                opposing_claim_text TEXT,
+                conflict_type TEXT,
+                resolution_status TEXT NOT NULL,
+                confidence DOUBLE PRECISION,
+                evidence_url TEXT,
+                published_at TEXT,
+                payload JSONB NOT NULL,
+                generated_at DOUBLE PRECISION NOT NULL
             )
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS source_reliability_snapshots (
-                    id BIGSERIAL PRIMARY KEY,
-                    snapshot_key TEXT NOT NULL,
-                    source_name TEXT NOT NULL,
-                    topic TEXT,
-                    corroborated_count INTEGER NOT NULL,
-                    contradicted_count INTEGER NOT NULL,
-                    unresolved_count INTEGER NOT NULL,
-                    mixed_count INTEGER NOT NULL,
-                    claim_count INTEGER NOT NULL,
-                    empirical_score DOUBLE PRECISION NOT NULL,
-                    weight_multiplier DOUBLE PRECISION NOT NULL,
-                    payload JSONB NOT NULL,
-                    generated_at DOUBLE PRECISION NOT NULL
-                )
-                """
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS source_reliability_snapshots (
+                id BIGSERIAL PRIMARY KEY,
+                snapshot_key TEXT NOT NULL,
+                source_name TEXT NOT NULL,
+                topic TEXT,
+                corroborated_count INTEGER NOT NULL,
+                contradicted_count INTEGER NOT NULL,
+                unresolved_count INTEGER NOT NULL,
+                mixed_count INTEGER NOT NULL,
+                claim_count INTEGER NOT NULL,
+                empirical_score DOUBLE PRECISION NOT NULL,
+                weight_multiplier DOUBLE PRECISION NOT NULL,
+                payload JSONB NOT NULL,
+                generated_at DOUBLE PRECISION NOT NULL
             )
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS prediction_ledger (
-                    prediction_key TEXT PRIMARY KEY,
-                    topic TEXT,
-                    source_type TEXT NOT NULL,
-                    source_ref TEXT,
-                    prediction_text TEXT NOT NULL,
-                    prediction_horizon_days INTEGER NOT NULL,
-                    prediction_type TEXT,
-                    extracted_subjects JSONB NOT NULL,
-                    status TEXT NOT NULL,
-                    confidence TEXT,
-                    created_at DOUBLE PRECISION NOT NULL,
-                    horizon_at DOUBLE PRECISION NOT NULL,
-                    resolved_at DOUBLE PRECISION,
-                    outcome_summary TEXT,
-                    payload JSONB NOT NULL
-                )
-                """
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS prediction_ledger (
+                prediction_key TEXT PRIMARY KEY,
+                topic TEXT,
+                source_type TEXT NOT NULL,
+                source_ref TEXT,
+                prediction_text TEXT NOT NULL,
+                prediction_horizon_days INTEGER NOT NULL,
+                prediction_type TEXT,
+                extracted_subjects JSONB NOT NULL,
+                status TEXT NOT NULL,
+                confidence TEXT,
+                created_at DOUBLE PRECISION NOT NULL,
+                horizon_at DOUBLE PRECISION NOT NULL,
+                resolved_at DOUBLE PRECISION,
+                outcome_summary TEXT,
+                payload JSONB NOT NULL
             )
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS event_observation_archive (
-                    event_key TEXT PRIMARY KEY,
-                    topic TEXT,
-                    event_label TEXT NOT NULL,
-                    first_othello_seen_at DOUBLE PRECISION NOT NULL,
-                    latest_othello_seen_at DOUBLE PRECISION NOT NULL,
-                    first_article_published_at TEXT,
-                    first_major_source_published_at TEXT,
-                    earliest_source TEXT,
-                    earliest_major_source TEXT,
-                    article_urls JSONB NOT NULL,
-                    source_names JSONB NOT NULL,
-                    payload JSONB NOT NULL
-                )
-                """
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS event_observation_archive (
+                event_key TEXT PRIMARY KEY,
+                topic TEXT,
+                event_label TEXT NOT NULL,
+                first_othello_seen_at DOUBLE PRECISION NOT NULL,
+                latest_othello_seen_at DOUBLE PRECISION NOT NULL,
+                first_article_published_at TEXT,
+                first_major_source_published_at TEXT,
+                earliest_source TEXT,
+                earliest_major_source TEXT,
+                article_urls JSONB NOT NULL,
+                source_names JSONB NOT NULL,
+                payload JSONB NOT NULL
             )
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS entity_reference_cache (
-                    entity_key TEXT PRIMARY KEY,
-                    provider TEXT NOT NULL,
-                    query_text TEXT NOT NULL,
-                    reference_title TEXT,
-                    reference_summary TEXT,
-                    reference_url TEXT,
-                    thumbnail_url TEXT,
-                    page_id TEXT,
-                    language TEXT,
-                    status TEXT NOT NULL,
-                    error TEXT,
-                    payload JSONB NOT NULL,
-                    fetched_at DOUBLE PRECISION NOT NULL
-                )
-                """
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS entity_reference_cache (
+                entity_key TEXT PRIMARY KEY,
+                provider TEXT NOT NULL,
+                query_text TEXT NOT NULL,
+                reference_title TEXT,
+                reference_summary TEXT,
+                reference_url TEXT,
+                thumbnail_url TEXT,
+                page_id TEXT,
+                language TEXT,
+                status TEXT NOT NULL,
+                error TEXT,
+                payload JSONB NOT NULL,
+                fetched_at DOUBLE PRECISION NOT NULL
             )
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS article_summaries (
-                    url TEXT PRIMARY KEY,
-                    title TEXT NOT NULL,
-                    source TEXT NOT NULL,
-                    source_domain TEXT,
-                    published_at TEXT NOT NULL,
-                    topic TEXT,
-                    quality_score INTEGER NOT NULL DEFAULT 0,
-                    first_seen_at DOUBLE PRECISION NOT NULL
-                )
-                """
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS article_summaries (
+                url TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                source TEXT NOT NULL,
+                source_domain TEXT,
+                published_at TEXT NOT NULL,
+                topic TEXT,
+                quality_score INTEGER NOT NULL DEFAULT 0,
+                first_seen_at DOUBLE PRECISION NOT NULL
             )
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_article_summaries_topic ON article_summaries (topic, published_at DESC)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_articles_published_at ON articles (published_at DESC)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_articles_last_ingested_at ON articles (last_ingested_at DESC)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_article_topics_topic ON article_topics (topic)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_article_translations_target ON article_translations (target_language, translated_at DESC)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_historical_url_queue_status ON historical_url_queue (fetch_status, published_at DESC)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_historical_url_queue_domain ON historical_url_queue (source_domain, published_at DESC)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_ingestion_state_provider_topic ON ingestion_state (provider, topic)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_source_registry_type ON source_registry (source_type, trust_tier)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_raw_source_documents_source ON raw_source_documents (source_id, published_at DESC)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_structured_events_date ON structured_events (event_date DESC)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_structured_events_dataset ON structured_events (dataset, event_date DESC)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_materialized_story_clusters_topic ON materialized_story_clusters (topic, computed_at DESC)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_articles_domain_published ON articles (source_domain, published_at DESC)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_official_updates_body ON official_updates (issuing_body, published_at DESC)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_monitored_channels_key ON monitored_channels (channel_key, posted_at DESC)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_evidence_links_topic ON evidence_links (topic, linked_at DESC)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_contradiction_topic ON contradiction_records (topic)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_contradiction_history_event_key ON contradiction_history (event_key, generated_at DESC)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_article_framing_subject ON article_framing_signals (subject_key, published_at DESC)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_narrative_drift_subject ON narrative_drift_snapshots (subject_key, generated_at DESC)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_claim_resolution_source ON claim_resolution_records (source_name, generated_at DESC)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_source_reliability_topic ON source_reliability_snapshots (topic, generated_at DESC)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_prediction_status ON prediction_ledger (status, created_at DESC)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_event_observation_topic ON event_observation_archive (topic, first_othello_seen_at DESC)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_entity_reference_provider ON entity_reference_cache (provider, fetched_at DESC)")
+            """
+        )
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_article_summaries_topic ON article_summaries (topic, published_at DESC)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_articles_published_at ON articles (published_at DESC)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_articles_last_ingested_at ON articles (last_ingested_at DESC)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_article_topics_topic ON article_topics (topic)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_article_translations_target ON article_translations (target_language, translated_at DESC)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_historical_url_queue_status ON historical_url_queue (fetch_status, published_at DESC)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_historical_url_queue_domain ON historical_url_queue (source_domain, published_at DESC)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_ingestion_state_provider_topic ON ingestion_state (provider, topic)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_source_registry_type ON source_registry (source_type, trust_tier)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_raw_source_documents_source ON raw_source_documents (source_id, published_at DESC)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_structured_events_date ON structured_events (event_date DESC)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_structured_events_dataset ON structured_events (dataset, event_date DESC)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_materialized_story_clusters_topic ON materialized_story_clusters (topic, computed_at DESC)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_articles_domain_published ON articles (source_domain, published_at DESC)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_official_updates_body ON official_updates (issuing_body, published_at DESC)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_monitored_channels_key ON monitored_channels (channel_key, posted_at DESC)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_evidence_links_topic ON evidence_links (topic, linked_at DESC)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_contradiction_topic ON contradiction_records (topic)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_contradiction_history_event_key ON contradiction_history (event_key, generated_at DESC)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_article_framing_subject ON article_framing_signals (subject_key, published_at DESC)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_narrative_drift_subject ON narrative_drift_snapshots (subject_key, generated_at DESC)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_claim_resolution_source ON claim_resolution_records (source_name, generated_at DESC)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_source_reliability_topic ON source_reliability_snapshots (topic, generated_at DESC)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_prediction_status ON prediction_ledger (status, created_at DESC)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_event_observation_topic ON event_observation_archive (topic, first_othello_seen_at DESC)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_entity_reference_provider ON entity_reference_cache (provider, fetched_at DESC)")
 
-            # ── v2 tables (typed timestamps, Postgres-only) ──────────────
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS articles_v2 (
-                    url TEXT PRIMARY KEY,
-                    canonical_url TEXT NOT NULL,
-                    title TEXT NOT NULL,
-                    description TEXT,
-                    source TEXT NOT NULL,
-                    source_domain TEXT,
-                    published_at TIMESTAMPTZ NOT NULL,
-                    language TEXT,
-                    provider TEXT NOT NULL,
-                    content_hash TEXT NOT NULL,
-                    first_ingested_at TIMESTAMPTZ NOT NULL,
-                    last_ingested_at TIMESTAMPTZ NOT NULL,
-                    payload JSONB NOT NULL
-                )
-                """
+        # ── canonical event model ─────────────────────────────────────
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS canonical_events (
+                event_id TEXT PRIMARY KEY,
+                topic TEXT NOT NULL,
+                label TEXT NOT NULL,
+                event_type TEXT,
+                status TEXT NOT NULL DEFAULT 'developing',
+                geo_country TEXT,
+                geo_region TEXT,
+                latitude DOUBLE PRECISION,
+                longitude DOUBLE PRECISION,
+                first_reported_at TEXT,
+                last_updated_at TEXT,
+                article_count INTEGER NOT NULL DEFAULT 0,
+                source_count INTEGER NOT NULL DEFAULT 0,
+                perspective_count INTEGER NOT NULL DEFAULT 0,
+                contradiction_count INTEGER NOT NULL DEFAULT 0,
+                neutral_summary TEXT,
+                neutral_confidence DOUBLE PRECISION,
+                neutral_generated_at DOUBLE PRECISION,
+                linked_structured_event_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
+                article_urls JSONB NOT NULL DEFAULT '[]'::jsonb,
+                first_seen_at DOUBLE PRECISION NOT NULL,
+                computed_at DOUBLE PRECISION NOT NULL,
+                payload JSONB NOT NULL DEFAULT '{}'::jsonb
             )
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS article_topics_v2 (
-                    article_url TEXT NOT NULL REFERENCES articles_v2(url) ON DELETE CASCADE,
-                    topic TEXT NOT NULL,
-                    assigned_at TIMESTAMPTZ NOT NULL,
-                    PRIMARY KEY (article_url, topic)
-                )
-                """
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS event_perspectives (
+                perspective_id TEXT PRIMARY KEY,
+                event_id TEXT NOT NULL REFERENCES canonical_events(event_id) ON DELETE CASCADE,
+                article_url TEXT REFERENCES articles(url) ON DELETE CASCADE,
+                source_name TEXT NOT NULL,
+                source_domain TEXT,
+                source_reliability_score DOUBLE PRECISION,
+                source_trust_tier TEXT,
+                source_region TEXT,
+                dominant_frame TEXT,
+                frame_counts JSONB NOT NULL DEFAULT '{}'::jsonb,
+                matched_terms JSONB NOT NULL DEFAULT '[]'::jsonb,
+                claim_text TEXT,
+                claim_type TEXT,
+                claim_resolution_status TEXT,
+                sentiment TEXT,
+                published_at TEXT,
+                analyzed_at DOUBLE PRECISION NOT NULL,
+                payload JSONB NOT NULL DEFAULT '{}'::jsonb
             )
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS article_summaries_v2 (
-                    url TEXT PRIMARY KEY,
-                    title TEXT NOT NULL,
-                    source TEXT NOT NULL,
-                    source_domain TEXT,
-                    published_at TIMESTAMPTZ NOT NULL,
-                    topic TEXT,
-                    quality_score INTEGER NOT NULL DEFAULT 0,
-                    first_seen_at TIMESTAMPTZ NOT NULL
-                )
-                """
+            """
+        )
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_canonical_events_topic ON canonical_events (topic, computed_at DESC)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_canonical_events_status ON canonical_events (status, last_updated_at DESC)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_event_perspectives_event ON event_perspectives (event_id, analyzed_at DESC)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_event_perspectives_source ON event_perspectives (source_name, analyzed_at DESC)")
+
+        # ── v2 tables (typed timestamps, Postgres-only) ──────────────
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS articles_v2 (
+                url TEXT PRIMARY KEY,
+                canonical_url TEXT NOT NULL,
+                title TEXT NOT NULL,
+                description TEXT,
+                source TEXT NOT NULL,
+                source_domain TEXT,
+                published_at TIMESTAMPTZ NOT NULL,
+                language TEXT,
+                provider TEXT NOT NULL,
+                content_hash TEXT NOT NULL,
+                first_ingested_at TIMESTAMPTZ NOT NULL,
+                last_ingested_at TIMESTAMPTZ NOT NULL,
+                payload JSONB NOT NULL
             )
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_articles_v2_published_at ON articles_v2 (published_at DESC)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_articles_v2_last_ingested ON articles_v2 (last_ingested_at DESC)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_articles_v2_domain_published ON articles_v2 (source_domain, published_at DESC)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_article_topics_v2_topic ON article_topics_v2 (topic)")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_article_summaries_v2_topic ON article_summaries_v2 (topic, published_at DESC)")
-            return
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS article_topics_v2 (
+                article_url TEXT NOT NULL REFERENCES articles_v2(url) ON DELETE CASCADE,
+                topic TEXT NOT NULL,
+                assigned_at TIMESTAMPTZ NOT NULL,
+                PRIMARY KEY (article_url, topic)
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS article_summaries_v2 (
+                url TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                source TEXT NOT NULL,
+                source_domain TEXT,
+                published_at TIMESTAMPTZ NOT NULL,
+                topic TEXT,
+                quality_score INTEGER NOT NULL DEFAULT 0,
+                first_seen_at TIMESTAMPTZ NOT NULL
+            )
+            """
+        )
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_articles_v2_published_at ON articles_v2 (published_at DESC)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_articles_v2_last_ingested ON articles_v2 (last_ingested_at DESC)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_articles_v2_domain_published ON articles_v2 (source_domain, published_at DESC)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_article_topics_v2_topic ON article_topics_v2 (topic)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_article_summaries_v2_topic ON article_summaries_v2 (topic, published_at DESC)")
+        return
 
         conn.execute(
             """
@@ -1025,6 +1051,65 @@ def init_db():
         conn.execute("CREATE INDEX IF NOT EXISTS idx_event_observation_topic ON event_observation_archive(topic, first_othello_seen_at DESC)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_entity_reference_provider ON entity_reference_cache(provider, fetched_at DESC)")
 
+        # ── canonical event model ─────────────────────────────────────
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS canonical_events (
+                event_id TEXT PRIMARY KEY,
+                topic TEXT NOT NULL,
+                label TEXT NOT NULL,
+                event_type TEXT,
+                status TEXT NOT NULL DEFAULT 'developing',
+                geo_country TEXT,
+                geo_region TEXT,
+                latitude REAL,
+                longitude REAL,
+                first_reported_at TEXT,
+                last_updated_at TEXT,
+                article_count INTEGER NOT NULL DEFAULT 0,
+                source_count INTEGER NOT NULL DEFAULT 0,
+                perspective_count INTEGER NOT NULL DEFAULT 0,
+                contradiction_count INTEGER NOT NULL DEFAULT 0,
+                neutral_summary TEXT,
+                neutral_confidence REAL,
+                neutral_generated_at REAL,
+                linked_structured_event_ids TEXT NOT NULL DEFAULT '[]',
+                article_urls TEXT NOT NULL DEFAULT '[]',
+                first_seen_at REAL NOT NULL,
+                computed_at REAL NOT NULL,
+                payload TEXT NOT NULL DEFAULT '{}'
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS event_perspectives (
+                perspective_id TEXT PRIMARY KEY,
+                event_id TEXT NOT NULL REFERENCES canonical_events(event_id) ON DELETE CASCADE,
+                article_url TEXT REFERENCES articles(url) ON DELETE CASCADE,
+                source_name TEXT NOT NULL,
+                source_domain TEXT,
+                source_reliability_score REAL,
+                source_trust_tier TEXT,
+                source_region TEXT,
+                dominant_frame TEXT,
+                frame_counts TEXT NOT NULL DEFAULT '{}',
+                matched_terms TEXT NOT NULL DEFAULT '[]',
+                claim_text TEXT,
+                claim_type TEXT,
+                claim_resolution_status TEXT,
+                sentiment TEXT,
+                published_at TEXT,
+                analyzed_at REAL NOT NULL,
+                payload TEXT NOT NULL DEFAULT '{}'
+            )
+            """
+        )
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_canonical_events_topic ON canonical_events(topic, computed_at DESC)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_canonical_events_status ON canonical_events(status, last_updated_at DESC)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_event_perspectives_event ON event_perspectives(event_id, analyzed_at DESC)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_event_perspectives_source ON event_perspectives(source_name, analyzed_at DESC)")
+
 
 def _canonical_url(url: str) -> str:
     parsed = urlparse((url or "").strip())
@@ -1164,78 +1249,41 @@ def upsert_source_registry(sources: list[dict]) -> int:
         for seed in sources:
             source_id = seed["source_id"]
             metadata = json.dumps(seed.get("metadata") or {}, sort_keys=True)
-            if using_postgres():
-                existing = conn.execute(
-                    "SELECT source_id FROM source_registry WHERE source_id = %s",
-                    (source_id,),
-                ).fetchone()
-                conn.execute(
-                    """
-                    INSERT INTO source_registry (
-                        source_id, source_name, source_domain, source_type, trust_tier, region, language,
-                        active, metadata, created_at, updated_at
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s)
-                    ON CONFLICT (source_id) DO UPDATE SET
-                        source_name = EXCLUDED.source_name,
-                        source_domain = EXCLUDED.source_domain,
-                        source_type = EXCLUDED.source_type,
-                        trust_tier = EXCLUDED.trust_tier,
-                        region = EXCLUDED.region,
-                        language = EXCLUDED.language,
-                        active = EXCLUDED.active,
-                        metadata = EXCLUDED.metadata,
-                        updated_at = EXCLUDED.updated_at
-                    """,
-                    (
-                        source_id,
-                        seed["source_name"],
-                        seed.get("source_domain"),
-                        seed["source_type"],
-                        seed["trust_tier"],
-                        seed.get("region"),
-                        seed.get("language", "en"),
-                        bool(seed.get("active", True)),
-                        metadata,
-                        now,
-                        now,
-                    ),
-                )
-            else:
-                existing = conn.execute(
-                    "SELECT source_id FROM source_registry WHERE source_id = ?",
-                    (source_id,),
-                ).fetchone()
-                conn.execute(
-                    """
-                    INSERT INTO source_registry (
-                        source_id, source_name, source_domain, source_type, trust_tier, region, language,
-                        active, metadata, created_at, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(source_id) DO UPDATE SET
-                        source_name = excluded.source_name,
-                        source_domain = excluded.source_domain,
-                        source_type = excluded.source_type,
-                        trust_tier = excluded.trust_tier,
-                        region = excluded.region,
-                        language = excluded.language,
-                        active = excluded.active,
-                        metadata = excluded.metadata,
-                        updated_at = excluded.updated_at
-                    """,
-                    (
-                        source_id,
-                        seed["source_name"],
-                        seed.get("source_domain"),
-                        seed["source_type"],
-                        seed["trust_tier"],
-                        seed.get("region"),
-                        seed.get("language", "en"),
-                        1 if seed.get("active", True) else 0,
-                        metadata,
-                        now,
-                        now,
-                    ),
-                )
+            existing = conn.execute(
+                "SELECT source_id FROM source_registry WHERE source_id = %s",
+                (source_id,),
+            ).fetchone()
+            conn.execute(
+                """
+                INSERT INTO source_registry (
+                    source_id, source_name, source_domain, source_type, trust_tier, region, language,
+                    active, metadata, created_at, updated_at
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s)
+                ON CONFLICT (source_id) DO UPDATE SET
+                    source_name = EXCLUDED.source_name,
+                    source_domain = EXCLUDED.source_domain,
+                    source_type = EXCLUDED.source_type,
+                    trust_tier = EXCLUDED.trust_tier,
+                    region = EXCLUDED.region,
+                    language = EXCLUDED.language,
+                    active = EXCLUDED.active,
+                    metadata = EXCLUDED.metadata,
+                    updated_at = EXCLUDED.updated_at
+                """,
+                (
+                    source_id,
+                    seed["source_name"],
+                    seed.get("source_domain"),
+                    seed["source_type"],
+                    seed["trust_tier"],
+                    seed.get("region"),
+                    seed.get("language", "en"),
+                    bool(seed.get("active", True)),
+                    metadata,
+                    now,
+                    now,
+                ),
+            )
             if not existing:
                 inserted += 1
     return inserted
@@ -1244,12 +1292,11 @@ def upsert_source_registry(sources: list[dict]) -> int:
 def get_source_registry(source_type: str | None = None, active_only: bool = True) -> list[dict]:
     clauses = []
     params: list[object] = []
-    placeholder = "%s" if using_postgres() else "?"
     if source_type:
-        clauses.append(f"source_type = {placeholder}")
+        clauses.append(f"source_type = %s")
         params.append(source_type)
     if active_only:
-        clauses.append("active = TRUE" if using_postgres() else "active = 1")
+        pass
     where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
     with _connect() as conn:
         rows = conn.execute(
@@ -1315,20 +1362,13 @@ def set_source_registry_active(source_ids: list[str], active: bool) -> int:
     if not normalized:
         return 0
 
-    placeholder = "%s" if using_postgres() else "?"
-    placeholders = ", ".join([placeholder] * len(normalized))
+    placeholders = ", ".join(["%s"] * len(normalized))
     with _connect() as conn:
-        if using_postgres():
-            result = conn.execute(
-                f"UPDATE source_registry SET active = %s, updated_at = %s WHERE source_id IN ({placeholders})",
-                (active, time.time(), *normalized),
-            )
-            return result.rowcount or 0
-        cursor = conn.execute(
-            f"UPDATE source_registry SET active = ?, updated_at = ? WHERE source_id IN ({placeholders})",
-            (1 if active else 0, time.time(), *normalized),
+        result = conn.execute(
+            f"UPDATE source_registry SET active = %s, updated_at = %s WHERE source_id IN ({placeholders})",
+            (active, time.time(), *normalized),
         )
-        return cursor.rowcount or 0
+        return result.rowcount or 0
 
 
 def upsert_historical_url_queue(records: list[dict]) -> int:
@@ -1344,125 +1384,66 @@ def upsert_historical_url_queue(records: list[dict]) -> int:
             except ValueError:
                 continue
 
-            if using_postgres():
-                existing = conn.execute(
-                    """
-                    SELECT canonical_url, title, source_name, source_domain, published_at, language,
-                           discovered_via, topic_guess, gdelt_query, gdelt_window_start, gdelt_window_end,
-                           fetch_status, last_attempt_at, attempt_count, payload
-                    FROM historical_url_queue
-                    WHERE url = %s
-                    """,
-                    (normalized["url"],),
-                ).fetchone()
-                conn.execute(
-                    """
-                    INSERT INTO historical_url_queue (
-                        url, canonical_url, title, source_name, source_domain, published_at, language,
-                        discovered_via, topic_guess, gdelt_query, gdelt_window_start, gdelt_window_end,
-                        fetch_status, last_attempt_at, attempt_count, payload, created_at, updated_at
-                    ) VALUES (
-                        %s, %s, %s, %s, %s, %s, %s,
-                        %s, %s, %s, %s, %s,
-                        %s, %s, %s, %s::jsonb, %s, %s
-                    )
-                    ON CONFLICT (url) DO UPDATE SET
-                        canonical_url = EXCLUDED.canonical_url,
-                        title = COALESCE(EXCLUDED.title, historical_url_queue.title),
-                        source_name = COALESCE(EXCLUDED.source_name, historical_url_queue.source_name),
-                        source_domain = COALESCE(EXCLUDED.source_domain, historical_url_queue.source_domain),
-                        published_at = COALESCE(EXCLUDED.published_at, historical_url_queue.published_at),
-                        language = COALESCE(EXCLUDED.language, historical_url_queue.language),
-                        discovered_via = EXCLUDED.discovered_via,
-                        topic_guess = COALESCE(EXCLUDED.topic_guess, historical_url_queue.topic_guess),
-                        gdelt_query = COALESCE(EXCLUDED.gdelt_query, historical_url_queue.gdelt_query),
-                        gdelt_window_start = COALESCE(EXCLUDED.gdelt_window_start, historical_url_queue.gdelt_window_start),
-                        gdelt_window_end = COALESCE(EXCLUDED.gdelt_window_end, historical_url_queue.gdelt_window_end),
-                        fetch_status = EXCLUDED.fetch_status,
-                        last_attempt_at = COALESCE(EXCLUDED.last_attempt_at, historical_url_queue.last_attempt_at),
-                        attempt_count = EXCLUDED.attempt_count,
-                        payload = EXCLUDED.payload,
-                        updated_at = EXCLUDED.updated_at
-                    """,
-                    (
-                        normalized["url"],
-                        normalized["canonical_url"],
-                        normalized["title"],
-                        normalized["source_name"],
-                        normalized["source_domain"],
-                        normalized["published_at"],
-                        normalized["language"],
-                        normalized["discovered_via"],
-                        normalized["topic_guess"],
-                        normalized["gdelt_query"],
-                        normalized["gdelt_window_start"],
-                        normalized["gdelt_window_end"],
-                        normalized["fetch_status"],
-                        normalized["last_attempt_at"],
-                        normalized["attempt_count"],
-                        json.dumps(normalized["payload"], sort_keys=True),
-                        now,
-                        now,
-                    ),
+            existing = conn.execute(
+                """
+                SELECT canonical_url, title, source_name, source_domain, published_at, language,
+                       discovered_via, topic_guess, gdelt_query, gdelt_window_start, gdelt_window_end,
+                       fetch_status, last_attempt_at, attempt_count, payload
+                FROM historical_url_queue
+                WHERE url = %s
+                """,
+                (normalized["url"],),
+            ).fetchone()
+            conn.execute(
+                """
+                INSERT INTO historical_url_queue (
+                    url, canonical_url, title, source_name, source_domain, published_at, language,
+                    discovered_via, topic_guess, gdelt_query, gdelt_window_start, gdelt_window_end,
+                    fetch_status, last_attempt_at, attempt_count, payload, created_at, updated_at
+                ) VALUES (
+                    %s, %s, %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s::jsonb, %s, %s
                 )
-            else:
-                existing = conn.execute(
-                    """
-                    SELECT canonical_url, title, source_name, source_domain, published_at, language,
-                           discovered_via, topic_guess, gdelt_query, gdelt_window_start, gdelt_window_end,
-                           fetch_status, last_attempt_at, attempt_count, payload
-                    FROM historical_url_queue
-                    WHERE url = ?
-                    """,
-                    (normalized["url"],),
-                ).fetchone()
-                conn.execute(
-                    """
-                    INSERT INTO historical_url_queue (
-                        url, canonical_url, title, source_name, source_domain, published_at, language,
-                        discovered_via, topic_guess, gdelt_query, gdelt_window_start, gdelt_window_end,
-                        fetch_status, last_attempt_at, attempt_count, payload, created_at, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(url) DO UPDATE SET
-                        canonical_url = excluded.canonical_url,
-                        title = COALESCE(excluded.title, historical_url_queue.title),
-                        source_name = COALESCE(excluded.source_name, historical_url_queue.source_name),
-                        source_domain = COALESCE(excluded.source_domain, historical_url_queue.source_domain),
-                        published_at = COALESCE(excluded.published_at, historical_url_queue.published_at),
-                        language = COALESCE(excluded.language, historical_url_queue.language),
-                        discovered_via = excluded.discovered_via,
-                        topic_guess = COALESCE(excluded.topic_guess, historical_url_queue.topic_guess),
-                        gdelt_query = COALESCE(excluded.gdelt_query, historical_url_queue.gdelt_query),
-                        gdelt_window_start = COALESCE(excluded.gdelt_window_start, historical_url_queue.gdelt_window_start),
-                        gdelt_window_end = COALESCE(excluded.gdelt_window_end, historical_url_queue.gdelt_window_end),
-                        fetch_status = excluded.fetch_status,
-                        last_attempt_at = COALESCE(excluded.last_attempt_at, historical_url_queue.last_attempt_at),
-                        attempt_count = excluded.attempt_count,
-                        payload = excluded.payload,
-                        updated_at = excluded.updated_at
-                    """,
-                    (
-                        normalized["url"],
-                        normalized["canonical_url"],
-                        normalized["title"],
-                        normalized["source_name"],
-                        normalized["source_domain"],
-                        normalized["published_at"],
-                        normalized["language"],
-                        normalized["discovered_via"],
-                        normalized["topic_guess"],
-                        normalized["gdelt_query"],
-                        normalized["gdelt_window_start"],
-                        normalized["gdelt_window_end"],
-                        normalized["fetch_status"],
-                        normalized["last_attempt_at"],
-                        normalized["attempt_count"],
-                        json.dumps(normalized["payload"], sort_keys=True),
-                        now,
-                        now,
-                    ),
-                )
-
+                ON CONFLICT (url) DO UPDATE SET
+                    canonical_url = EXCLUDED.canonical_url,
+                    title = COALESCE(EXCLUDED.title, historical_url_queue.title),
+                    source_name = COALESCE(EXCLUDED.source_name, historical_url_queue.source_name),
+                    source_domain = COALESCE(EXCLUDED.source_domain, historical_url_queue.source_domain),
+                    published_at = COALESCE(EXCLUDED.published_at, historical_url_queue.published_at),
+                    language = COALESCE(EXCLUDED.language, historical_url_queue.language),
+                    discovered_via = EXCLUDED.discovered_via,
+                    topic_guess = COALESCE(EXCLUDED.topic_guess, historical_url_queue.topic_guess),
+                    gdelt_query = COALESCE(EXCLUDED.gdelt_query, historical_url_queue.gdelt_query),
+                    gdelt_window_start = COALESCE(EXCLUDED.gdelt_window_start, historical_url_queue.gdelt_window_start),
+                    gdelt_window_end = COALESCE(EXCLUDED.gdelt_window_end, historical_url_queue.gdelt_window_end),
+                    fetch_status = EXCLUDED.fetch_status,
+                    last_attempt_at = COALESCE(EXCLUDED.last_attempt_at, historical_url_queue.last_attempt_at),
+                    attempt_count = EXCLUDED.attempt_count,
+                    payload = EXCLUDED.payload,
+                    updated_at = EXCLUDED.updated_at
+                """,
+                (
+                    normalized["url"],
+                    normalized["canonical_url"],
+                    normalized["title"],
+                    normalized["source_name"],
+                    normalized["source_domain"],
+                    normalized["published_at"],
+                    normalized["language"],
+                    normalized["discovered_via"],
+                    normalized["topic_guess"],
+                    normalized["gdelt_query"],
+                    normalized["gdelt_window_start"],
+                    normalized["gdelt_window_end"],
+                    normalized["fetch_status"],
+                    normalized["last_attempt_at"],
+                    normalized["attempt_count"],
+                    json.dumps(normalized["payload"], sort_keys=True),
+                    now,
+                    now,
+                ),
+            )
             comparable_payload = json.dumps(normalized["payload"], sort_keys=True)
             if not existing:
                 inserted_or_updated += 1
@@ -1502,14 +1483,13 @@ def get_historical_url_queue_batch(
     normalized_statuses = [status for status in (statuses or ["pending", "retry"]) if status]
     clauses = []
     params: list[object] = []
-    placeholder = "%s" if using_postgres() else "?"
 
     if normalized_statuses:
-        status_placeholders = ", ".join([placeholder] * len(normalized_statuses))
+        status_placeholders = ", ".join(["%s"] * len(normalized_statuses))
         clauses.append(f"fetch_status IN ({status_placeholders})")
         params.extend(normalized_statuses)
     if source_domain:
-        clauses.append(f"source_domain = {placeholder}")
+        clauses.append(f"source_domain = %s")
         params.append(source_domain.strip().lower())
 
     where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
@@ -1530,7 +1510,7 @@ def get_historical_url_queue_batch(
                 CASE WHEN topic_guess IS NULL OR topic_guess = '' THEN 1 ELSE 0 END,
                 COALESCE(published_at, '') DESC,
                 updated_at ASC
-            LIMIT {placeholder}
+            LIMIT %s
             """,
             params,
         ).fetchall()
@@ -1550,16 +1530,10 @@ def update_historical_url_queue_status(
 
     now = time.time()
     with _connect() as conn:
-        if using_postgres():
-            existing = conn.execute(
-                "SELECT payload, attempt_count FROM historical_url_queue WHERE url = %s",
-                (url,),
-            ).fetchone()
-        else:
-            existing = conn.execute(
-                "SELECT payload, attempt_count FROM historical_url_queue WHERE url = ?",
-                (url,),
-            ).fetchone()
+        existing = conn.execute(
+            "SELECT payload, attempt_count FROM historical_url_queue WHERE url = %s",
+            (url,),
+        ).fetchone()
         if not existing:
             return
 
@@ -1572,48 +1546,25 @@ def update_historical_url_queue_status(
         next_attempt_count = attempt_count if attempt_count is not None else int(existing["attempt_count"] or 0)
         attempt_ts = last_attempt_at if last_attempt_at is not None else time.time()
 
-        if using_postgres():
-            conn.execute(
-                """
-                UPDATE historical_url_queue
-                SET fetch_status = %s,
-                    last_attempt_at = %s,
-                    attempt_count = %s,
-                    payload = %s::jsonb,
-                    updated_at = %s
-                WHERE url = %s
-                """,
-                (
-                    fetch_status,
-                    attempt_ts,
-                    next_attempt_count,
-                    json.dumps(payload, sort_keys=True),
-                    now,
-                    url,
-                ),
-            )
-        else:
-            conn.execute(
-                """
-                UPDATE historical_url_queue
-                SET fetch_status = ?,
-                    last_attempt_at = ?,
-                    attempt_count = ?,
-                    payload = ?,
-                    updated_at = ?
-                WHERE url = ?
-                """,
-                (
-                    fetch_status,
-                    attempt_ts,
-                    next_attempt_count,
-                    json.dumps(payload, sort_keys=True),
-                    now,
-                    url,
-                ),
-            )
-
-
+        conn.execute(
+            """
+            UPDATE historical_url_queue
+            SET fetch_status = %s,
+                last_attempt_at = %s,
+                attempt_count = %s,
+                payload = %s::jsonb,
+                updated_at = %s
+            WHERE url = %s
+            """,
+            (
+                fetch_status,
+                attempt_ts,
+                next_attempt_count,
+                json.dumps(payload, sort_keys=True),
+                now,
+                url,
+            ),
+        )
 def record_raw_source_documents(documents: list[dict]) -> int:
     if not documents:
         return 0
@@ -1631,102 +1582,52 @@ def record_raw_source_documents(documents: list[dict]) -> int:
                     document.get("published_at", ""),
                 ]
             )
-            if using_postgres():
-                existing = conn.execute(
-                    """
-                    SELECT document_id
-                    FROM raw_source_documents
-                    WHERE document_id = %s OR (source_id = %s AND content_hash = %s)
-                    LIMIT 1
-                    """,
-                    (document["document_id"], document["source_id"], content_hash),
-                ).fetchone()
-            else:
-                existing = conn.execute(
-                    """
-                    SELECT document_id
-                    FROM raw_source_documents
-                    WHERE document_id = ? OR (source_id = ? AND content_hash = ?)
-                    LIMIT 1
-                    """,
-                    (document["document_id"], document["source_id"], content_hash),
-                ).fetchone()
-
+            existing = conn.execute(
+                """
+                SELECT document_id
+                FROM raw_source_documents
+                WHERE document_id = %s OR (source_id = %s AND content_hash = %s)
+                LIMIT 1
+                """,
+                (document["document_id"], document["source_id"], content_hash),
+            ).fetchone()
             target_document_id = existing["document_id"] if existing else _canonical_raw_document_id(document["source_id"], content_hash)
-            if using_postgres():
-                conn.execute(
-                    """
-                    INSERT INTO raw_source_documents (
-                        document_id, source_id, external_id, url, title, published_at, fetched_at,
-                        language, source_type, trust_tier, content_hash, payload, normalized_ref
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s)
-                    ON CONFLICT (document_id) DO UPDATE SET
-                        source_id = EXCLUDED.source_id,
-                        external_id = EXCLUDED.external_id,
-                        url = EXCLUDED.url,
-                        title = EXCLUDED.title,
-                        published_at = EXCLUDED.published_at,
-                        fetched_at = EXCLUDED.fetched_at,
-                        language = EXCLUDED.language,
-                        source_type = EXCLUDED.source_type,
-                        trust_tier = EXCLUDED.trust_tier,
-                        content_hash = EXCLUDED.content_hash,
-                        payload = EXCLUDED.payload,
-                        normalized_ref = EXCLUDED.normalized_ref
-                    """,
-                    (
-                        target_document_id,
-                        document["source_id"],
-                        document.get("external_id"),
-                        document.get("url"),
-                        document.get("title"),
-                        document.get("published_at"),
-                        document["fetched_at"],
-                        document.get("language", "en"),
-                        document["source_type"],
-                        document["trust_tier"],
-                        content_hash,
-                        payload,
-                        document.get("normalized_ref"),
-                    ),
-                )
-            else:
-                conn.execute(
-                    """
-                    INSERT INTO raw_source_documents (
-                        document_id, source_id, external_id, url, title, published_at, fetched_at,
-                        language, source_type, trust_tier, content_hash, payload, normalized_ref
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(document_id) DO UPDATE SET
-                        source_id = excluded.source_id,
-                        external_id = excluded.external_id,
-                        url = excluded.url,
-                        title = excluded.title,
-                        published_at = excluded.published_at,
-                        fetched_at = excluded.fetched_at,
-                        language = excluded.language,
-                        source_type = excluded.source_type,
-                        trust_tier = excluded.trust_tier,
-                        content_hash = excluded.content_hash,
-                        payload = excluded.payload,
-                        normalized_ref = excluded.normalized_ref
-                    """,
-                    (
-                        target_document_id,
-                        document["source_id"],
-                        document.get("external_id"),
-                        document.get("url"),
-                        document.get("title"),
-                        document.get("published_at"),
-                        document["fetched_at"],
-                        document.get("language", "en"),
-                        document["source_type"],
-                        document["trust_tier"],
-                        content_hash,
-                        payload,
-                        document.get("normalized_ref"),
-                    ),
-                )
+            conn.execute(
+                """
+                INSERT INTO raw_source_documents (
+                    document_id, source_id, external_id, url, title, published_at, fetched_at,
+                    language, source_type, trust_tier, content_hash, payload, normalized_ref
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s)
+                ON CONFLICT (document_id) DO UPDATE SET
+                    source_id = EXCLUDED.source_id,
+                    external_id = EXCLUDED.external_id,
+                    url = EXCLUDED.url,
+                    title = EXCLUDED.title,
+                    published_at = EXCLUDED.published_at,
+                    fetched_at = EXCLUDED.fetched_at,
+                    language = EXCLUDED.language,
+                    source_type = EXCLUDED.source_type,
+                    trust_tier = EXCLUDED.trust_tier,
+                    content_hash = EXCLUDED.content_hash,
+                    payload = EXCLUDED.payload,
+                    normalized_ref = EXCLUDED.normalized_ref
+                """,
+                (
+                    target_document_id,
+                    document["source_id"],
+                    document.get("external_id"),
+                    document.get("url"),
+                    document.get("title"),
+                    document.get("published_at"),
+                    document["fetched_at"],
+                    document.get("language", "en"),
+                    document["source_type"],
+                    document["trust_tier"],
+                    content_hash,
+                    payload,
+                    document.get("normalized_ref"),
+                ),
+            )
             if not existing:
                 inserted += 1
     return inserted
@@ -1740,88 +1641,46 @@ def upsert_official_updates(updates: list[dict]) -> int:
     with _connect() as conn:
         for update in updates:
             payload = json.dumps(update.get("payload") or {}, sort_keys=True)
-            if using_postgres():
-                existing = conn.execute(
-                    "SELECT update_id FROM official_updates WHERE update_id = %s",
-                    (update["update_id"],),
-                ).fetchone()
-                conn.execute(
-                    """
-                    INSERT INTO official_updates (
-                        update_id, issuing_body, update_type, title, url, published_at, fetched_at,
-                        region, language, trust_tier, content_hash, payload, summary
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s)
-                    ON CONFLICT (update_id) DO UPDATE SET
-                        issuing_body = EXCLUDED.issuing_body,
-                        update_type = EXCLUDED.update_type,
-                        title = EXCLUDED.title,
-                        url = EXCLUDED.url,
-                        published_at = EXCLUDED.published_at,
-                        fetched_at = EXCLUDED.fetched_at,
-                        region = EXCLUDED.region,
-                        language = EXCLUDED.language,
-                        trust_tier = EXCLUDED.trust_tier,
-                        content_hash = EXCLUDED.content_hash,
-                        payload = EXCLUDED.payload,
-                        summary = EXCLUDED.summary
-                    """,
-                    (
-                        update["update_id"],
-                        update["issuing_body"],
-                        update["update_type"],
-                        update["title"],
-                        update.get("url"),
-                        update.get("published_at"),
-                        update["fetched_at"],
-                        update.get("region"),
-                        update.get("language", "en"),
-                        update["trust_tier"],
-                        update["content_hash"],
-                        payload,
-                        update.get("summary"),
-                    ),
-                )
-            else:
-                existing = conn.execute(
-                    "SELECT update_id FROM official_updates WHERE update_id = ?",
-                    (update["update_id"],),
-                ).fetchone()
-                conn.execute(
-                    """
-                    INSERT INTO official_updates (
-                        update_id, issuing_body, update_type, title, url, published_at, fetched_at,
-                        region, language, trust_tier, content_hash, payload, summary
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(update_id) DO UPDATE SET
-                        issuing_body = excluded.issuing_body,
-                        update_type = excluded.update_type,
-                        title = excluded.title,
-                        url = excluded.url,
-                        published_at = excluded.published_at,
-                        fetched_at = excluded.fetched_at,
-                        region = excluded.region,
-                        language = excluded.language,
-                        trust_tier = excluded.trust_tier,
-                        content_hash = excluded.content_hash,
-                        payload = excluded.payload,
-                        summary = excluded.summary
-                    """,
-                    (
-                        update["update_id"],
-                        update["issuing_body"],
-                        update["update_type"],
-                        update["title"],
-                        update.get("url"),
-                        update.get("published_at"),
-                        update["fetched_at"],
-                        update.get("region"),
-                        update.get("language", "en"),
-                        update["trust_tier"],
-                        update["content_hash"],
-                        payload,
-                        update.get("summary"),
-                    ),
-                )
+            existing = conn.execute(
+                "SELECT update_id FROM official_updates WHERE update_id = %s",
+                (update["update_id"],),
+            ).fetchone()
+            conn.execute(
+                """
+                INSERT INTO official_updates (
+                    update_id, issuing_body, update_type, title, url, published_at, fetched_at,
+                    region, language, trust_tier, content_hash, payload, summary
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s)
+                ON CONFLICT (update_id) DO UPDATE SET
+                    issuing_body = EXCLUDED.issuing_body,
+                    update_type = EXCLUDED.update_type,
+                    title = EXCLUDED.title,
+                    url = EXCLUDED.url,
+                    published_at = EXCLUDED.published_at,
+                    fetched_at = EXCLUDED.fetched_at,
+                    region = EXCLUDED.region,
+                    language = EXCLUDED.language,
+                    trust_tier = EXCLUDED.trust_tier,
+                    content_hash = EXCLUDED.content_hash,
+                    payload = EXCLUDED.payload,
+                    summary = EXCLUDED.summary
+                """,
+                (
+                    update["update_id"],
+                    update["issuing_body"],
+                    update["update_type"],
+                    update["title"],
+                    update.get("url"),
+                    update.get("published_at"),
+                    update["fetched_at"],
+                    update.get("region"),
+                    update.get("language", "en"),
+                    update["trust_tier"],
+                    update["content_hash"],
+                    payload,
+                    update.get("summary"),
+                ),
+            )
             if not existing:
                 inserted += 1
     return inserted
@@ -1836,126 +1695,65 @@ def upsert_structured_events(events: list[dict]) -> int:
         for event in events:
             payload = json.dumps(event.get("payload") or {}, sort_keys=True)
             source_urls = json.dumps(event.get("source_urls") or [], sort_keys=True)
-            if using_postgres():
-                existing = conn.execute(
-                    "SELECT event_id FROM structured_events WHERE event_id = %s",
-                    (event["event_id"],),
-                ).fetchone()
-                conn.execute(
-                    """
-                    INSERT INTO structured_events (
-                        event_id, dataset, dataset_event_id, event_date, country, region, admin1, admin2,
-                        location, latitude, longitude, event_type, sub_event_type, actor_primary,
-                        actor_secondary, fatalities, source_count, source_urls, summary, payload,
-                        first_ingested_at, last_ingested_at
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s::jsonb, %s, %s)
-                    ON CONFLICT (event_id) DO UPDATE SET
-                        dataset = EXCLUDED.dataset,
-                        dataset_event_id = EXCLUDED.dataset_event_id,
-                        event_date = EXCLUDED.event_date,
-                        country = EXCLUDED.country,
-                        region = EXCLUDED.region,
-                        admin1 = EXCLUDED.admin1,
-                        admin2 = EXCLUDED.admin2,
-                        location = EXCLUDED.location,
-                        latitude = EXCLUDED.latitude,
-                        longitude = EXCLUDED.longitude,
-                        event_type = EXCLUDED.event_type,
-                        sub_event_type = EXCLUDED.sub_event_type,
-                        actor_primary = EXCLUDED.actor_primary,
-                        actor_secondary = EXCLUDED.actor_secondary,
-                        fatalities = EXCLUDED.fatalities,
-                        source_count = EXCLUDED.source_count,
-                        source_urls = EXCLUDED.source_urls,
-                        summary = EXCLUDED.summary,
-                        payload = EXCLUDED.payload,
-                        last_ingested_at = EXCLUDED.last_ingested_at
-                    """,
-                    (
-                        event["event_id"],
-                        event["dataset"],
-                        event.get("dataset_event_id"),
-                        event["event_date"],
-                        event.get("country"),
-                        event.get("region"),
-                        event.get("admin1"),
-                        event.get("admin2"),
-                        event.get("location"),
-                        event.get("latitude"),
-                        event.get("longitude"),
-                        event.get("event_type"),
-                        event.get("sub_event_type"),
-                        event.get("actor_primary"),
-                        event.get("actor_secondary"),
-                        event.get("fatalities"),
-                        event.get("source_count"),
-                        source_urls,
-                        event.get("summary"),
-                        payload,
-                        event["first_ingested_at"],
-                        event["last_ingested_at"],
-                    ),
-                )
-            else:
-                existing = conn.execute(
-                    "SELECT event_id FROM structured_events WHERE event_id = ?",
-                    (event["event_id"],),
-                ).fetchone()
-                conn.execute(
-                    """
-                    INSERT INTO structured_events (
-                        event_id, dataset, dataset_event_id, event_date, country, region, admin1, admin2,
-                        location, latitude, longitude, event_type, sub_event_type, actor_primary,
-                        actor_secondary, fatalities, source_count, source_urls, summary, payload,
-                        first_ingested_at, last_ingested_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(event_id) DO UPDATE SET
-                        dataset = excluded.dataset,
-                        dataset_event_id = excluded.dataset_event_id,
-                        event_date = excluded.event_date,
-                        country = excluded.country,
-                        region = excluded.region,
-                        admin1 = excluded.admin1,
-                        admin2 = excluded.admin2,
-                        location = excluded.location,
-                        latitude = excluded.latitude,
-                        longitude = excluded.longitude,
-                        event_type = excluded.event_type,
-                        sub_event_type = excluded.sub_event_type,
-                        actor_primary = excluded.actor_primary,
-                        actor_secondary = excluded.actor_secondary,
-                        fatalities = excluded.fatalities,
-                        source_count = excluded.source_count,
-                        source_urls = excluded.source_urls,
-                        summary = excluded.summary,
-                        payload = excluded.payload,
-                        last_ingested_at = excluded.last_ingested_at
-                    """,
-                    (
-                        event["event_id"],
-                        event["dataset"],
-                        event.get("dataset_event_id"),
-                        event["event_date"],
-                        event.get("country"),
-                        event.get("region"),
-                        event.get("admin1"),
-                        event.get("admin2"),
-                        event.get("location"),
-                        event.get("latitude"),
-                        event.get("longitude"),
-                        event.get("event_type"),
-                        event.get("sub_event_type"),
-                        event.get("actor_primary"),
-                        event.get("actor_secondary"),
-                        event.get("fatalities"),
-                        event.get("source_count"),
-                        source_urls,
-                        event.get("summary"),
-                        payload,
-                        event["first_ingested_at"],
-                        event["last_ingested_at"],
-                    ),
-                )
+            existing = conn.execute(
+                "SELECT event_id FROM structured_events WHERE event_id = %s",
+                (event["event_id"],),
+            ).fetchone()
+            conn.execute(
+                """
+                INSERT INTO structured_events (
+                    event_id, dataset, dataset_event_id, event_date, country, region, admin1, admin2,
+                    location, latitude, longitude, event_type, sub_event_type, actor_primary,
+                    actor_secondary, fatalities, source_count, source_urls, summary, payload,
+                    first_ingested_at, last_ingested_at
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s::jsonb, %s, %s)
+                ON CONFLICT (event_id) DO UPDATE SET
+                    dataset = EXCLUDED.dataset,
+                    dataset_event_id = EXCLUDED.dataset_event_id,
+                    event_date = EXCLUDED.event_date,
+                    country = EXCLUDED.country,
+                    region = EXCLUDED.region,
+                    admin1 = EXCLUDED.admin1,
+                    admin2 = EXCLUDED.admin2,
+                    location = EXCLUDED.location,
+                    latitude = EXCLUDED.latitude,
+                    longitude = EXCLUDED.longitude,
+                    event_type = EXCLUDED.event_type,
+                    sub_event_type = EXCLUDED.sub_event_type,
+                    actor_primary = EXCLUDED.actor_primary,
+                    actor_secondary = EXCLUDED.actor_secondary,
+                    fatalities = EXCLUDED.fatalities,
+                    source_count = EXCLUDED.source_count,
+                    source_urls = EXCLUDED.source_urls,
+                    summary = EXCLUDED.summary,
+                    payload = EXCLUDED.payload,
+                    last_ingested_at = EXCLUDED.last_ingested_at
+                """,
+                (
+                    event["event_id"],
+                    event["dataset"],
+                    event.get("dataset_event_id"),
+                    event["event_date"],
+                    event.get("country"),
+                    event.get("region"),
+                    event.get("admin1"),
+                    event.get("admin2"),
+                    event.get("location"),
+                    event.get("latitude"),
+                    event.get("longitude"),
+                    event.get("event_type"),
+                    event.get("sub_event_type"),
+                    event.get("actor_primary"),
+                    event.get("actor_secondary"),
+                    event.get("fatalities"),
+                    event.get("source_count"),
+                    source_urls,
+                    event.get("summary"),
+                    payload,
+                    event["first_ingested_at"],
+                    event["last_ingested_at"],
+                ),
+            )
             if not existing:
                 inserted += 1
     return inserted
@@ -2164,112 +1962,60 @@ def upsert_articles(
             except ValueError:
                 continue
 
-            if using_postgres():
-                v2_records.append(record)
-                existing = conn.execute(
-                    "SELECT content_hash FROM articles WHERE url = %s",
-                    (record["url"],),
-                ).fetchone()
+            v2_records.append(record)
+            existing = conn.execute(
+                "SELECT content_hash FROM articles WHERE url = %s",
+                (record["url"],),
+            ).fetchone()
+            conn.execute(
+                """
+                INSERT INTO articles (
+                    url, canonical_url, title, description, source, source_domain, published_at,
+                    language, provider, content_hash, first_ingested_at, last_ingested_at, payload
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb)
+                ON CONFLICT (url) DO UPDATE SET
+                    canonical_url = EXCLUDED.canonical_url,
+                    title = EXCLUDED.title,
+                    description = EXCLUDED.description,
+                    source = EXCLUDED.source,
+                    source_domain = EXCLUDED.source_domain,
+                    published_at = EXCLUDED.published_at,
+                    language = EXCLUDED.language,
+                    provider = EXCLUDED.provider,
+                    content_hash = EXCLUDED.content_hash,
+                    last_ingested_at = EXCLUDED.last_ingested_at,
+                    payload = EXCLUDED.payload
+                """,
+                (
+                    record["url"],
+                    record["canonical_url"],
+                    record["title"],
+                    record["description"],
+                    record["source"],
+                    record["source_domain"],
+                    record["published_at"],
+                    record["language"],
+                    record["provider"],
+                    record["content_hash"],
+                    now,
+                    now,
+                    json.dumps(record["payload"]),
+                ),
+            )
+            for topic_name in topics:
                 conn.execute(
                     """
-                    INSERT INTO articles (
-                        url, canonical_url, title, description, source, source_domain, published_at,
-                        language, provider, content_hash, first_ingested_at, last_ingested_at, payload
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb)
-                    ON CONFLICT (url) DO UPDATE SET
-                        canonical_url = EXCLUDED.canonical_url,
-                        title = EXCLUDED.title,
-                        description = EXCLUDED.description,
-                        source = EXCLUDED.source,
-                        source_domain = EXCLUDED.source_domain,
-                        published_at = EXCLUDED.published_at,
-                        language = EXCLUDED.language,
-                        provider = EXCLUDED.provider,
-                        content_hash = EXCLUDED.content_hash,
-                        last_ingested_at = EXCLUDED.last_ingested_at,
-                        payload = EXCLUDED.payload
+                    INSERT INTO article_topics (article_url, topic, assigned_at)
+                    VALUES (%s, %s, %s)
+                    ON CONFLICT (article_url, topic) DO UPDATE SET assigned_at = EXCLUDED.assigned_at
                     """,
-                    (
-                        record["url"],
-                        record["canonical_url"],
-                        record["title"],
-                        record["description"],
-                        record["source"],
-                        record["source_domain"],
-                        record["published_at"],
-                        record["language"],
-                        record["provider"],
-                        record["content_hash"],
-                        now,
-                        now,
-                        json.dumps(record["payload"]),
-                    ),
+                    (record["url"], topic_name, now),
                 )
-                for topic_name in topics:
-                    conn.execute(
-                        """
-                        INSERT INTO article_topics (article_url, topic, assigned_at)
-                        VALUES (%s, %s, %s)
-                        ON CONFLICT (article_url, topic) DO UPDATE SET assigned_at = EXCLUDED.assigned_at
-                        """,
-                        (record["url"], topic_name, now),
-                    )
-            else:
-                existing = conn.execute(
-                    "SELECT content_hash FROM articles WHERE url = ?",
-                    (record["url"],),
-                ).fetchone()
-                conn.execute(
-                    """
-                    INSERT INTO articles (
-                        url, canonical_url, title, description, source, source_domain, published_at,
-                        language, provider, content_hash, first_ingested_at, last_ingested_at, payload
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(url) DO UPDATE SET
-                        canonical_url = excluded.canonical_url,
-                        title = excluded.title,
-                        description = excluded.description,
-                        source = excluded.source,
-                        source_domain = excluded.source_domain,
-                        published_at = excluded.published_at,
-                        language = excluded.language,
-                        provider = excluded.provider,
-                        content_hash = excluded.content_hash,
-                        last_ingested_at = excluded.last_ingested_at,
-                        payload = excluded.payload
-                    """,
-                    (
-                        record["url"],
-                        record["canonical_url"],
-                        record["title"],
-                        record["description"],
-                        record["source"],
-                        record["source_domain"],
-                        record["published_at"],
-                        record["language"],
-                        record["provider"],
-                        record["content_hash"],
-                        now,
-                        now,
-                        json.dumps(record["payload"]),
-                    ),
-                )
-                for topic_name in topics:
-                    conn.execute(
-                        """
-                        INSERT INTO article_topics (article_url, topic, assigned_at)
-                        VALUES (?, ?, ?)
-                        ON CONFLICT(article_url, topic) DO UPDATE SET assigned_at = excluded.assigned_at
-                        """,
-                        (record["url"], topic_name, now),
-                    )
-
             existing_hash = existing["content_hash"] if existing else None
             if existing_hash is None or existing_hash != record["content_hash"]:
                 inserted += 1
 
         # ── dual-write to v2 tables (Postgres only) ─────────────────
-        if ARTICLES_V2_DUAL_WRITE and using_postgres() and v2_records:
             try:
                 now_iso = datetime.now(timezone.utc).isoformat()
                 _bulk_upsert_articles_pg(conn, v2_records, topics, now_iso)
@@ -2302,24 +2048,14 @@ def upsert_article_summaries(articles: list[dict], topic: str | None = None, qua
             published_at = (article.get("published_at") or datetime.now(timezone.utc).isoformat()).strip()
             article_topic = topic or (article.get("topic") or "")
 
-            if using_postgres():
-                cursor = conn.execute(
-                    """
-                    INSERT INTO article_summaries (url, title, source, source_domain, published_at, topic, quality_score, first_seen_at)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (url) DO NOTHING
-                    """,
-                    (url, title, source, source_domain, published_at, article_topic, score, now),
-                )
-            else:
-                cursor = conn.execute(
-                    """
-                    INSERT INTO article_summaries (url, title, source, source_domain, published_at, topic, quality_score, first_seen_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(url) DO NOTHING
-                    """,
-                    (url, title, source, source_domain, published_at, article_topic, score, now),
-                )
+            cursor = conn.execute(
+                """
+                INSERT INTO article_summaries (url, title, source, source_domain, published_at, topic, quality_score, first_seen_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (url) DO NOTHING
+                """,
+                (url, title, source, source_domain, published_at, article_topic, score, now),
+            )
             if cursor.rowcount > 0:
                 inserted += 1
 
@@ -2336,89 +2072,46 @@ def save_article_translation(
 ) -> None:
     translated_at = time.time()
     with _connect() as conn:
-        if using_postgres():
-            conn.execute(
-                """
-                INSERT INTO article_translations (
-                    article_url, source_language, target_language, translated_title,
-                    translated_description, translation_provider, translated_at
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (article_url) DO UPDATE SET
-                    source_language = EXCLUDED.source_language,
-                    target_language = EXCLUDED.target_language,
-                    translated_title = EXCLUDED.translated_title,
-                    translated_description = EXCLUDED.translated_description,
-                    translation_provider = EXCLUDED.translation_provider,
-                    translated_at = EXCLUDED.translated_at
-                """,
-                (
-                    article_url,
-                    source_language,
-                    target_language,
-                    translated_title,
-                    translated_description,
-                    translation_provider,
-                    translated_at,
-                ),
-            )
-        else:
-            conn.execute(
-                """
-                INSERT INTO article_translations (
-                    article_url, source_language, target_language, translated_title,
-                    translated_description, translation_provider, translated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(article_url) DO UPDATE SET
-                    source_language = excluded.source_language,
-                    target_language = excluded.target_language,
-                    translated_title = excluded.translated_title,
-                    translated_description = excluded.translated_description,
-                    translation_provider = excluded.translation_provider,
-                    translated_at = excluded.translated_at
-                """,
-                (
-                    article_url,
-                    source_language,
-                    target_language,
-                    translated_title,
-                    translated_description,
-                    translation_provider,
-                    translated_at,
-                ),
-            )
-
-
+        conn.execute(
+            """
+            INSERT INTO article_translations (
+                article_url, source_language, target_language, translated_title,
+                translated_description, translation_provider, translated_at
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (article_url) DO UPDATE SET
+                source_language = EXCLUDED.source_language,
+                target_language = EXCLUDED.target_language,
+                translated_title = EXCLUDED.translated_title,
+                translated_description = EXCLUDED.translated_description,
+                translation_provider = EXCLUDED.translation_provider,
+                translated_at = EXCLUDED.translated_at
+            """,
+            (
+                article_url,
+                source_language,
+                target_language,
+                translated_title,
+                translated_description,
+                translation_provider,
+                translated_at,
+            ),
+        )
 def get_articles_missing_translation(limit: int = 24, hours: int = 336) -> list[dict]:
     cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
     with _connect() as conn:
-        if using_postgres():
-            rows = conn.execute(
-                """
-                SELECT a.*
-                FROM articles a
-                LEFT JOIN article_translations t ON t.article_url = a.url
-                WHERE a.published_at >= %s
-                  AND COALESCE(LOWER(a.language), 'en') NOT IN ('en', 'eng', 'english', 'en-us', 'en-gb')
-                  AND t.article_url IS NULL
-                ORDER BY a.published_at DESC, a.last_ingested_at DESC
-                LIMIT %s
-                """,
-                (cutoff, limit),
-            ).fetchall()
-        else:
-            rows = conn.execute(
-                """
-                SELECT a.*
-                FROM articles a
-                LEFT JOIN article_translations t ON t.article_url = a.url
-                WHERE a.published_at >= ?
-                  AND COALESCE(LOWER(a.language), 'en') NOT IN ('en', 'eng', 'english', 'en-us', 'en-gb')
-                  AND t.article_url IS NULL
-                ORDER BY a.published_at DESC, a.last_ingested_at DESC
-                LIMIT ?
-                """,
-                (cutoff, limit),
-            ).fetchall()
+        rows = conn.execute(
+            """
+            SELECT a.*
+            FROM articles a
+            LEFT JOIN article_translations t ON t.article_url = a.url
+            WHERE a.published_at >= %s
+              AND COALESCE(LOWER(a.language), 'en') NOT IN ('en', 'eng', 'english', 'en-us', 'en-gb')
+              AND t.article_url IS NULL
+            ORDER BY a.published_at DESC, a.last_ingested_at DESC
+            LIMIT %s
+            """,
+            (cutoff, limit),
+        ).fetchall()
     return [_row_to_article(row) for row in rows]
 
 
@@ -2428,25 +2121,14 @@ def load_entity_reference(entity: str, provider: str = "wikipedia", max_age_hour
         return None
 
     with _connect() as conn:
-        if using_postgres():
-            row = conn.execute(
-                """
-                SELECT *
-                FROM entity_reference_cache
-                WHERE entity_key = %s AND provider = %s
-                """,
-                (entity_key, provider),
-            ).fetchone()
-        else:
-            row = conn.execute(
-                """
-                SELECT *
-                FROM entity_reference_cache
-                WHERE entity_key = ? AND provider = ?
-                """,
-                (entity_key, provider),
-            ).fetchone()
-
+        row = conn.execute(
+            """
+            SELECT *
+            FROM entity_reference_cache
+            WHERE entity_key = %s AND provider = %s
+            """,
+            (entity_key, provider),
+        ).fetchone()
     if not row:
         return None
 
@@ -2499,82 +2181,42 @@ def save_entity_reference(
     language = reference.get("language")
 
     with _connect() as conn:
-        if using_postgres():
-            conn.execute(
-                """
-                INSERT INTO entity_reference_cache (
-                    entity_key, provider, query_text, reference_title, reference_summary,
-                    reference_url, thumbnail_url, page_id, language, status, error, payload, fetched_at
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s)
-                ON CONFLICT (entity_key) DO UPDATE SET
-                    provider = EXCLUDED.provider,
-                    query_text = EXCLUDED.query_text,
-                    reference_title = EXCLUDED.reference_title,
-                    reference_summary = EXCLUDED.reference_summary,
-                    reference_url = EXCLUDED.reference_url,
-                    thumbnail_url = EXCLUDED.thumbnail_url,
-                    page_id = EXCLUDED.page_id,
-                    language = EXCLUDED.language,
-                    status = EXCLUDED.status,
-                    error = EXCLUDED.error,
-                    payload = EXCLUDED.payload,
-                    fetched_at = EXCLUDED.fetched_at
-                """,
-                (
-                    entity_key,
-                    provider,
-                    entity.strip(),
-                    title,
-                    summary,
-                    url,
-                    thumbnail_url,
-                    page_id,
-                    language,
-                    status,
-                    error,
-                    payload,
-                    fetched_at,
-                ),
-            )
-        else:
-            conn.execute(
-                """
-                INSERT INTO entity_reference_cache (
-                    entity_key, provider, query_text, reference_title, reference_summary,
-                    reference_url, thumbnail_url, page_id, language, status, error, payload, fetched_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(entity_key) DO UPDATE SET
-                    provider = excluded.provider,
-                    query_text = excluded.query_text,
-                    reference_title = excluded.reference_title,
-                    reference_summary = excluded.reference_summary,
-                    reference_url = excluded.reference_url,
-                    thumbnail_url = excluded.thumbnail_url,
-                    page_id = excluded.page_id,
-                    language = excluded.language,
-                    status = excluded.status,
-                    error = excluded.error,
-                    payload = excluded.payload,
-                    fetched_at = excluded.fetched_at
-                """,
-                (
-                    entity_key,
-                    provider,
-                    entity.strip(),
-                    title,
-                    summary,
-                    url,
-                    thumbnail_url,
-                    page_id,
-                    language,
-                    status,
-                    error,
-                    payload,
-                    fetched_at,
-                ),
-            )
-
-
+        conn.execute(
+            """
+            INSERT INTO entity_reference_cache (
+                entity_key, provider, query_text, reference_title, reference_summary,
+                reference_url, thumbnail_url, page_id, language, status, error, payload, fetched_at
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s)
+            ON CONFLICT (entity_key) DO UPDATE SET
+                provider = EXCLUDED.provider,
+                query_text = EXCLUDED.query_text,
+                reference_title = EXCLUDED.reference_title,
+                reference_summary = EXCLUDED.reference_summary,
+                reference_url = EXCLUDED.reference_url,
+                thumbnail_url = EXCLUDED.thumbnail_url,
+                page_id = EXCLUDED.page_id,
+                language = EXCLUDED.language,
+                status = EXCLUDED.status,
+                error = EXCLUDED.error,
+                payload = EXCLUDED.payload,
+                fetched_at = EXCLUDED.fetched_at
+            """,
+            (
+                entity_key,
+                provider,
+                entity.strip(),
+                title,
+                summary,
+                url,
+                thumbnail_url,
+                page_id,
+                language,
+                status,
+                error,
+                payload,
+                fetched_at,
+            ),
+        )
 def save_article_framing_signals(signals: list[dict]) -> int:
     if not signals:
         return 0
@@ -2586,70 +2228,37 @@ def save_article_framing_signals(signals: list[dict]) -> int:
             frame_counts = json.dumps(signal.get("frame_counts") or {}, sort_keys=True)
             matched_terms = json.dumps(signal.get("matched_terms") or {}, sort_keys=True)
             payload = json.dumps(signal.get("payload") or {}, sort_keys=True)
-            if using_postgres():
-                conn.execute(
-                    """
-                    INSERT INTO article_framing_signals (
-                        article_url, subject_key, subject_label, topic, source, published_at,
-                        dominant_frame, frame_counts, matched_terms, payload, analyzed_at
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s::jsonb, %s)
-                    ON CONFLICT (article_url, subject_key) DO UPDATE SET
-                        subject_label = EXCLUDED.subject_label,
-                        topic = EXCLUDED.topic,
-                        source = EXCLUDED.source,
-                        published_at = EXCLUDED.published_at,
-                        dominant_frame = EXCLUDED.dominant_frame,
-                        frame_counts = EXCLUDED.frame_counts,
-                        matched_terms = EXCLUDED.matched_terms,
-                        payload = EXCLUDED.payload,
-                        analyzed_at = EXCLUDED.analyzed_at
-                    """,
-                    (
-                        signal["article_url"],
-                        signal["subject_key"],
-                        signal["subject_label"],
-                        signal.get("topic"),
-                        signal.get("source"),
-                        signal.get("published_at"),
-                        signal.get("dominant_frame"),
-                        frame_counts,
-                        matched_terms,
-                        payload,
-                        signal.get("analyzed_at", now),
-                    ),
-                )
-            else:
-                conn.execute(
-                    """
-                    INSERT INTO article_framing_signals (
-                        article_url, subject_key, subject_label, topic, source, published_at,
-                        dominant_frame, frame_counts, matched_terms, payload, analyzed_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(article_url, subject_key) DO UPDATE SET
-                        subject_label = excluded.subject_label,
-                        topic = excluded.topic,
-                        source = excluded.source,
-                        published_at = excluded.published_at,
-                        dominant_frame = excluded.dominant_frame,
-                        frame_counts = excluded.frame_counts,
-                        matched_terms = excluded.matched_terms,
-                        payload = excluded.payload,
-                        analyzed_at = excluded.analyzed_at
-                    """,
-                    (
-                        signal["article_url"],
-                        signal["subject_key"],
-                        signal["subject_label"],
-                        signal.get("topic"),
-                        signal.get("source"),
-                        signal.get("published_at"),
-                        signal.get("dominant_frame"),
-                        frame_counts,
-                        matched_terms,
-                        payload,
-                        signal.get("analyzed_at", now),
-                    ),
-                )
+            conn.execute(
+                """
+                INSERT INTO article_framing_signals (
+                    article_url, subject_key, subject_label, topic, source, published_at,
+                    dominant_frame, frame_counts, matched_terms, payload, analyzed_at
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s::jsonb, %s)
+                ON CONFLICT (article_url, subject_key) DO UPDATE SET
+                    subject_label = EXCLUDED.subject_label,
+                    topic = EXCLUDED.topic,
+                    source = EXCLUDED.source,
+                    published_at = EXCLUDED.published_at,
+                    dominant_frame = EXCLUDED.dominant_frame,
+                    frame_counts = EXCLUDED.frame_counts,
+                    matched_terms = EXCLUDED.matched_terms,
+                    payload = EXCLUDED.payload,
+                    analyzed_at = EXCLUDED.analyzed_at
+                """,
+                (
+                    signal["article_url"],
+                    signal["subject_key"],
+                    signal["subject_label"],
+                    signal.get("topic"),
+                    signal.get("source"),
+                    signal.get("published_at"),
+                    signal.get("dominant_frame"),
+                    frame_counts,
+                    matched_terms,
+                    payload,
+                    signal.get("analyzed_at", now),
+                ),
+            )
             saved += 1
     return saved
 
@@ -2658,10 +2267,9 @@ def load_article_framing_signals(subject: str, topic: str | None = None, days: i
     subject_key = _normalize_entity_key(subject)
     cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
     params: list[object] = [subject_key, cutoff]
-    placeholder = "%s" if using_postgres() else "?"
     where_topic = ""
     if topic:
-        where_topic = f"AND topic = {placeholder}"
+        where_topic = f"AND topic = %s"
         params.append(topic)
     params.append(limit)
     with _connect() as conn:
@@ -2669,11 +2277,11 @@ def load_article_framing_signals(subject: str, topic: str | None = None, days: i
             f"""
             SELECT *
             FROM article_framing_signals
-            WHERE subject_key = {placeholder}
-              AND COALESCE(published_at, '') >= {placeholder}
+            WHERE subject_key = %s
+              AND COALESCE(published_at, '') >= %s
               {where_topic}
             ORDER BY published_at ASC, analyzed_at ASC
-            LIMIT {placeholder}
+            LIMIT %s
             """,
             params,
         ).fetchall()
@@ -2725,90 +2333,51 @@ def save_narrative_drift_snapshot(
     generated_at = time.time()
 
     with _connect() as conn:
-        if using_postgres():
-            existing = conn.execute(
-                """
-                SELECT snapshot_hash
-                FROM narrative_drift_snapshots
-                WHERE snapshot_key = %s
-                ORDER BY generated_at DESC
-                LIMIT 1
-                """,
-                (snapshot_key,),
-            ).fetchone()
-        else:
-            existing = conn.execute(
-                """
-                SELECT snapshot_hash
-                FROM narrative_drift_snapshots
-                WHERE snapshot_key = ?
-                ORDER BY generated_at DESC
-                LIMIT 1
-                """,
-                (snapshot_key,),
-            ).fetchone()
-
+        existing = conn.execute(
+            """
+            SELECT snapshot_hash
+            FROM narrative_drift_snapshots
+            WHERE snapshot_key = %s
+            ORDER BY generated_at DESC
+            LIMIT 1
+            """,
+            (snapshot_key,),
+        ).fetchone()
         if existing is not None and existing["snapshot_hash"] == snapshot_hash:
             return
 
-        if using_postgres():
-            conn.execute(
-                """
-                INSERT INTO narrative_drift_snapshots (
-                    snapshot_key, subject_key, subject_label, topic, window_days, article_count,
-                    earliest_published_at, latest_published_at, snapshot_hash, payload, generated_at
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s)
-                """,
-                (
-                    snapshot_key,
-                    subject_key,
-                    subject.strip(),
-                    topic,
-                    window_days,
-                    article_count,
-                    earliest,
-                    latest,
-                    snapshot_hash,
-                    serialized_payload,
-                    generated_at,
-                ),
-            )
-        else:
-            conn.execute(
-                """
-                INSERT INTO narrative_drift_snapshots (
-                    snapshot_key, subject_key, subject_label, topic, window_days, article_count,
-                    earliest_published_at, latest_published_at, snapshot_hash, payload, generated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    snapshot_key,
-                    subject_key,
-                    subject.strip(),
-                    topic,
-                    window_days,
-                    article_count,
-                    earliest,
-                    latest,
-                    snapshot_hash,
-                    serialized_payload,
-                    generated_at,
-                ),
-            )
-
-
+        conn.execute(
+            """
+            INSERT INTO narrative_drift_snapshots (
+                snapshot_key, subject_key, subject_label, topic, window_days, article_count,
+                earliest_published_at, latest_published_at, snapshot_hash, payload, generated_at
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s)
+            """,
+            (
+                snapshot_key,
+                subject_key,
+                subject.strip(),
+                topic,
+                window_days,
+                article_count,
+                earliest,
+                latest,
+                snapshot_hash,
+                serialized_payload,
+                generated_at,
+            ),
+        )
 def load_narrative_drift_snapshot(subject: str, topic: str | None = None, window_days: int = 180, max_age_hours: int = 24) -> dict | None:
     subject_key = _normalize_entity_key(subject)
     snapshot_key = f"{subject_key}:{topic or 'global'}:{window_days}"
     cutoff = time.time() - (max_age_hours * 3600)
-    placeholder = "%s" if using_postgres() else "?"
     with _connect() as conn:
         row = conn.execute(
             f"""
             SELECT *
             FROM narrative_drift_snapshots
-            WHERE snapshot_key = {placeholder}
-              AND generated_at >= {placeholder}
+            WHERE snapshot_key = %s
+              AND generated_at >= %s
             ORDER BY generated_at DESC
             LIMIT 1
             """,
@@ -2836,11 +2405,10 @@ def load_narrative_drift_snapshot(subject: str, topic: str | None = None, window
 
 def get_recent_contradiction_records(topic: str | None = None, hours: int = 24 * 30, limit: int = 500) -> list[dict]:
     cutoff = time.time() - (hours * 3600)
-    placeholder = "%s" if using_postgres() else "?"
     params: list[object] = [cutoff]
     topic_clause = ""
     if topic:
-        topic_clause = f"AND topic = {placeholder}"
+        topic_clause = f"AND topic = %s"
         params.append(topic)
     params.append(limit)
     with _connect() as conn:
@@ -2848,10 +2416,10 @@ def get_recent_contradiction_records(topic: str | None = None, hours: int = 24 *
             f"""
             SELECT *
             FROM contradiction_records
-            WHERE generated_at >= {placeholder}
+            WHERE generated_at >= %s
               {topic_clause}
             ORDER BY generated_at DESC
-            LIMIT {placeholder}
+            LIMIT %s
             """,
             params,
         ).fetchall()
@@ -2882,11 +2450,7 @@ def get_recent_contradiction_records(topic: str | None = None, hours: int = 24 *
 def replace_claim_resolution_snapshot(snapshot_key: str, records: list[dict]) -> int:
     now = time.time()
     with _connect() as conn:
-        if using_postgres():
-            conn.execute("DELETE FROM claim_resolution_records WHERE snapshot_key = %s", (snapshot_key,))
-        else:
-            conn.execute("DELETE FROM claim_resolution_records WHERE snapshot_key = ?", (snapshot_key,))
-
+        conn.execute("DELETE FROM claim_resolution_records WHERE snapshot_key = %s", (snapshot_key,))
         saved = 0
         for record in records:
             base_claim_record_key = record["claim_record_key"]
@@ -2896,90 +2460,47 @@ def replace_claim_resolution_snapshot(snapshot_key: str, records: list[dict]) ->
             payload_data = dict(record.get("payload") or {})
             payload_data.setdefault("base_claim_record_key", base_claim_record_key)
             payload = json.dumps(payload_data, sort_keys=True)
-            if using_postgres():
-                conn.execute(
-                    """
-                    INSERT INTO claim_resolution_records (
-                        claim_record_key, snapshot_key, event_key, topic, event_label, source_name,
-                        claim_text, opposing_claim_text, conflict_type, resolution_status, confidence,
-                        evidence_url, published_at, payload, generated_at
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s)
-                    ON CONFLICT (claim_record_key) DO UPDATE SET
-                        snapshot_key = EXCLUDED.snapshot_key,
-                        event_key = EXCLUDED.event_key,
-                        topic = EXCLUDED.topic,
-                        event_label = EXCLUDED.event_label,
-                        source_name = EXCLUDED.source_name,
-                        claim_text = EXCLUDED.claim_text,
-                        opposing_claim_text = EXCLUDED.opposing_claim_text,
-                        conflict_type = EXCLUDED.conflict_type,
-                        resolution_status = EXCLUDED.resolution_status,
-                        confidence = EXCLUDED.confidence,
-                        evidence_url = EXCLUDED.evidence_url,
-                        published_at = EXCLUDED.published_at,
-                        payload = EXCLUDED.payload,
-                        generated_at = EXCLUDED.generated_at
-                    """,
-                    (
-                        storage_claim_record_key,
-                        snapshot_key,
-                        record.get("event_key"),
-                        record.get("topic"),
-                        record.get("event_label"),
-                        record["source_name"],
-                        record["claim_text"],
-                        record.get("opposing_claim_text"),
-                        record.get("conflict_type"),
-                        record["resolution_status"],
-                        record.get("confidence"),
-                        record.get("evidence_url"),
-                        record.get("published_at"),
-                        payload,
-                        record.get("generated_at", now),
-                    ),
-                )
-            else:
-                conn.execute(
-                    """
-                    INSERT INTO claim_resolution_records (
-                        claim_record_key, snapshot_key, event_key, topic, event_label, source_name,
-                        claim_text, opposing_claim_text, conflict_type, resolution_status, confidence,
-                        evidence_url, published_at, payload, generated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(claim_record_key) DO UPDATE SET
-                        snapshot_key = excluded.snapshot_key,
-                        event_key = excluded.event_key,
-                        topic = excluded.topic,
-                        event_label = excluded.event_label,
-                        source_name = excluded.source_name,
-                        claim_text = excluded.claim_text,
-                        opposing_claim_text = excluded.opposing_claim_text,
-                        conflict_type = excluded.conflict_type,
-                        resolution_status = excluded.resolution_status,
-                        confidence = excluded.confidence,
-                        evidence_url = excluded.evidence_url,
-                        published_at = excluded.published_at,
-                        payload = excluded.payload,
-                        generated_at = excluded.generated_at
-                    """,
-                    (
-                        storage_claim_record_key,
-                        snapshot_key,
-                        record.get("event_key"),
-                        record.get("topic"),
-                        record.get("event_label"),
-                        record["source_name"],
-                        record["claim_text"],
-                        record.get("opposing_claim_text"),
-                        record.get("conflict_type"),
-                        record["resolution_status"],
-                        record.get("confidence"),
-                        record.get("evidence_url"),
-                        record.get("published_at"),
-                        payload,
-                        record.get("generated_at", now),
-                    ),
-                )
+            conn.execute(
+                """
+                INSERT INTO claim_resolution_records (
+                    claim_record_key, snapshot_key, event_key, topic, event_label, source_name,
+                    claim_text, opposing_claim_text, conflict_type, resolution_status, confidence,
+                    evidence_url, published_at, payload, generated_at
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s)
+                ON CONFLICT (claim_record_key) DO UPDATE SET
+                    snapshot_key = EXCLUDED.snapshot_key,
+                    event_key = EXCLUDED.event_key,
+                    topic = EXCLUDED.topic,
+                    event_label = EXCLUDED.event_label,
+                    source_name = EXCLUDED.source_name,
+                    claim_text = EXCLUDED.claim_text,
+                    opposing_claim_text = EXCLUDED.opposing_claim_text,
+                    conflict_type = EXCLUDED.conflict_type,
+                    resolution_status = EXCLUDED.resolution_status,
+                    confidence = EXCLUDED.confidence,
+                    evidence_url = EXCLUDED.evidence_url,
+                    published_at = EXCLUDED.published_at,
+                    payload = EXCLUDED.payload,
+                    generated_at = EXCLUDED.generated_at
+                """,
+                (
+                    storage_claim_record_key,
+                    snapshot_key,
+                    record.get("event_key"),
+                    record.get("topic"),
+                    record.get("event_label"),
+                    record["source_name"],
+                    record["claim_text"],
+                    record.get("opposing_claim_text"),
+                    record.get("conflict_type"),
+                    record["resolution_status"],
+                    record.get("confidence"),
+                    record.get("evidence_url"),
+                    record.get("published_at"),
+                    payload,
+                    record.get("generated_at", now),
+                ),
+            )
             saved += 1
     return saved
 
@@ -2992,102 +2513,56 @@ def save_source_reliability_snapshot(snapshot_key: str, rows: list[dict], topic:
     with _connect() as conn:
         for row in rows:
             payload = json.dumps(row.get("payload") or {}, sort_keys=True)
-            if using_postgres():
-                conn.execute(
-                    """
-                    INSERT INTO source_reliability_snapshots (
-                        snapshot_key, source_name, topic, corroborated_count, contradicted_count,
-                        unresolved_count, mixed_count, claim_count, empirical_score, weight_multiplier,
-                        payload, generated_at
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s)
-                    """,
-                    (
-                        snapshot_key,
-                        row["source_name"],
-                        topic,
-                        row.get("corroborated_count", 0),
-                        row.get("contradicted_count", 0),
-                        row.get("unresolved_count", 0),
-                        row.get("mixed_count", 0),
-                        row.get("claim_count", 0),
-                        row.get("empirical_score", 0.5),
-                        row.get("weight_multiplier", 1.0),
-                        payload,
-                        row.get("generated_at", now),
-                    ),
-                )
-            else:
-                conn.execute(
-                    """
-                    INSERT INTO source_reliability_snapshots (
-                        snapshot_key, source_name, topic, corroborated_count, contradicted_count,
-                        unresolved_count, mixed_count, claim_count, empirical_score, weight_multiplier,
-                        payload, generated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        snapshot_key,
-                        row["source_name"],
-                        topic,
-                        row.get("corroborated_count", 0),
-                        row.get("contradicted_count", 0),
-                        row.get("unresolved_count", 0),
-                        row.get("mixed_count", 0),
-                        row.get("claim_count", 0),
-                        row.get("empirical_score", 0.5),
-                        row.get("weight_multiplier", 1.0),
-                        payload,
-                        row.get("generated_at", now),
-                    ),
-                )
+            conn.execute(
+                """
+                INSERT INTO source_reliability_snapshots (
+                    snapshot_key, source_name, topic, corroborated_count, contradicted_count,
+                    unresolved_count, mixed_count, claim_count, empirical_score, weight_multiplier,
+                    payload, generated_at
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s)
+                """,
+                (
+                    snapshot_key,
+                    row["source_name"],
+                    topic,
+                    row.get("corroborated_count", 0),
+                    row.get("contradicted_count", 0),
+                    row.get("unresolved_count", 0),
+                    row.get("mixed_count", 0),
+                    row.get("claim_count", 0),
+                    row.get("empirical_score", 0.5),
+                    row.get("weight_multiplier", 1.0),
+                    payload,
+                    row.get("generated_at", now),
+                ),
+            )
             saved += 1
     return saved
 
 
 def load_latest_source_reliability(topic: str | None = None, max_age_hours: int = 24 * 7) -> dict[str, dict]:
     cutoff = time.time() - (max_age_hours * 3600)
-    placeholder = "%s" if using_postgres() else "?"
     params: list[object] = [cutoff]
     topic_clause = ""
     if topic is None:
         topic_clause = "AND topic IS NULL"
     else:
-        topic_clause = f"AND topic = {placeholder}"
+        topic_clause = f"AND topic = %s"
         params.append(topic)
 
     with _connect() as conn:
-        if using_postgres():
-            rows = conn.execute(
-                f"""
-                SELECT DISTINCT ON (LOWER(source_name))
-                    source_name, topic, corroborated_count, contradicted_count, unresolved_count, mixed_count,
-                    claim_count, empirical_score, weight_multiplier, payload, generated_at
-                FROM source_reliability_snapshots
-                WHERE generated_at >= {placeholder}
-                  {topic_clause}
-                ORDER BY LOWER(source_name), generated_at DESC
-                """,
-                params,
-            ).fetchall()
-        else:
-            rows = conn.execute(
-                f"""
-                SELECT source_name, topic, corroborated_count, contradicted_count, unresolved_count, mixed_count,
-                       claim_count, empirical_score, weight_multiplier, payload, generated_at
-                FROM source_reliability_snapshots
-                WHERE generated_at >= {placeholder}
-                  {topic_clause}
-                  AND id IN (
-                      SELECT MAX(id)
-                      FROM source_reliability_snapshots
-                      WHERE generated_at >= {placeholder}
-                        {topic_clause}
-                      GROUP BY LOWER(source_name)
-                  )
-                """,
-                params + params,
-            ).fetchall()
-
+        rows = conn.execute(
+            f"""
+            SELECT DISTINCT ON (LOWER(source_name))
+                source_name, topic, corroborated_count, contradicted_count, unresolved_count, mixed_count,
+                claim_count, empirical_score, weight_multiplier, payload, generated_at
+            FROM source_reliability_snapshots
+            WHERE generated_at >= %s
+              {topic_clause}
+            ORDER BY LOWER(source_name), generated_at DESC
+            """,
+            params,
+        ).fetchall()
     result = {}
     for row in rows:
         payload = row["payload"]
@@ -3117,103 +2592,59 @@ def upsert_prediction_records(records: list[dict]) -> int:
         for record in records:
             extracted_subjects = json.dumps(record.get("extracted_subjects") or [], sort_keys=True)
             payload = json.dumps(record.get("payload") or {}, sort_keys=True)
-            if using_postgres():
-                conn.execute(
-                    """
-                    INSERT INTO prediction_ledger (
-                        prediction_key, topic, source_type, source_ref, prediction_text, prediction_horizon_days,
-                        prediction_type, extracted_subjects, status, confidence, created_at, horizon_at,
-                        resolved_at, outcome_summary, payload
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s, %s, %s, %s, %s, %s::jsonb)
-                    ON CONFLICT (prediction_key) DO UPDATE SET
-                        topic = EXCLUDED.topic,
-                        source_type = EXCLUDED.source_type,
-                        source_ref = EXCLUDED.source_ref,
-                        prediction_text = EXCLUDED.prediction_text,
-                        prediction_horizon_days = EXCLUDED.prediction_horizon_days,
-                        prediction_type = EXCLUDED.prediction_type,
-                        extracted_subjects = EXCLUDED.extracted_subjects,
-                        status = EXCLUDED.status,
-                        confidence = EXCLUDED.confidence,
-                        created_at = EXCLUDED.created_at,
-                        horizon_at = EXCLUDED.horizon_at,
-                        resolved_at = EXCLUDED.resolved_at,
-                        outcome_summary = EXCLUDED.outcome_summary,
-                        payload = EXCLUDED.payload
-                    """,
-                    (
-                        record["prediction_key"],
-                        record.get("topic"),
-                        record["source_type"],
-                        record.get("source_ref"),
-                        record["prediction_text"],
-                        record["prediction_horizon_days"],
-                        record.get("prediction_type"),
-                        extracted_subjects,
-                        record["status"],
-                        record.get("confidence"),
-                        record["created_at"],
-                        record["horizon_at"],
-                        record.get("resolved_at"),
-                        record.get("outcome_summary"),
-                        payload,
-                    ),
-                )
-            else:
-                conn.execute(
-                    """
-                    INSERT INTO prediction_ledger (
-                        prediction_key, topic, source_type, source_ref, prediction_text, prediction_horizon_days,
-                        prediction_type, extracted_subjects, status, confidence, created_at, horizon_at,
-                        resolved_at, outcome_summary, payload
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(prediction_key) DO UPDATE SET
-                        topic = excluded.topic,
-                        source_type = excluded.source_type,
-                        source_ref = excluded.source_ref,
-                        prediction_text = excluded.prediction_text,
-                        prediction_horizon_days = excluded.prediction_horizon_days,
-                        prediction_type = excluded.prediction_type,
-                        extracted_subjects = excluded.extracted_subjects,
-                        status = excluded.status,
-                        confidence = excluded.confidence,
-                        created_at = excluded.created_at,
-                        horizon_at = excluded.horizon_at,
-                        resolved_at = excluded.resolved_at,
-                        outcome_summary = excluded.outcome_summary,
-                        payload = excluded.payload
-                    """,
-                    (
-                        record["prediction_key"],
-                        record.get("topic"),
-                        record["source_type"],
-                        record.get("source_ref"),
-                        record["prediction_text"],
-                        record["prediction_horizon_days"],
-                        record.get("prediction_type"),
-                        extracted_subjects,
-                        record["status"],
-                        record.get("confidence"),
-                        record["created_at"],
-                        record["horizon_at"],
-                        record.get("resolved_at"),
-                        record.get("outcome_summary"),
-                        payload,
-                    ),
-                )
+            conn.execute(
+                """
+                INSERT INTO prediction_ledger (
+                    prediction_key, topic, source_type, source_ref, prediction_text, prediction_horizon_days,
+                    prediction_type, extracted_subjects, status, confidence, created_at, horizon_at,
+                    resolved_at, outcome_summary, payload
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s, %s, %s, %s, %s, %s::jsonb)
+                ON CONFLICT (prediction_key) DO UPDATE SET
+                    topic = EXCLUDED.topic,
+                    source_type = EXCLUDED.source_type,
+                    source_ref = EXCLUDED.source_ref,
+                    prediction_text = EXCLUDED.prediction_text,
+                    prediction_horizon_days = EXCLUDED.prediction_horizon_days,
+                    prediction_type = EXCLUDED.prediction_type,
+                    extracted_subjects = EXCLUDED.extracted_subjects,
+                    status = EXCLUDED.status,
+                    confidence = EXCLUDED.confidence,
+                    created_at = EXCLUDED.created_at,
+                    horizon_at = EXCLUDED.horizon_at,
+                    resolved_at = EXCLUDED.resolved_at,
+                    outcome_summary = EXCLUDED.outcome_summary,
+                    payload = EXCLUDED.payload
+                """,
+                (
+                    record["prediction_key"],
+                    record.get("topic"),
+                    record["source_type"],
+                    record.get("source_ref"),
+                    record["prediction_text"],
+                    record["prediction_horizon_days"],
+                    record.get("prediction_type"),
+                    extracted_subjects,
+                    record["status"],
+                    record.get("confidence"),
+                    record["created_at"],
+                    record["horizon_at"],
+                    record.get("resolved_at"),
+                    record.get("outcome_summary"),
+                    payload,
+                ),
+            )
             saved += 1
     return saved
 
 
 def load_prediction_records(topic: str | None = None, status: str | None = None, limit: int = 100) -> list[dict]:
     params: list[object] = []
-    placeholder = "%s" if using_postgres() else "?"
     clauses = []
     if topic:
-        clauses.append(f"topic = {placeholder}")
+        clauses.append(f"topic = %s")
         params.append(topic)
     if status:
-        clauses.append(f"status = {placeholder}")
+        clauses.append(f"status = %s")
         params.append(status)
     where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
     params.append(limit)
@@ -3224,7 +2655,7 @@ def load_prediction_records(topic: str | None = None, status: str | None = None,
             FROM prediction_ledger
             {where}
             ORDER BY created_at DESC
-            LIMIT {placeholder}
+            LIMIT %s
             """,
             params,
         ).fetchall()
@@ -3262,22 +2693,20 @@ def load_prediction_records(topic: str | None = None, status: str | None = None,
 def delete_prediction_records(topic: str | None = None, source_ref: str | None = None) -> int:
     clauses = []
     params: list[object] = []
-    placeholder = "%s" if using_postgres() else "?"
     if topic:
-        clauses.append(f"topic = {placeholder}")
+        clauses.append(f"topic = %s")
         params.append(topic)
     if source_ref:
-        clauses.append(f"source_ref = {placeholder}")
+        clauses.append(f"source_ref = %s")
         params.append(source_ref)
     if not clauses:
         return 0
     with _connect() as conn:
-        if using_postgres():
-            row = conn.execute(
-                f"DELETE FROM prediction_ledger WHERE {' AND '.join(clauses)} RETURNING prediction_key",
-                params,
-            ).fetchall()
-            return len(row)
+        row = conn.execute(
+            f"DELETE FROM prediction_ledger WHERE {' AND '.join(clauses)} RETURNING prediction_key",
+            params,
+        ).fetchall()
+        return len(row)
         cursor = conn.execute(
             f"DELETE FROM prediction_ledger WHERE {' AND '.join(clauses)}",
             params,
@@ -3294,84 +2723,46 @@ def upsert_event_observations(records: list[dict]) -> int:
             article_urls = json.dumps(record.get("article_urls") or [], sort_keys=True)
             source_names = json.dumps(record.get("source_names") or [], sort_keys=True)
             payload = json.dumps(record.get("payload") or {}, sort_keys=True)
-            if using_postgres():
-                conn.execute(
-                    """
-                    INSERT INTO event_observation_archive (
-                        event_key, topic, event_label, first_othello_seen_at, latest_othello_seen_at,
-                        first_article_published_at, first_major_source_published_at, earliest_source,
-                        earliest_major_source, article_urls, source_names, payload
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s::jsonb)
-                    ON CONFLICT (event_key) DO UPDATE SET
-                        topic = EXCLUDED.topic,
-                        event_label = EXCLUDED.event_label,
-                        first_othello_seen_at = LEAST(event_observation_archive.first_othello_seen_at, EXCLUDED.first_othello_seen_at),
-                        latest_othello_seen_at = GREATEST(event_observation_archive.latest_othello_seen_at, EXCLUDED.latest_othello_seen_at),
-                        first_article_published_at = COALESCE(event_observation_archive.first_article_published_at, EXCLUDED.first_article_published_at),
-                        first_major_source_published_at = COALESCE(event_observation_archive.first_major_source_published_at, EXCLUDED.first_major_source_published_at),
-                        earliest_source = COALESCE(event_observation_archive.earliest_source, EXCLUDED.earliest_source),
-                        earliest_major_source = COALESCE(event_observation_archive.earliest_major_source, EXCLUDED.earliest_major_source),
-                        article_urls = EXCLUDED.article_urls,
-                        source_names = EXCLUDED.source_names,
-                        payload = EXCLUDED.payload
-                    """,
-                    (
-                        record["event_key"],
-                        record.get("topic"),
-                        record["event_label"],
-                        record["first_othello_seen_at"],
-                        record["latest_othello_seen_at"],
-                        record.get("first_article_published_at"),
-                        record.get("first_major_source_published_at"),
-                        record.get("earliest_source"),
-                        record.get("earliest_major_source"),
-                        article_urls,
-                        source_names,
-                        payload,
-                    ),
-                )
-            else:
-                conn.execute(
-                    """
-                    INSERT INTO event_observation_archive (
-                        event_key, topic, event_label, first_othello_seen_at, latest_othello_seen_at,
-                        first_article_published_at, first_major_source_published_at, earliest_source,
-                        earliest_major_source, article_urls, source_names, payload
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(event_key) DO UPDATE SET
-                        topic = excluded.topic,
-                        event_label = excluded.event_label,
-                        first_othello_seen_at = MIN(first_othello_seen_at, excluded.first_othello_seen_at),
-                        latest_othello_seen_at = MAX(latest_othello_seen_at, excluded.latest_othello_seen_at),
-                        first_article_published_at = COALESCE(first_article_published_at, excluded.first_article_published_at),
-                        first_major_source_published_at = COALESCE(first_major_source_published_at, excluded.first_major_source_published_at),
-                        earliest_source = COALESCE(earliest_source, excluded.earliest_source),
-                        earliest_major_source = COALESCE(earliest_major_source, excluded.earliest_major_source),
-                        article_urls = excluded.article_urls,
-                        source_names = excluded.source_names,
-                        payload = excluded.payload
-                    """,
-                    (
-                        record["event_key"],
-                        record.get("topic"),
-                        record["event_label"],
-                        record["first_othello_seen_at"],
-                        record["latest_othello_seen_at"],
-                        record.get("first_article_published_at"),
-                        record.get("first_major_source_published_at"),
-                        record.get("earliest_source"),
-                        record.get("earliest_major_source"),
-                        article_urls,
-                        source_names,
-                        payload,
-                    ),
-                )
+            conn.execute(
+                """
+                INSERT INTO event_observation_archive (
+                    event_key, topic, event_label, first_othello_seen_at, latest_othello_seen_at,
+                    first_article_published_at, first_major_source_published_at, earliest_source,
+                    earliest_major_source, article_urls, source_names, payload
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s::jsonb)
+                ON CONFLICT (event_key) DO UPDATE SET
+                    topic = EXCLUDED.topic,
+                    event_label = EXCLUDED.event_label,
+                    first_othello_seen_at = LEAST(event_observation_archive.first_othello_seen_at, EXCLUDED.first_othello_seen_at),
+                    latest_othello_seen_at = GREATEST(event_observation_archive.latest_othello_seen_at, EXCLUDED.latest_othello_seen_at),
+                    first_article_published_at = COALESCE(event_observation_archive.first_article_published_at, EXCLUDED.first_article_published_at),
+                    first_major_source_published_at = COALESCE(event_observation_archive.first_major_source_published_at, EXCLUDED.first_major_source_published_at),
+                    earliest_source = COALESCE(event_observation_archive.earliest_source, EXCLUDED.earliest_source),
+                    earliest_major_source = COALESCE(event_observation_archive.earliest_major_source, EXCLUDED.earliest_major_source),
+                    article_urls = EXCLUDED.article_urls,
+                    source_names = EXCLUDED.source_names,
+                    payload = EXCLUDED.payload
+                """,
+                (
+                    record["event_key"],
+                    record.get("topic"),
+                    record["event_label"],
+                    record["first_othello_seen_at"],
+                    record["latest_othello_seen_at"],
+                    record.get("first_article_published_at"),
+                    record.get("first_major_source_published_at"),
+                    record.get("earliest_source"),
+                    record.get("earliest_major_source"),
+                    article_urls,
+                    source_names,
+                    payload,
+                ),
+            )
             saved += 1
     return saved
 
 
 def load_before_news_archive(limit: int = 100, minimum_gap_hours: int = 4) -> list[dict]:
-    placeholder = "%s" if using_postgres() else "?"
     threshold = minimum_gap_hours * 3600
     with _connect() as conn:
         rows = conn.execute(
@@ -3380,7 +2771,7 @@ def load_before_news_archive(limit: int = 100, minimum_gap_hours: int = 4) -> li
             FROM event_observation_archive
             WHERE first_major_source_published_at IS NOT NULL
             ORDER BY first_othello_seen_at DESC
-            LIMIT {placeholder}
+            LIMIT %s
             """,
             (limit,),
         ).fetchall()
@@ -3422,14 +2813,13 @@ def load_before_news_archive(limit: int = 100, minimum_gap_hours: int = 4) -> li
 
 
 def load_event_observation_records(limit: int = 100) -> list[dict]:
-    placeholder = "%s" if using_postgres() else "?"
     with _connect() as conn:
         rows = conn.execute(
             f"""
             SELECT *
             FROM event_observation_archive
             ORDER BY latest_othello_seen_at DESC
-            LIMIT {placeholder}
+            LIMIT %s
             """,
             (limit,),
         ).fetchall()
@@ -3479,30 +2869,18 @@ def _parse_published_at(value: str | None) -> datetime | None:
 
 def record_ingestion_run(topic: str, provider: str, article_count: int, started_at: float, status: str, error: str | None = None):
     with _connect() as conn:
-        if using_postgres():
-            conn.execute(
-                """
-                INSERT INTO ingestion_runs (topic, provider, article_count, started_at, completed_at, status, error)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-                """,
-                (topic, provider, article_count, started_at, time.time(), status, error),
-            )
-        else:
-            conn.execute(
-                """
-                INSERT INTO ingestion_runs (topic, provider, article_count, started_at, completed_at, status, error)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                """,
-                (topic, provider, article_count, started_at, time.time(), status, error),
-            )
-
-
-def _headline_corpus_sql_filter(table_alias: str = "a") -> str:
-    if using_postgres():
-        return (
-            f" AND ({table_alias}.payload->>'analytic_tier' IS NULL OR "
-            f"{table_alias}.payload->>'analytic_tier' IN ('', 'headline'))"
+        conn.execute(
+            """
+            INSERT INTO ingestion_runs (topic, provider, article_count, started_at, completed_at, status, error)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """,
+            (topic, provider, article_count, started_at, time.time(), status, error),
         )
+def _headline_corpus_sql_filter(table_alias: str = "a") -> str:
+    return (
+        f" AND ({table_alias}.payload->>'analytic_tier' IS NULL OR "
+        f"{table_alias}.payload->>'analytic_tier' IN ('', 'headline'))"
+    )
     return (
         f" AND (json_extract({table_alias}.payload, '$.analytic_tier') IS NULL OR "
         f"json_extract({table_alias}.payload, '$.analytic_tier') IN ('', 'headline'))"
@@ -3519,69 +2897,38 @@ def get_recent_articles(
     cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
     tier_clause = _headline_corpus_sql_filter("a") if headline_corpus_only else ""
     with _connect() as conn:
-        if using_postgres():
-            if topic:
-                rows = conn.execute(
-                    f"""
-                    SELECT a.*, tr.translated_title, tr.translated_description, tr.source_language AS translation_source_language,
-                           tr.target_language AS translation_target_language, tr.translation_provider, tr.translated_at
-                    FROM articles a
-                    JOIN article_topics t ON t.article_url = a.url
-                    LEFT JOIN article_translations tr ON tr.article_url = a.url
-                    WHERE t.topic = %s AND a.published_at >= %s{tier_clause}
-                    ORDER BY a.published_at DESC, a.last_ingested_at DESC
-                    LIMIT %s
-                    """,
-                    (topic, cutoff, limit),
-                ).fetchall()
-            else:
-                rows = conn.execute(
-                    f"""
-                    SELECT a.*, tr.translated_title, tr.translated_description, tr.source_language AS translation_source_language,
-                           tr.target_language AS translation_target_language, tr.translation_provider, tr.translated_at
-                    FROM articles a
-                    LEFT JOIN article_translations tr ON tr.article_url = a.url
-                    WHERE published_at >= %s{tier_clause}
-                    ORDER BY published_at DESC, last_ingested_at DESC
-                    LIMIT %s
-                    """,
-                    (cutoff, limit),
-                ).fetchall()
+        if topic:
+            rows = conn.execute(
+                f"""
+                SELECT a.*, tr.translated_title, tr.translated_description, tr.source_language AS translation_source_language,
+                       tr.target_language AS translation_target_language, tr.translation_provider, tr.translated_at
+                FROM articles a
+                JOIN article_topics t ON t.article_url = a.url
+                LEFT JOIN article_translations tr ON tr.article_url = a.url
+                WHERE t.topic = %s AND a.published_at >= %s{tier_clause}
+                ORDER BY a.published_at DESC, a.last_ingested_at DESC
+                LIMIT %s
+                """,
+                (topic, cutoff, limit),
+            ).fetchall()
         else:
-            if topic:
-                rows = conn.execute(
-                    f"""
-                    SELECT a.*, tr.translated_title, tr.translated_description, tr.source_language AS translation_source_language,
-                           tr.target_language AS translation_target_language, tr.translation_provider, tr.translated_at
-                    FROM articles a
-                    JOIN article_topics t ON t.article_url = a.url
-                    LEFT JOIN article_translations tr ON tr.article_url = a.url
-                    WHERE t.topic = ? AND a.published_at >= ?{tier_clause}
-                    ORDER BY a.published_at DESC, a.last_ingested_at DESC
-                    LIMIT ?
-                    """,
-                    (topic, cutoff, limit),
-                ).fetchall()
-            else:
-                rows = conn.execute(
-                    f"""
-                    SELECT a.*, tr.translated_title, tr.translated_description, tr.source_language AS translation_source_language,
-                           tr.target_language AS translation_target_language, tr.translation_provider, tr.translated_at
-                    FROM articles a
-                    LEFT JOIN article_translations tr ON tr.article_url = a.url
-                    WHERE published_at >= ?{tier_clause}
-                    ORDER BY published_at DESC, last_ingested_at DESC
-                    LIMIT ?
-                    """,
-                    (cutoff, limit),
-                ).fetchall()
+            rows = conn.execute(
+                f"""
+                SELECT a.*, tr.translated_title, tr.translated_description, tr.source_language AS translation_source_language,
+                       tr.target_language AS translation_target_language, tr.translation_provider, tr.translated_at
+                FROM articles a
+                LEFT JOIN article_translations tr ON tr.article_url = a.url
+                WHERE published_at >= %s{tier_clause}
+                ORDER BY published_at DESC, last_ingested_at DESC
+                LIMIT %s
+                """,
+                (cutoff, limit),
+            ).fetchall()
     return [_row_to_article(row) for row in rows]
 
 
 def get_articles_with_regions(hours: int = 72) -> list[dict]:
     cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
-    placeholder = "%s" if using_postgres() else "?"
-    active_clause = "TRUE" if using_postgres() else "1"
     with _connect() as conn:
         rows = conn.execute(
             f"""
@@ -3597,7 +2944,7 @@ def get_articles_with_regions(hours: int = 72) -> list[dict]:
             LEFT JOIN source_registry name_registry
                 ON name_registry.source_name = a.source
                AND name_registry.active = {active_clause}
-            WHERE a.published_at >= {placeholder}
+            WHERE a.published_at >= %s
             ORDER BY a.published_at DESC, a.last_ingested_at DESC
             """,
             (cutoff,),
@@ -3646,22 +2993,21 @@ def get_recent_structured_events(
     country: str | None = None,
     event_type: str | None = None,
 ) -> list[dict]:
-    placeholder = "%s" if using_postgres() else "?"
     base_clauses = []
     base_params: list[object] = []
 
     if dataset:
-        base_clauses.append(f"dataset = {placeholder}")
+        base_clauses.append(f"dataset = %s")
         base_params.append(dataset)
     if country:
-        base_clauses.append(f"country = {placeholder}")
+        base_clauses.append(f"country = %s")
         base_params.append(country)
     if event_type:
-        base_clauses.append(f"event_type = {placeholder}")
+        base_clauses.append(f"event_type = %s")
         base_params.append(event_type)
 
     def fetch_rows(cutoff_value: str) -> list:
-        clauses = [f"event_date >= {placeholder}", *base_clauses]
+        clauses = [f"event_date >= %s", *base_clauses]
         params = [cutoff_value, *base_params, limit]
         where = " AND ".join(clauses)
         with _connect() as conn:
@@ -3671,7 +3017,7 @@ def get_recent_structured_events(
                 FROM structured_events
                 WHERE {where}
                 ORDER BY event_date DESC, COALESCE(fatalities, 0) DESC, last_ingested_at DESC
-                LIMIT {placeholder}
+                LIMIT %s
                 """,
                 params,
             ).fetchall()
@@ -3705,8 +3051,7 @@ def get_structured_event_coordinates_by_ids(event_ids: list[str]) -> dict[str, d
         return {}
     cap = min(len(ids), 400)
     ids = ids[:cap]
-    placeholder = "%s" if using_postgres() else "?"
-    placeholders = ", ".join([placeholder] * len(ids))
+    placeholders = ", ".join(["%s"] * len(ids))
     with _connect() as conn:
         rows = conn.execute(
             f"""
@@ -3740,8 +3085,7 @@ def get_articles_by_urls(urls: list[str], *, limit: int = 64) -> dict[str, dict]
         return {}
     cap = max(1, min(limit, 120))
     cleaned = cleaned[:cap]
-    placeholder = "%s" if using_postgres() else "?"
-    placeholders = ", ".join([placeholder] * len(cleaned))
+    placeholders = ", ".join(["%s"] * len(cleaned))
     with _connect() as conn:
         rows = conn.execute(
             f"""
@@ -3766,16 +3110,15 @@ def list_structured_event_ids_in_date_range(
     end = (end_date or "").strip()
     if not start or not end:
         return []
-    placeholder = "%s" if using_postgres() else "?"
     cap = max(1, min(limit, 2000))
     with _connect() as conn:
         rows = conn.execute(
             f"""
             SELECT event_id
             FROM structured_events
-            WHERE event_date >= {placeholder} AND event_date <= {placeholder}
+            WHERE event_date >= %s AND event_date <= %s
             ORDER BY event_date DESC, COALESCE(fatalities, 0) DESC
-            LIMIT {placeholder}
+            LIMIT %s
             """,
             (start, end, cap),
         ).fetchall()
@@ -3787,69 +3130,38 @@ def replace_materialized_story_clusters(*, topic: str, window_hours: int, rows: 
         return 0
     window_hours = max(1, int(window_hours))
     now = time.time()
-    placeholder = "%s" if using_postgres() else "?"
     with _connect() as conn:
-        if using_postgres():
-            conn.execute(
-                f"DELETE FROM materialized_story_clusters WHERE topic = {placeholder} AND window_hours = {placeholder}",
-                (topic, window_hours),
-            )
-        else:
-            conn.execute(
-                "DELETE FROM materialized_story_clusters WHERE topic = ? AND window_hours = ?",
-                (topic, window_hours),
-            )
+        conn.execute(
+            f"DELETE FROM materialized_story_clusters WHERE topic = %s AND window_hours = %s",
+            (topic, window_hours),
+        )
         written = 0
         for row in rows:
             article_urls = json.dumps(row.get("article_urls") or [], sort_keys=True)
             linked = json.dumps(row.get("linked_structured_event_ids") or [], sort_keys=True)
             payload = json.dumps(row.get("event_payload") or {}, sort_keys=True, default=str)
-            if using_postgres():
-                conn.execute(
-                    """
-                    INSERT INTO materialized_story_clusters (
-                        cluster_key, topic, computed_at, window_hours, label, summary,
-                        earliest_published_at, latest_published_at, article_urls,
-                        linked_structured_event_ids, event_payload
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s::jsonb)
-                    """,
-                    (
-                        row["cluster_key"],
-                        topic,
-                        now,
-                        window_hours,
-                        row["label"],
-                        row.get("summary"),
-                        row.get("earliest_published_at"),
-                        row.get("latest_published_at"),
-                        article_urls,
-                        linked,
-                        payload,
-                    ),
-                )
-            else:
-                conn.execute(
-                    """
-                    INSERT INTO materialized_story_clusters (
-                        cluster_key, topic, computed_at, window_hours, label, summary,
-                        earliest_published_at, latest_published_at, article_urls,
-                        linked_structured_event_ids, event_payload
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        row["cluster_key"],
-                        topic,
-                        now,
-                        window_hours,
-                        row["label"],
-                        row.get("summary"),
-                        row.get("earliest_published_at"),
-                        row.get("latest_published_at"),
-                        article_urls,
-                        linked,
-                        payload,
-                    ),
-                )
+            conn.execute(
+                """
+                INSERT INTO materialized_story_clusters (
+                    cluster_key, topic, computed_at, window_hours, label, summary,
+                    earliest_published_at, latest_published_at, article_urls,
+                    linked_structured_event_ids, event_payload
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s::jsonb)
+                """,
+                (
+                    row["cluster_key"],
+                    topic,
+                    now,
+                    window_hours,
+                    row["label"],
+                    row.get("summary"),
+                    row.get("earliest_published_at"),
+                    row.get("latest_published_at"),
+                    article_urls,
+                    linked,
+                    payload,
+                ),
+            )
             written += 1
     return written
 
@@ -3860,14 +3172,13 @@ def load_materialized_story_clusters(
     window_hours: int | None = None,
     limit: int = 40,
 ) -> list[dict]:
-    placeholder = "%s" if using_postgres() else "?"
     clauses: list[str] = []
     params: list[object] = []
     if topic:
-        clauses.append(f"topic = {placeholder}")
+        clauses.append(f"topic = %s")
         params.append(topic)
     if window_hours is not None:
-        clauses.append(f"window_hours = {placeholder}")
+        clauses.append(f"window_hours = %s")
         params.append(int(window_hours))
     where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
     params.append(max(1, min(limit, 500)))
@@ -3878,7 +3189,7 @@ def load_materialized_story_clusters(
             FROM materialized_story_clusters
             {where}
             ORDER BY computed_at DESC, latest_published_at DESC
-            LIMIT {placeholder}
+            LIMIT %s
             """,
             params,
         ).fetchall()
@@ -3911,6 +3222,389 @@ def load_materialized_story_clusters(
     return out
 
 
+# ── canonical_events ─────────────────────────────────────────────────────────
+
+def upsert_canonical_events(rows: list[dict]) -> int:
+    """Upsert canonical event records. Preserves neutral_summary/neutral_confidence if already set."""
+    if not rows:
+        return 0
+    now = time.time()
+    written = 0
+    with _connect() as conn:
+        for row in rows:
+            event_id = (row.get("event_id") or "").strip()
+            if not event_id:
+                continue
+            article_urls = json.dumps(sorted(row.get("article_urls") or []), sort_keys=True)
+            linked = json.dumps(row.get("linked_structured_event_ids") or [], sort_keys=True)
+            payload = json.dumps(row.get("payload") or {}, sort_keys=True, default=str)
+            conn.execute(
+                """
+                INSERT INTO canonical_events (
+                    event_id, topic, label, event_type, status,
+                    geo_country, geo_region, latitude, longitude,
+                    first_reported_at, last_updated_at,
+                    article_count, source_count, perspective_count, contradiction_count,
+                    linked_structured_event_ids, article_urls,
+                    first_seen_at, computed_at, payload
+                ) VALUES (
+                    %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s,
+                    %s, %s,
+                    %s, %s, %s, %s,
+                    %s::jsonb, %s::jsonb,
+                    %s, %s, %s::jsonb
+                )
+                ON CONFLICT (event_id) DO UPDATE SET
+                    label = EXCLUDED.label,
+                    event_type = COALESCE(EXCLUDED.event_type, canonical_events.event_type),
+                    status = EXCLUDED.status,
+                    geo_country = COALESCE(EXCLUDED.geo_country, canonical_events.geo_country),
+                    geo_region = COALESCE(EXCLUDED.geo_region, canonical_events.geo_region),
+                    latitude = COALESCE(EXCLUDED.latitude, canonical_events.latitude),
+                    longitude = COALESCE(EXCLUDED.longitude, canonical_events.longitude),
+                    first_reported_at = EXCLUDED.first_reported_at,
+                    last_updated_at = EXCLUDED.last_updated_at,
+                    article_count = EXCLUDED.article_count,
+                    source_count = EXCLUDED.source_count,
+                    contradiction_count = EXCLUDED.contradiction_count,
+                    linked_structured_event_ids = EXCLUDED.linked_structured_event_ids,
+                    article_urls = EXCLUDED.article_urls,
+                    computed_at = EXCLUDED.computed_at,
+                    payload = EXCLUDED.payload
+                """,
+                (
+                    event_id,
+                    row.get("topic") or "",
+                    row.get("label") or "",
+                    row.get("event_type"),
+                    row.get("status") or "developing",
+                    row.get("geo_country"),
+                    row.get("geo_region"),
+                    row.get("latitude"),
+                    row.get("longitude"),
+                    row.get("first_reported_at"),
+                    row.get("last_updated_at"),
+                    int(row.get("article_count") or 0),
+                    int(row.get("source_count") or 0),
+                    int(row.get("perspective_count") or 0),
+                    int(row.get("contradiction_count") or 0),
+                    linked,
+                    article_urls,
+                    row.get("first_seen_at") or now,
+                    now,
+                    payload,
+                ),
+            )
+            written += 1
+    return written
+
+
+def update_canonical_event_synthesis(
+    event_id: str,
+    *,
+    neutral_summary: str,
+    neutral_confidence: float,
+    perspective_count: int | None = None,
+    contradiction_count: int | None = None,
+) -> bool:
+    """Write neutral synthesis back onto a canonical event. Returns True if the row existed."""
+    if not event_id:
+        return False
+    now = time.time()
+    perspective_sql = f", perspective_count = %s" if perspective_count is not None else ""
+    contradiction_sql = f", contradiction_count = %s" if contradiction_count is not None else ""
+    params: list[object] = [neutral_summary, float(neutral_confidence), now]
+    if perspective_count is not None:
+        params.append(perspective_count)
+    if contradiction_count is not None:
+        params.append(contradiction_count)
+    params.append(event_id)
+    with _connect() as conn:
+        result = conn.execute(
+            f"""
+            UPDATE canonical_events
+            SET neutral_summary = %s,
+                neutral_confidence = %s,
+                neutral_generated_at = %s
+                {perspective_sql}
+                {contradiction_sql}
+            WHERE event_id = %s
+            """,
+            params,
+        )
+        return (result.rowcount or 0) > 0
+
+
+def get_canonical_events(
+    topic: str | None = None,
+    status: str | None = None,
+    limit: int = 40,
+) -> list[dict]:
+    clauses: list[str] = []
+    params: list[object] = []
+    if topic:
+        clauses.append(f"topic = %s")
+        params.append(topic)
+    if status:
+        clauses.append(f"status = %s")
+        params.append(status)
+    where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+    params.append(max(1, min(limit, 500)))
+    with _connect() as conn:
+        rows = conn.execute(
+            f"""
+            SELECT *
+            FROM canonical_events
+            {where}
+            ORDER BY computed_at DESC, last_updated_at DESC
+            LIMIT %s
+            """,
+            params,
+        ).fetchall()
+    return [_row_to_canonical_event(row) for row in rows]
+
+
+def get_canonical_event(event_id: str) -> dict | None:
+    if not event_id:
+        return None
+    with _connect() as conn:
+        row = conn.execute(
+            f"SELECT * FROM canonical_events WHERE event_id = %s",
+            (event_id,),
+        ).fetchone()
+    return _row_to_canonical_event(row) if row else None
+
+
+def _row_to_canonical_event(row) -> dict:
+    article_urls = row["article_urls"]
+    linked = row["linked_structured_event_ids"]
+    payload = row["payload"]
+    if isinstance(article_urls, str):
+        article_urls = json.loads(article_urls) if article_urls else []
+    if isinstance(linked, str):
+        linked = json.loads(linked) if linked else []
+    if isinstance(payload, str):
+        payload = json.loads(payload) if payload else {}
+    return {
+        "event_id": row["event_id"],
+        "topic": row["topic"],
+        "label": row["label"],
+        "event_type": row["event_type"],
+        "status": row["status"],
+        "geo_country": row["geo_country"],
+        "geo_region": row["geo_region"],
+        "latitude": row["latitude"],
+        "longitude": row["longitude"],
+        "first_reported_at": row["first_reported_at"],
+        "last_updated_at": row["last_updated_at"],
+        "article_count": int(row["article_count"] or 0),
+        "source_count": int(row["source_count"] or 0),
+        "perspective_count": int(row["perspective_count"] or 0),
+        "contradiction_count": int(row["contradiction_count"] or 0),
+        "neutral_summary": row["neutral_summary"],
+        "neutral_confidence": row["neutral_confidence"],
+        "neutral_generated_at": row["neutral_generated_at"],
+        "linked_structured_event_ids": linked or [],
+        "article_urls": article_urls or [],
+        "first_seen_at": row["first_seen_at"],
+        "computed_at": row["computed_at"],
+        "payload": payload or {},
+    }
+
+
+# ── event_perspectives ───────────────────────────────────────────────────────
+
+def upsert_event_perspectives(rows: list[dict]) -> int:
+    """Upsert per-source perspective rows for canonical events."""
+    if not rows:
+        return 0
+    now = time.time()
+    written = 0
+    with _connect() as conn:
+        for row in rows:
+            pid = (row.get("perspective_id") or "").strip()
+            if not pid:
+                continue
+            frame_counts = json.dumps(row.get("frame_counts") or {}, sort_keys=True)
+            matched_terms = json.dumps(row.get("matched_terms") or [], sort_keys=True)
+            payload = json.dumps(row.get("payload") or {}, sort_keys=True, default=str)
+            conn.execute(
+                """
+                INSERT INTO event_perspectives (
+                    perspective_id, event_id, article_url,
+                    source_name, source_domain, source_reliability_score,
+                    source_trust_tier, source_region,
+                    dominant_frame, frame_counts, matched_terms,
+                    claim_text, claim_type, claim_resolution_status,
+                    sentiment, published_at, analyzed_at, payload
+                ) VALUES (
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                    %s::jsonb, %s::jsonb,
+                    %s, %s, %s, %s, %s, %s, %s::jsonb
+                )
+                ON CONFLICT (perspective_id) DO UPDATE SET
+                    dominant_frame = EXCLUDED.dominant_frame,
+                    frame_counts = EXCLUDED.frame_counts,
+                    matched_terms = EXCLUDED.matched_terms,
+                    claim_text = COALESCE(EXCLUDED.claim_text, event_perspectives.claim_text),
+                    claim_type = COALESCE(EXCLUDED.claim_type, event_perspectives.claim_type),
+                    claim_resolution_status = COALESCE(EXCLUDED.claim_resolution_status, event_perspectives.claim_resolution_status),
+                    source_reliability_score = COALESCE(EXCLUDED.source_reliability_score, event_perspectives.source_reliability_score),
+                    analyzed_at = EXCLUDED.analyzed_at,
+                    payload = EXCLUDED.payload
+                """,
+                (
+                    pid,
+                    row["event_id"],
+                    row.get("article_url"),
+                    row["source_name"],
+                    row.get("source_domain"),
+                    row.get("source_reliability_score"),
+                    row.get("source_trust_tier"),
+                    row.get("source_region"),
+                    row.get("dominant_frame"),
+                    frame_counts,
+                    matched_terms,
+                    row.get("claim_text"),
+                    row.get("claim_type"),
+                    row.get("claim_resolution_status"),
+                    row.get("sentiment"),
+                    row.get("published_at"),
+                    row.get("analyzed_at") or now,
+                    payload,
+                ),
+            )
+            written += 1
+    return written
+
+
+def get_event_perspectives(event_id: str) -> list[dict]:
+    if not event_id:
+        return []
+    with _connect() as conn:
+        rows = conn.execute(
+            f"""
+            SELECT *
+            FROM event_perspectives
+            WHERE event_id = %s
+            ORDER BY source_reliability_score DESC NULLS LAST, analyzed_at DESC
+            """,
+            (event_id,),
+        ).fetchall()
+    return [_row_to_perspective(row) for row in rows]
+
+
+def _row_to_perspective(row) -> dict:
+    frame_counts = row["frame_counts"]
+    matched_terms = row["matched_terms"]
+    payload = row["payload"]
+    if isinstance(frame_counts, str):
+        frame_counts = json.loads(frame_counts) if frame_counts else {}
+    if isinstance(matched_terms, str):
+        matched_terms = json.loads(matched_terms) if matched_terms else []
+    if isinstance(payload, str):
+        payload = json.loads(payload) if payload else {}
+    return {
+        "perspective_id": row["perspective_id"],
+        "event_id": row["event_id"],
+        "article_url": row["article_url"],
+        "source_name": row["source_name"],
+        "source_domain": row["source_domain"],
+        "source_reliability_score": row["source_reliability_score"],
+        "source_trust_tier": row["source_trust_tier"],
+        "source_region": row["source_region"],
+        "dominant_frame": row["dominant_frame"],
+        "frame_counts": frame_counts or {},
+        "matched_terms": matched_terms or [],
+        "claim_text": row["claim_text"],
+        "claim_type": row["claim_type"],
+        "claim_resolution_status": row["claim_resolution_status"],
+        "sentiment": row["sentiment"],
+        "published_at": row["published_at"],
+        "analyzed_at": row["analyzed_at"],
+        "payload": payload or {},
+    }
+
+
+def load_framing_signals_for_article_urls(article_urls: list[str]) -> dict[str, dict]:
+    """Load article_framing_signals keyed by article_url for a set of URLs."""
+    if not article_urls:
+        return {}
+    placeholders = ", ".join(["%s"] * len(article_urls))
+    with _connect() as conn:
+        rows = conn.execute(
+            f"""
+            SELECT *
+            FROM article_framing_signals
+            WHERE article_url IN ({placeholders})
+            ORDER BY analyzed_at DESC
+            """,
+            list(article_urls),
+        ).fetchall()
+    result: dict[str, dict] = {}
+    for row in rows:
+        url = row["article_url"]
+        if url in result:
+            continue  # keep most recent per article
+        frame_counts = row["frame_counts"]
+        matched_terms = row["matched_terms"]
+        payload = row["payload"]
+        if isinstance(frame_counts, str):
+            frame_counts = json.loads(frame_counts) if frame_counts else {}
+        if isinstance(matched_terms, str):
+            matched_terms = json.loads(matched_terms) if matched_terms else {}
+        if isinstance(payload, str):
+            payload = json.loads(payload) if payload else {}
+        result[url] = {
+            "article_url": url,
+            "subject_key": row["subject_key"],
+            "dominant_frame": row["dominant_frame"],
+            "frame_counts": frame_counts or {},
+            "matched_terms": matched_terms or {},
+            "source": row["source"],
+            "published_at": row["published_at"],
+            "analyzed_at": row["analyzed_at"],
+            "payload": payload or {},
+        }
+    return result
+
+
+def load_claim_resolution_for_event_key(event_key: str) -> list[dict]:
+    """Load claim resolution records for a specific event key."""
+    if not event_key:
+        return []
+    with _connect() as conn:
+        rows = conn.execute(
+            f"""
+            SELECT *
+            FROM claim_resolution_records
+            WHERE event_key = %s
+            ORDER BY generated_at DESC
+            """,
+            (event_key,),
+        ).fetchall()
+    out = []
+    for row in rows:
+        payload = row["payload"]
+        if isinstance(payload, str):
+            payload = json.loads(payload) if payload else {}
+        out.append(
+            {
+                "claim_record_key": row["claim_record_key"],
+                "event_key": row["event_key"],
+                "source_name": row["source_name"],
+                "claim_text": row["claim_text"],
+                "claim_type": row["conflict_type"],
+                "resolution_status": row["resolution_status"],
+                "confidence": row["confidence"],
+                "published_at": row["published_at"],
+                "payload": payload or {},
+            }
+        )
+    return out
+
+
 def get_article_count(topic: str | None = None, hours: int | None = None) -> int:
     if hours is not None:
         cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
@@ -3919,10 +3613,9 @@ def get_article_count(topic: str | None = None, hours: int | None = None) -> int
     clauses = []
     params: list[object] = []
     join = ""
-    placeholder = "%s" if using_postgres() else "?"
     if topic:
         join = "JOIN article_topics t ON t.article_url = a.url"
-        clauses.append(f"t.topic = {placeholder}")
+        clauses.append(f"t.topic = %s")
         params.append(topic)
     where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
     with _connect() as conn:
@@ -3962,12 +3655,11 @@ def _parse_article_timestamp(value: str | None) -> datetime | None:
 
 def _published_values(topic: str | None = None) -> list[str]:
     params: list[object] = []
-    placeholder = "%s" if using_postgres() else "?"
     join = ""
     where = ""
     if topic:
         join = "JOIN article_topics t ON t.article_url = a.url"
-        where = f"WHERE t.topic = {placeholder}"
+        where = f"WHERE t.topic = %s"
         params.append(topic)
     with _connect() as conn:
         rows = conn.execute(
@@ -4006,26 +3698,13 @@ def _topic_time_bounds_python(topic: str | None = None) -> dict:
 
 def get_ingestion_summary() -> dict:
     with _connect() as conn:
-        if using_postgres():
-            topic_rows = conn.execute(
-                """
-                SELECT DISTINCT ON (topic) topic, provider, article_count, completed_at, status, error
-                FROM ingestion_runs
-                ORDER BY topic, id DESC
-                """
-            ).fetchall()
-        else:
-            topic_rows = conn.execute(
-                """
-                SELECT topic, provider, article_count, completed_at, status, error
-                FROM ingestion_runs
-                WHERE id IN (
-                    SELECT MAX(id)
-                    FROM ingestion_runs
-                    GROUP BY topic
-                )
-                """
-            ).fetchall()
+        topic_rows = conn.execute(
+            """
+            SELECT DISTINCT ON (topic) topic, provider, article_count, completed_at, status, error
+            FROM ingestion_runs
+            ORDER BY topic, id DESC
+            """
+        ).fetchall()
     topics = {}
     for row in topic_rows:
         topics[row["topic"]] = {
@@ -4049,13 +3728,12 @@ def get_topic_time_bounds(topic: str | None = None) -> dict:
 
 
 def load_ingestion_state(state_key: str) -> dict | None:
-    placeholder = "%s" if using_postgres() else "?"
     with _connect() as conn:
         row = conn.execute(
             f"""
             SELECT *
             FROM ingestion_state
-            WHERE state_key = {placeholder}
+            WHERE state_key = %s
             """,
             (state_key,),
         ).fetchone()
@@ -4090,56 +3768,34 @@ def save_ingestion_state(
     now = time.time()
     serialized_payload = json.dumps(payload or {}, sort_keys=True)
     with _connect() as conn:
-        if using_postgres():
-            conn.execute(
-                """
-                INSERT INTO ingestion_state (
-                    state_key, topic, provider, cursor_start, cursor_end, status, error, updated_at, payload
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb)
-                ON CONFLICT (state_key) DO UPDATE SET
-                    topic = EXCLUDED.topic,
-                    provider = EXCLUDED.provider,
-                    cursor_start = EXCLUDED.cursor_start,
-                    cursor_end = EXCLUDED.cursor_end,
-                    status = EXCLUDED.status,
-                    error = EXCLUDED.error,
-                    updated_at = EXCLUDED.updated_at,
-                    payload = EXCLUDED.payload
-                """,
-                (state_key, topic, provider, cursor_start, cursor_end, status, error, now, serialized_payload),
-            )
-        else:
-            conn.execute(
-                """
-                INSERT INTO ingestion_state (
-                    state_key, topic, provider, cursor_start, cursor_end, status, error, updated_at, payload
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(state_key) DO UPDATE SET
-                    topic = excluded.topic,
-                    provider = excluded.provider,
-                    cursor_start = excluded.cursor_start,
-                    cursor_end = excluded.cursor_end,
-                    status = excluded.status,
-                    error = excluded.error,
-                    updated_at = excluded.updated_at,
-                    payload = excluded.payload
-                """,
-                (state_key, topic, provider, cursor_start, cursor_end, status, error, now, serialized_payload),
-            )
-
-
+        conn.execute(
+            """
+            INSERT INTO ingestion_state (
+                state_key, topic, provider, cursor_start, cursor_end, status, error, updated_at, payload
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb)
+            ON CONFLICT (state_key) DO UPDATE SET
+                topic = EXCLUDED.topic,
+                provider = EXCLUDED.provider,
+                cursor_start = EXCLUDED.cursor_start,
+                cursor_end = EXCLUDED.cursor_end,
+                status = EXCLUDED.status,
+                error = EXCLUDED.error,
+                updated_at = EXCLUDED.updated_at,
+                payload = EXCLUDED.payload
+            """,
+            (state_key, topic, provider, cursor_start, cursor_end, status, error, now, serialized_payload),
+        )
 def get_sources(limit: int = 12, hours: int = 72) -> list[dict]:
     cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
-    placeholder = "%s" if using_postgres() else "?"
     with _connect() as conn:
         rows = conn.execute(
             f"""
             SELECT source, source_domain, COUNT(*) AS article_count, MAX(published_at) AS latest_published_at
             FROM articles
-            WHERE published_at >= {placeholder}
+            WHERE published_at >= %s
             GROUP BY source, source_domain
             ORDER BY article_count DESC, latest_published_at DESC
-            LIMIT {placeholder}
+            LIMIT %s
             """,
             (cutoff, limit),
         ).fetchall()
@@ -4188,12 +3844,11 @@ def search_recent_articles_by_keywords(query: str, topic: str | None = None, lim
 def load_contradiction_record(event_key: str, max_age_hours: int = 168) -> dict | None:
     cutoff = time.time() - (max_age_hours * 3600)
     with _connect() as conn:
-        placeholder = "%s" if using_postgres() else "?"
         row = conn.execute(
             f"""
             SELECT *
             FROM contradiction_records
-            WHERE event_key = {placeholder} AND generated_at >= {placeholder}
+            WHERE event_key = %s AND generated_at >= %s
             """,
             (event_key, cutoff),
         ).fetchone()
@@ -4219,16 +3874,15 @@ def load_contradiction_record(event_key: str, max_age_hours: int = 168) -> dict 
 
 
 def load_contradiction_history(event_key: str, limit: int = 10) -> list[dict]:
-    placeholder = "%s" if using_postgres() else "?"
     with _connect() as conn:
         rows = conn.execute(
             f"""
             SELECT event_key, topic, event_label, latest_update, article_urls, contradictions,
                    contradiction_count, generated_at, content_hash
             FROM contradiction_history
-            WHERE event_key = {placeholder}
+            WHERE event_key = %s
             ORDER BY generated_at DESC
-            LIMIT {placeholder}
+            LIMIT %s
             """,
             (event_key, limit),
         ).fetchall()
@@ -4275,152 +3929,55 @@ def save_contradiction_record(event_key: str, event: dict, contradictions: list[
         ).encode("utf-8")
     ).hexdigest()
     with _connect() as conn:
-        if using_postgres():
-            existing = conn.execute(
-                "SELECT content_hash FROM contradiction_history WHERE event_key = %s ORDER BY generated_at DESC LIMIT 1",
-                (event_key,),
-            ).fetchone()
-        else:
-            existing = conn.execute(
-                "SELECT content_hash FROM contradiction_history WHERE event_key = ? ORDER BY generated_at DESC LIMIT 1",
-                (event_key,),
-            ).fetchone()
-
-        if using_postgres():
-            conn.execute(
-                """
-                INSERT INTO contradiction_records (
-                    event_key, topic, event_label, latest_update, article_urls, contradictions, contradiction_count, generated_at
-                ) VALUES (%s, %s, %s, %s, %s::jsonb, %s::jsonb, %s, %s)
-                ON CONFLICT (event_key) DO UPDATE SET
-                    topic = EXCLUDED.topic,
-                    event_label = EXCLUDED.event_label,
-                    latest_update = EXCLUDED.latest_update,
-                    article_urls = EXCLUDED.article_urls,
-                    contradictions = EXCLUDED.contradictions,
-                    contradiction_count = EXCLUDED.contradiction_count,
-                    generated_at = EXCLUDED.generated_at
-                """,
-                (
-                    event_key,
-                    event.get("topic"),
-                    event.get("label", "Emerging event"),
-                    event.get("latest_update"),
-                    serialized_article_urls,
-                    serialized_contradictions,
-                    len(contradictions),
-                    now,
-                ),
-            )
-            if existing is None or existing["content_hash"] != content_hash:
-                conn.execute(
-                    """
-                    INSERT INTO contradiction_history (
-                        event_key, topic, event_label, latest_update, article_urls, contradictions,
-                        contradiction_count, generated_at, content_hash
-                    ) VALUES (%s, %s, %s, %s, %s::jsonb, %s::jsonb, %s, %s, %s)
-                    """,
-                    (
-                        event_key,
-                        event.get("topic"),
-                        event.get("label", "Emerging event"),
-                        event.get("latest_update"),
-                        serialized_article_urls,
-                        serialized_contradictions,
-                        len(contradictions),
-                        now,
-                        content_hash,
-                    ),
-                )
-        else:
-            conn.execute(
-                """
-                INSERT INTO contradiction_records (
-                    event_key, topic, event_label, latest_update, article_urls, contradictions, contradiction_count, generated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(event_key) DO UPDATE SET
-                    topic = excluded.topic,
-                    event_label = excluded.event_label,
-                    latest_update = excluded.latest_update,
-                    article_urls = excluded.article_urls,
-                    contradictions = excluded.contradictions,
-                    contradiction_count = excluded.contradiction_count,
-                    generated_at = excluded.generated_at
-                """,
-                (
-                    event_key,
-                    event.get("topic"),
-                    event.get("label", "Emerging event"),
-                    event.get("latest_update"),
-                    serialized_article_urls,
-                    serialized_contradictions,
-                    len(contradictions),
-                    now,
-                ),
-            )
-            if existing is None or existing["content_hash"] != content_hash:
-                conn.execute(
-                    """
-                    INSERT INTO contradiction_history (
-                        event_key, topic, event_label, latest_update, article_urls, contradictions,
-                        contradiction_count, generated_at, content_hash
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        event_key,
-                        event.get("topic"),
-                        event.get("label", "Emerging event"),
-                        event.get("latest_update"),
-                        serialized_article_urls,
-                        serialized_contradictions,
-                        len(contradictions),
-                        now,
-                        content_hash,
-                    ),
-                )
-
-
-def migrate_sqlite_to_current_backend(sqlite_path: str = SQLITE_DB_PATH) -> dict:
-    if not using_postgres():
-        return {"migrated": 0, "backend": "sqlite"}
-
-    sqlite_conn = sqlite3.connect(sqlite_path)
-    sqlite_conn.row_factory = sqlite3.Row
-    article_rows = sqlite_conn.execute("SELECT payload, provider FROM articles").fetchall()
-    topic_rows = sqlite_conn.execute("SELECT article_url, topic FROM article_topics").fetchall()
-    run_rows = sqlite_conn.execute(
-        "SELECT topic, provider, article_count, started_at, completed_at, status, error FROM ingestion_runs ORDER BY id"
-    ).fetchall()
-    sqlite_conn.close()
-
-    topic_map: dict[str, list[str]] = {}
-    for row in topic_rows:
-        topic_map.setdefault(row["article_url"], []).append(row["topic"])
-
-    migrated = 0
-    for row in article_rows:
-        payload = json.loads(row["payload"]) if row["payload"] else {}
-        url = payload.get("url")
-        if not url:
-            continue
-        topics = topic_map.get(url, [])
-        if not topics:
-            continue
-        migrated += upsert_articles([payload], topic=topics, provider=row["provider"])
-
-    for row in run_rows:
-        record_ingestion_run(
-            row["topic"],
-            row["provider"],
-            row["article_count"],
-            row["started_at"],
-            row["status"],
-            error=row["error"],
+        existing = conn.execute(
+            "SELECT content_hash FROM contradiction_history WHERE event_key = %s ORDER BY generated_at DESC LIMIT 1",
+            (event_key,),
+        ).fetchone()
+        conn.execute(
+            """
+            INSERT INTO contradiction_records (
+                event_key, topic, event_label, latest_update, article_urls, contradictions, contradiction_count, generated_at
+            ) VALUES (%s, %s, %s, %s, %s::jsonb, %s::jsonb, %s, %s)
+            ON CONFLICT (event_key) DO UPDATE SET
+                topic = EXCLUDED.topic,
+                event_label = EXCLUDED.event_label,
+                latest_update = EXCLUDED.latest_update,
+                article_urls = EXCLUDED.article_urls,
+                contradictions = EXCLUDED.contradictions,
+                contradiction_count = EXCLUDED.contradiction_count,
+                generated_at = EXCLUDED.generated_at
+            """,
+            (
+                event_key,
+                event.get("topic"),
+                event.get("label", "Emerging event"),
+                event.get("latest_update"),
+                serialized_article_urls,
+                serialized_contradictions,
+                len(contradictions),
+                now,
+            ),
         )
-
-    return {"migrated": migrated, "backend": "postgres", "source": sqlite_path}
-
-
+        if existing is None or existing["content_hash"] != content_hash:
+            conn.execute(
+                """
+                INSERT INTO contradiction_history (
+                    event_key, topic, event_label, latest_update, article_urls, contradictions,
+                    contradiction_count, generated_at, content_hash
+                ) VALUES (%s, %s, %s, %s, %s::jsonb, %s::jsonb, %s, %s, %s)
+                """,
+                (
+                    event_key,
+                    event.get("topic"),
+                    event.get("label", "Emerging event"),
+                    event.get("latest_update"),
+                    serialized_article_urls,
+                    serialized_contradictions,
+                    len(contradictions),
+                    now,
+                    content_hash,
+                ),
+            )
 def _row_to_article(row) -> dict:
     payload = row["payload"]
     if isinstance(payload, str):

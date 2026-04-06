@@ -1,9 +1,12 @@
 """
 HTTP smoke tests for the FastAPI app.
 
-Uses an isolated temp directory for SQLite state. Run from backend/:
+Uses an isolated Postgres test database. Run from backend/:
 
     python -m unittest test_api_smoke -v
+
+Requires a Postgres database named `othello_test` (or set OTHELLO_TEST_PGDATABASE).
+Create it once with: createdb othello_test
 """
 
 from __future__ import annotations
@@ -22,35 +25,24 @@ _BACKEND = Path(__file__).resolve().parent
 if str(_BACKEND) not in sys.path:
     sys.path.insert(0, str(_BACKEND))
 
-_TEST_HOME = tempfile.mkdtemp(prefix="othello_api_smoke_", dir=str(_BACKEND))
-_ORIG_CWD = os.getcwd()
-os.chdir(_TEST_HOME)
 os.environ["OTHELLO_INTERNAL_SCHEDULER"] = "false"
-# corpus.load_dotenv does not override existing keys; keep Postgres off so init_db() uses SQLite in cwd.
-os.environ["OTHELLO_DATABASE_URL"] = ""
-for _pg_key in (
-    "OTHELLO_PGHOST",
-    "OTHELLO_PGDATABASE",
-    "OTHELLO_PGUSER",
-    "OTHELLO_PGPASSWORD",
-    "OTHELLO_PGPORT",
-):
-    os.environ[_pg_key] = ""
+# Point corpus at the test database
+os.environ["OTHELLO_PGDATABASE"] = os.environ.get("OTHELLO_TEST_PGDATABASE", "othello_test")
 
+# Isolate the briefing/headline cache (cache.py still uses SQLite)
+_TEST_HOME = tempfile.mkdtemp(prefix="othello_api_smoke_", dir=str(_BACKEND))
 import cache as _cache_module
-
 _cache_module.DB_PATH = Path(_TEST_HOME) / "othello_cache.db"
 
 import corpus
-corpus.init_db()  # explicitly init DB against othello_corpus.db in _TEST_HOME
-from corpus import upsert_structured_events
+corpus.init_db()
 
 import main as main_module
+from corpus import upsert_structured_events
 from starlette.testclient import TestClient
 
 
 def tearDownModule():
-    os.chdir(_ORIG_CWD)
     shutil.rmtree(_TEST_HOME, ignore_errors=True)
 
 

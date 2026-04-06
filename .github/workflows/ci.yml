@@ -10,6 +10,22 @@ jobs:
     defaults:
       run:
         working-directory: backend
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: othello
+          POSTGRES_PASSWORD: othello
+          POSTGRES_DB: othello_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -22,7 +38,12 @@ jobs:
       - name: Run backend smoke and wiring tests
         env:
           OTHELLO_INTERNAL_SCHEDULER: 'false'
-          OTHELLO_DATABASE_URL: ''
+          OTHELLO_PGHOST: localhost
+          OTHELLO_PGPORT: '5432'
+          OTHELLO_PGDATABASE: othello_test
+          OTHELLO_TEST_PGDATABASE: othello_test
+          OTHELLO_PGUSER: othello
+          OTHELLO_PGPASSWORD: othello
         run: python -m unittest test_api_smoke test_runtime_wiring test_ingestion -v
 
   frontend:

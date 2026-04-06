@@ -2,10 +2,22 @@
 
 from __future__ import annotations
 
+import hashlib
+import time
 from datetime import datetime, timedelta
 
 from contradictions import cluster_articles, enrich_events, event_cluster_key
-from corpus import get_recent_articles, list_structured_event_ids_in_date_range, replace_materialized_story_clusters
+from corpus import (
+    get_recent_articles,
+    get_source_registry,
+    list_structured_event_ids_in_date_range,
+    load_claim_resolution_for_event_key,
+    load_framing_signals_for_article_urls,
+    load_latest_source_reliability,
+    replace_materialized_story_clusters,
+    upsert_canonical_events,
+    upsert_event_perspectives,
+)
 
 DEFAULT_TOPICS = ("geopolitics", "economics")
 
@@ -39,6 +51,99 @@ def _link_structured_ids(event: dict) -> list[str]:
     return list_structured_event_ids_in_date_range(start, end, limit=80)
 
 
+def _perspective_id(event_id: str, article_url: str) -> str:
+    return hashlib.sha256(f"{event_id}|{article_url}".encode()).hexdigest()
+
+
+def _infer_event_type(event: dict) -> str | None:
+    label = (event.get("label") or "").lower()
+    anchors = set(event.get("anchors") or [])
+    if "strike" in anchors or "ceasefire" in anchors or any(w in label for w in ("war", "attack", "conflict", "military", "troops", "missile")):
+        return "conflict"
+    if "sanctions" in anchors or "market" in anchors or any(w in label for w in ("trade", "tariff", "economy", "inflation", "rates", "gdp")):
+        return "economic"
+    if "meeting" in anchors or "vote" in anchors or any(w in label for w in ("election", "summit", "diplomacy", "treaty", "talks")):
+        return "diplomatic"
+    if "aid" in anchors or any(w in label for w in ("humanitarian", "relief", "refugee")):
+        return "humanitarian"
+    if "filing" in anchors or "detention" in anchors or any(w in label for w in ("legal", "court", "indictment", "arrest")):
+        return "legal"
+    return "political"
+
+
+def _build_canonical_row(event: dict, topic: str, linked: list[str], urls: list[str], cluster_key: str) -> dict:
+    articles = event.get("articles") or []
+    sources = {(a.get("source") or "").strip() for a in articles if (a.get("source") or "").strip()}
+    published_dates = [
+        a.get("published_at") for a in articles if a.get("published_at")
+    ]
+    first_reported = min(published_dates) if published_dates else None
+    last_updated = max(published_dates) if published_dates else None
+    return {
+        "event_id": cluster_key,
+        "topic": topic,
+        "label": event.get("label") or "",
+        "event_type": _infer_event_type(event),
+        "status": "developing",
+        "first_reported_at": first_reported,
+        "last_updated_at": last_updated,
+        "article_count": len(urls),
+        "source_count": len(sources),
+        "perspective_count": 0,
+        "contradiction_count": len(event.get("contradictions") or []),
+        "linked_structured_event_ids": linked,
+        "article_urls": urls,
+        "payload": {
+            "summary": event.get("summary"),
+            "entity_focus": event.get("entity_focus") or [],
+            "anchors": list(event.get("anchors") or []),
+        },
+    }
+
+
+def _build_perspective_rows(
+    event_id: str,
+    articles: list[dict],
+    framing_by_url: dict[str, dict],
+    claims_by_source: dict[str, dict],
+    reliability_by_source: dict[str, dict],
+    registry_by_domain: dict[str, dict],
+) -> list[dict]:
+    rows = []
+    for article in articles:
+        url = (article.get("url") or "").strip()
+        if not url:
+            continue
+        source_name = (article.get("source") or "").strip()
+        source_domain = (article.get("source_domain") or "").strip()
+        framing = framing_by_url.get(url) or {}
+        reliability = reliability_by_source.get(source_name.lower()) or {}
+        reg = registry_by_domain.get(source_domain) or {}
+        claim = claims_by_source.get(source_name.lower()) or {}
+        rows.append(
+            {
+                "perspective_id": _perspective_id(event_id, url),
+                "event_id": event_id,
+                "article_url": url,
+                "source_name": source_name,
+                "source_domain": source_domain or None,
+                "source_reliability_score": reliability.get("empirical_score"),
+                "source_trust_tier": reg.get("trust_tier"),
+                "source_region": reg.get("region"),
+                "dominant_frame": framing.get("dominant_frame"),
+                "frame_counts": framing.get("frame_counts") or {},
+                "matched_terms": framing.get("matched_terms") or [],
+                "claim_text": claim.get("claim_text"),
+                "claim_type": claim.get("claim_type"),
+                "claim_resolution_status": claim.get("resolution_status"),
+                "published_at": article.get("published_at"),
+                "analyzed_at": time.time(),
+                "payload": {},
+            }
+        )
+    return rows
+
+
 def rebuild_materialized_story_clusters(
     *,
     topics: list[str] | None = None,
@@ -49,6 +154,12 @@ def rebuild_materialized_story_clusters(
     window_hours = max(1, int(window_hours))
     total_rows = 0
     detail: list[dict] = []
+
+    # load source metadata once for all topics
+    reliability_by_source = load_latest_source_reliability()
+    registry_entries = get_source_registry(active_only=False)
+    registry_by_domain = {(e.get("source_domain") or "").lower(): e for e in registry_entries if e.get("source_domain")}
+
     for topic in topic_list:
         articles = get_recent_articles(
             topic=topic,
@@ -61,15 +172,21 @@ def rebuild_materialized_story_clusters(
             detail.append({"topic": topic, "clusters": 0})
             continue
         events = enrich_events(cluster_articles(articles, topic=topic))
-        rows = []
+        legacy_rows = []
+        canonical_rows = []
+        all_perspective_rows = []
+
         for event in events:
+            cluster_key = event_cluster_key(event)
             linked = _link_structured_ids(event)
             urls = sorted(
                 {(a.get("url") or "").strip() for a in event.get("articles", []) if (a.get("url") or "").strip()}
             )
-            rows.append(
+
+            # legacy table (unchanged)
+            legacy_rows.append(
                 {
-                    "cluster_key": event_cluster_key(event),
+                    "cluster_key": cluster_key,
                     "label": event.get("label") or "",
                     "summary": event.get("summary"),
                     "earliest_published_at": event.get("earliest_update"),
@@ -79,6 +196,31 @@ def rebuild_materialized_story_clusters(
                     "event_payload": event,
                 }
             )
-        total_rows += replace_materialized_story_clusters(topic=topic, window_hours=window_hours, rows=rows)
-        detail.append({"topic": topic, "clusters": len(rows)})
+
+            # canonical event
+            canonical_rows.append(_build_canonical_row(event, topic, linked, urls, cluster_key))
+
+            # perspectives: load framing + claim resolution for this cluster
+            framing_by_url = load_framing_signals_for_article_urls(urls)
+            claim_records = load_claim_resolution_for_event_key(cluster_key)
+            claims_by_source = {
+                r["source_name"].lower(): r for r in claim_records
+            }
+            event_articles = event.get("articles") or []
+            perspective_rows = _build_perspective_rows(
+                cluster_key,
+                event_articles,
+                framing_by_url,
+                claims_by_source,
+                reliability_by_source,
+                registry_by_domain,
+            )
+            all_perspective_rows.extend(perspective_rows)
+
+        total_rows += replace_materialized_story_clusters(topic=topic, window_hours=window_hours, rows=legacy_rows)
+        upsert_canonical_events(canonical_rows)
+        upsert_event_perspectives(all_perspective_rows)
+
+        detail.append({"topic": topic, "clusters": len(legacy_rows)})
+
     return {"topics": topic_list, "window_hours": window_hours, "rows_written": total_rows, "detail": detail}
