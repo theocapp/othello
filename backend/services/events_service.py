@@ -1,7 +1,12 @@
 from fastapi import HTTPException
 
 from core.config import TOPICS
-from corpus import get_canonical_event, get_canonical_events, get_event_perspectives, load_materialized_story_clusters
+from corpus import (
+    get_canonical_event,
+    get_canonical_events,
+    get_event_perspectives,
+    load_materialized_story_clusters,
+)
 from services.headlines_service import _build_global_events, _build_topic_events
 from structured_story_rollups import build_structured_story_clusters
 
@@ -81,8 +86,16 @@ def get_canonical_event_payload(event_id: str) -> dict:
     frame_distribution: dict[str, int] = {}
     for f in frames:
         frame_distribution[f] = frame_distribution.get(f, 0) + 1
-    sources_agreeing = [p["source_name"] for p in perspectives if p.get("claim_resolution_status") == "corroborated"]
-    sources_dissenting = [p["source_name"] for p in perspectives if p.get("claim_resolution_status") == "contradicted"]
+    sources_agreeing = [
+        p["source_name"]
+        for p in perspectives
+        if p.get("claim_resolution_status") == "corroborated"
+    ]
+    sources_dissenting = [
+        p["source_name"]
+        for p in perspectives
+        if p.get("claim_resolution_status") == "contradicted"
+    ]
     return {
         **event,
         "perspectives": perspectives,

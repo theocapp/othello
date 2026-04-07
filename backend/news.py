@@ -29,13 +29,13 @@ ENGLISH_LANGUAGE_CODES = {
 TOPIC_QUERIES = {
     "geopolitics": [
         "war OR conflict OR sanctions OR diplomacy OR military OR ceasefire",
-        "\"Russia\" OR \"Ukraine\" OR \"China\" OR \"Taiwan\" OR \"Iran\" OR \"Israel\"",
+        '"Russia" OR "Ukraine" OR "China" OR "Taiwan" OR "Iran" OR "Israel"',
         "NATO OR deterrence OR escalation OR missile OR strike",
     ],
     "economics": [
-        "\"Federal Reserve\" OR inflation OR recession OR markets OR tariffs OR \"interest rates\"",
-        "\"central bank\" OR yields OR bonds OR trade OR gdp OR jobs",
-        "\"oil prices\" OR manufacturing OR liquidity OR deficit OR currency",
+        '"Federal Reserve" OR inflation OR recession OR markets OR tariffs OR "interest rates"',
+        '"central bank" OR yields OR bonds OR trade OR gdp OR jobs',
+        '"oil prices" OR manufacturing OR liquidity OR deficit OR currency',
     ],
 }
 
@@ -46,12 +46,40 @@ GLOBAL_INGEST_QUERIES = [
 
 TOPIC_KEYWORDS = {
     "geopolitics": {
-        "war", "conflict", "military", "sanctions", "diplomacy", "ceasefire", "nato",
-        "iran", "israel", "ukraine", "russia", "china", "taiwan", "missile", "strike",
+        "war",
+        "conflict",
+        "military",
+        "sanctions",
+        "diplomacy",
+        "ceasefire",
+        "nato",
+        "iran",
+        "israel",
+        "ukraine",
+        "russia",
+        "china",
+        "taiwan",
+        "missile",
+        "strike",
     },
     "economics": {
-        "inflation", "market", "markets", "rates", "tariffs", "trade", "economy", "economic",
-        "recession", "yield", "yields", "fed", "federal", "reserve", "stocks", "oil", "gdp",
+        "inflation",
+        "market",
+        "markets",
+        "rates",
+        "tariffs",
+        "trade",
+        "economy",
+        "economic",
+        "recession",
+        "yield",
+        "yields",
+        "fed",
+        "federal",
+        "reserve",
+        "stocks",
+        "oil",
+        "gdp",
     },
 }
 
@@ -111,7 +139,9 @@ TRUSTED_SOURCES = ",".join(
     ]
 )
 
-TRUSTED_SOURCE_LIST = [source.strip() for source in TRUSTED_SOURCES.split(",") if source.strip()]
+TRUSTED_SOURCE_LIST = [
+    source.strip() for source in TRUSTED_SOURCES.split(",") if source.strip()
+]
 
 GDELT_ENDPOINT = "https://api.gdeltproject.org/api/v2/doc/doc"
 GDELT_FALLBACK_ENDPOINTS = [
@@ -119,12 +149,16 @@ GDELT_FALLBACK_ENDPOINTS = [
     "http://api.gdeltproject.org/api/v2/doc/doc",
 ]
 
-HTML_BLOCK_TAGS_RE = re.compile(r"</?(?:p|div|br|li|ul|ol|h[1-6]|blockquote|tr|td|th)[^>]*>", re.IGNORECASE)
+HTML_BLOCK_TAGS_RE = re.compile(
+    r"</?(?:p|div|br|li|ul|ol|h[1-6]|blockquote|tr|td|th)[^>]*>", re.IGNORECASE
+)
 HTML_TAGS_RE = re.compile(r"<[^>]+>")
 WHITESPACE_RE = re.compile(r"\s+")
 GDELT_MAX_RECORDS = 100
 GDELT_ARCHIVE_MIN_WINDOW_HOURS = 3
-ENABLE_NEWSAPI_FALLBACK = os.getenv("OTHELLO_ENABLE_NEWSAPI_FALLBACK", "false").lower() == "true"
+ENABLE_NEWSAPI_FALLBACK = (
+    os.getenv("OTHELLO_ENABLE_NEWSAPI_FALLBACK", "false").lower() == "true"
+)
 _provider_cooldowns: dict[str, float] = {}
 _provider_last_request_at: dict[str, float] = {}
 _provider_failures: dict[str, int] = {}
@@ -135,7 +169,7 @@ TOPIC_ARCHIVE_QUERIES = {
         "(NATO OR Pentagon OR Kremlin OR Beijing OR Tehran OR Hezbollah OR Hamas) AND (missile OR summit OR conflict OR invasion OR talks)",
     ],
     "economics": [
-        "(\"Federal Reserve\" OR inflation OR recession OR tariffs OR trade OR markets OR \"interest rates\") AND (economy OR market OR rates OR prices)",
+        '("Federal Reserve" OR inflation OR recession OR tariffs OR trade OR markets OR "interest rates") AND (economy OR market OR rates OR prices)',
         "(oil OR bonds OR yields OR currency OR manufacturing OR jobs OR gdp) AND (economy OR trade OR inflation OR slowdown)",
     ],
 }
@@ -155,7 +189,11 @@ def source_status() -> dict:
         "directfeeds": {
             "enabled": directfeed_enabled,
             "api_key_required": False,
-            "packs": [pack_name for pack_name, meta in SOURCE_PACKS.items() if "article" in (meta.get("source_types") or [])],
+            "packs": [
+                pack_name
+                for pack_name, meta in SOURCE_PACKS.items()
+                if "article" in (meta.get("source_types") or [])
+            ],
         },
         "newsapi": {
             "enabled": bool(os.getenv("NEWS_API_KEY")) and ENABLE_NEWSAPI_FALLBACK,
@@ -194,7 +232,9 @@ def _cooldown_active(provider: str) -> bool:
 
 
 def _set_provider_cooldown(provider: str, seconds: int) -> None:
-    _provider_cooldowns[provider] = max(_provider_cooldowns.get(provider, 0), time.time() + max(seconds, 0))
+    _provider_cooldowns[provider] = max(
+        _provider_cooldowns.get(provider, 0), time.time() + max(seconds, 0)
+    )
 
 
 def _mark_provider_success(provider: str) -> None:
@@ -219,12 +259,24 @@ def _normalize_gdelt_query(query: str) -> str:
 
 def _is_rate_limit_error(exc: Exception | str) -> bool:
     message = str(exc).lower()
-    return any(token in message for token in ["rate limit", "ratelimit", "too many requests", "429", "please limit requests to one every 5 seconds"])
+    return any(
+        token in message
+        for token in [
+            "rate limit",
+            "ratelimit",
+            "too many requests",
+            "429",
+            "please limit requests to one every 5 seconds",
+        ]
+    )
 
 
 def _is_timeout_error(exc: Exception | str) -> bool:
     message = str(exc).lower()
-    return any(token in message for token in ["timed out", "timeout", "connect timeout", "read timeout"])
+    return any(
+        token in message
+        for token in ["timed out", "timeout", "connect timeout", "read timeout"]
+    )
 
 
 def _gdelt_cooldown_seconds(exc: Exception | str) -> int:
@@ -251,7 +303,9 @@ def _gdelt_retry_after_seconds(exc: Exception) -> int | None:
 
 def _gdelt_rate_limit_cooldown(exc: Exception | str) -> int:
     base = _gdelt_cooldown_seconds(exc)
-    retry_after = _gdelt_retry_after_seconds(exc) if isinstance(exc, Exception) else None
+    retry_after = (
+        _gdelt_retry_after_seconds(exc) if isinstance(exc, Exception) else None
+    )
     if retry_after:
         base = max(base, retry_after)
     failures = _mark_provider_failure("gdelt")
@@ -298,11 +352,13 @@ def normalize_article_title(title: str | None) -> str:
     return _normalize_text_fragment(title)
 
 
-def normalize_article_description(description: str | None, title: str | None = None, limit: int | None = None) -> str:
+def normalize_article_description(
+    description: str | None, title: str | None = None, limit: int | None = None
+) -> str:
     clean_title = normalize_article_title(title)
     clean_description = _normalize_text_fragment(description)
     if clean_title and clean_description.startswith(clean_title):
-        remainder = clean_description[len(clean_title):].lstrip(" :-|")
+        remainder = clean_description[len(clean_title) :].lstrip(" :-|")
         if remainder:
             clean_description = remainder
     if not clean_description:
@@ -343,7 +399,9 @@ def _parse_feed_entries(xml_text: str) -> list[dict]:
                 "title": _feed_entry_text(item, ["title"]),
                 "url": _feed_entry_text(item, ["link"]),
                 "description": _feed_entry_text(item, ["description"]),
-                "published_at": _normalize_feed_timestamp(_feed_entry_text(item, ["pubDate", "published", "updated"])),
+                "published_at": _normalize_feed_timestamp(
+                    _feed_entry_text(item, ["pubDate", "published", "updated"])
+                ),
                 "language": _feed_entry_text(item, ["language"]),
             }
         )
@@ -354,11 +412,25 @@ def _parse_feed_entries(xml_text: str) -> list[dict]:
             {
                 "title": _feed_entry_text(item, ["{http://www.w3.org/2005/Atom}title"]),
                 "url": href,
-                "description": _feed_entry_text(item, ["{http://www.w3.org/2005/Atom}summary", "{http://www.w3.org/2005/Atom}content"]),
-                "published_at": _normalize_feed_timestamp(
-                    _feed_entry_text(item, ["{http://www.w3.org/2005/Atom}updated", "{http://www.w3.org/2005/Atom}published"])
+                "description": _feed_entry_text(
+                    item,
+                    [
+                        "{http://www.w3.org/2005/Atom}summary",
+                        "{http://www.w3.org/2005/Atom}content",
+                    ],
                 ),
-                "language": item.attrib.get("{http://www.w3.org/XML/1998/namespace}lang"),
+                "published_at": _normalize_feed_timestamp(
+                    _feed_entry_text(
+                        item,
+                        [
+                            "{http://www.w3.org/2005/Atom}updated",
+                            "{http://www.w3.org/2005/Atom}published",
+                        ],
+                    )
+                ),
+                "language": item.attrib.get(
+                    "{http://www.w3.org/XML/1998/namespace}lang"
+                ),
             }
         )
     return [entry for entry in entries if entry.get("title") and entry.get("url")]
@@ -382,11 +454,23 @@ def _direct_feed_sources(topic: str | None = None) -> list[dict]:
         if filtered_feeds:
             sources.append({**seed, "metadata": {**metadata, "feeds": filtered_feeds}})
     if topic == "geopolitics":
-        pack_order = {"conflict_region_outlets": 0, "regional_flagships": 1, "global_wires": 2}
+        pack_order = {
+            "conflict_region_outlets": 0,
+            "regional_flagships": 1,
+            "global_wires": 2,
+        }
     elif topic == "economics":
-        pack_order = {"global_wires": 0, "regional_flagships": 1, "conflict_region_outlets": 2}
+        pack_order = {
+            "global_wires": 0,
+            "regional_flagships": 1,
+            "conflict_region_outlets": 2,
+        }
     else:
-        pack_order = {"global_wires": 0, "regional_flagships": 1, "conflict_region_outlets": 2}
+        pack_order = {
+            "global_wires": 0,
+            "regional_flagships": 1,
+            "conflict_region_outlets": 2,
+        }
     sources.sort(
         key=lambda source: (
             pack_order.get(source_pack_for(source) or "", 99),
@@ -396,7 +480,9 @@ def _direct_feed_sources(topic: str | None = None) -> list[dict]:
     return sources
 
 
-def _articles_from_direct_feeds(topic: str | None = None, page_size: int = 40) -> list[dict]:
+def _articles_from_direct_feeds(
+    topic: str | None = None, page_size: int = 40
+) -> list[dict]:
     if _cooldown_active("directfeeds"):
         return []
 
@@ -407,7 +493,9 @@ def _articles_from_direct_feeds(topic: str | None = None, page_size: int = 40) -
 
     collected = []
     feed_errors = 0
-    total_feeds = sum(len((source.get("metadata") or {}).get("feeds") or []) for source in sources)
+    total_feeds = sum(
+        len((source.get("metadata") or {}).get("feeds") or []) for source in sources
+    )
     per_feed_limit = max(4, min(10, page_size // max(total_feeds, 1) + 1))
 
     for source in sources:
@@ -425,19 +513,28 @@ def _articles_from_direct_feeds(topic: str | None = None, page_size: int = 40) -
                             source=source["source_name"],
                             url=entry["url"],
                             published_at=entry["published_at"],
-                            language=entry.get("language") or source.get("language") or "en",
+                            language=entry.get("language")
+                            or source.get("language")
+                            or "en",
                             provider="directfeeds",
                         )
                     )
             except Exception as exc:
                 feed_errors += 1
-                print(f"[news] Direct feed fetch failed for {source['source_name']} ({feed.get('url')}): {exc}")
+                print(
+                    f"[news] Direct feed fetch failed for {source['source_name']} ({feed.get('url')}): {exc}"
+                )
 
     if feed_errors and feed_errors >= max(3, total_feeds):
         _set_provider_cooldown("directfeeds", 15 * 60)
 
     deduped = _dedupe(collected)
-    return diversify_articles(deduped, page_size=page_size, topics=[topic] if topic else None, max_per_domain=2)
+    return diversify_articles(
+        deduped,
+        page_size=page_size,
+        topics=[topic] if topic else None,
+        max_per_domain=2,
+    )
 
 
 def _normalize_time(raw: str | None) -> str:
@@ -447,11 +544,23 @@ def _normalize_time(raw: str | None) -> str:
     if text.endswith("Z"):
         return text
     if len(text) == 14 and text.isdigit():
-        return datetime.strptime(text, "%Y%m%d%H%M%S").replace(tzinfo=timezone.utc).isoformat()
+        return (
+            datetime.strptime(text, "%Y%m%d%H%M%S")
+            .replace(tzinfo=timezone.utc)
+            .isoformat()
+        )
     return text
 
 
-def _normalize_article(title: str, description: str | None, source: str, url: str, published_at: str, language: str = "en", provider: str = "unknown") -> dict:
+def _normalize_article(
+    title: str,
+    description: str | None,
+    source: str,
+    url: str,
+    published_at: str,
+    language: str = "en",
+    provider: str = "unknown",
+) -> dict:
     language_text = (language or "en").strip()
     clean_title = normalize_article_title(title)
     clean_description = normalize_article_description(description, clean_title)
@@ -490,9 +599,7 @@ def _normalize_newsapi_articles(response: dict) -> list[dict]:
             language=article.get("language") or "en",
             provider="newsapi",
         )
-        articles.append(
-            article_record
-        )
+        articles.append(article_record)
     return articles
 
 
@@ -511,7 +618,9 @@ def _gdelt_datetime(value: datetime) -> str:
     return value.astimezone(timezone.utc).strftime("%Y%m%d%H%M%S")
 
 
-def _gdelt_window_params(query: str, start: datetime, end: datetime, maxrecords: int) -> dict:
+def _gdelt_window_params(
+    query: str, start: datetime, end: datetime, maxrecords: int
+) -> dict:
     return {
         "query": _normalize_gdelt_query(query),
         "mode": "artlist",
@@ -546,7 +655,9 @@ def _fetch_gdelt_payload(params: dict) -> dict:
                 raise RuntimeError(text.strip())
             content_type = response.headers.get("content-type", "")
             if "json" not in content_type.lower() and not text.startswith("{"):
-                raise ValueError(f"GDELT returned unexpected content type: {content_type or 'unknown'}")
+                raise ValueError(
+                    f"GDELT returned unexpected content type: {content_type or 'unknown'}"
+                )
             payload = response.json()
             _mark_provider_success("gdelt")
             break
@@ -573,7 +684,11 @@ def _fetch_gdelt_payload(params: dict) -> dict:
             _respect_provider_min_interval("gdelt", default_seconds=8.5)
             with urlopen(url, timeout=20, context=context) as response:
                 raw = response.read().decode("utf-8", errors="replace")
-            if raw.lstrip().lower().startswith("please limit requests to one every 5 seconds"):
+            if (
+                raw.lstrip()
+                .lower()
+                .startswith("please limit requests to one every 5 seconds")
+            ):
                 raise RuntimeError(raw.strip())
             payload = json.loads(raw)
             _mark_provider_success("gdelt")
@@ -604,7 +719,9 @@ def _normalize_gdelt_payload(payload: dict) -> list[dict]:
             or article.get("title")
         )
         source = article.get("domain") or article.get("source") or urlparse(url).netloc
-        published_at = article.get("seendate") or article.get("published") or article.get("date")
+        published_at = (
+            article.get("seendate") or article.get("published") or article.get("date")
+        )
         language = article.get("language") or "English"
         article_record = _normalize_article(
             title=title,
@@ -624,8 +741,12 @@ def _fetch_gdelt(query: str, maxrecords: int) -> list[dict]:
     return _normalize_gdelt_payload(payload)
 
 
-def _fetch_gdelt_window(query: str, start: datetime, end: datetime, maxrecords: int = GDELT_MAX_RECORDS) -> list[dict]:
-    payload = _fetch_gdelt_payload(_gdelt_window_params(query, start=start, end=end, maxrecords=maxrecords))
+def _fetch_gdelt_window(
+    query: str, start: datetime, end: datetime, maxrecords: int = GDELT_MAX_RECORDS
+) -> list[dict]:
+    payload = _fetch_gdelt_payload(
+        _gdelt_window_params(query, start=start, end=end, maxrecords=maxrecords)
+    )
     return _normalize_gdelt_payload(payload)
 
 
@@ -655,7 +776,7 @@ def _fetch_newsapi(query: str, page_size: int) -> list[dict]:
     chunk_size = 4
     per_chunk = max(4, min(10, page_size // 3 or 4))
     for index in range(0, len(TRUSTED_SOURCE_LIST), chunk_size):
-        source_chunk = TRUSTED_SOURCE_LIST[index:index + chunk_size]
+        source_chunk = TRUSTED_SOURCE_LIST[index : index + chunk_size]
         try:
             response = client.get_everything(
                 q=query,
@@ -679,7 +800,13 @@ def _provider_fetch(provider: str, query: str, page_size: int) -> list[dict]:
     if provider == "gdelt":
         return _fetch_gdelt(query, maxrecords=page_size)
     if provider == "directfeeds":
-        inferred_topic = "economics" if "inflation" in query.lower() or "rates" in query.lower() or "econom" in query.lower() else "geopolitics"
+        inferred_topic = (
+            "economics"
+            if "inflation" in query.lower()
+            or "rates" in query.lower()
+            or "econom" in query.lower()
+            else "geopolitics"
+        )
         return _articles_from_direct_feeds(topic=inferred_topic, page_size=page_size)
     if provider == "newsapi":
         return _fetch_newsapi(query, page_size=page_size)
@@ -696,9 +823,13 @@ def probe_provider(provider: str, query: str, page_size: int = 10) -> dict:
             "requested": page_size,
             "status": "ok" if articles else "empty",
             "article_count": len(articles),
-            "sample_titles": [article.get("title", "Untitled") for article in articles[:5]],
+            "sample_titles": [
+                article.get("title", "Untitled") for article in articles[:5]
+            ],
             "sample_urls": [article.get("url", "") for article in articles[:3]],
-            "latest_published_at": max((article.get("published_at", "") for article in articles), default=None),
+            "latest_published_at": max(
+                (article.get("published_at", "") for article in articles), default=None
+            ),
             "checked_at": started.isoformat(),
             "error": None,
         }
@@ -748,7 +879,9 @@ def _fetch_from_providers(query: str, page_size: int) -> list[dict]:
         "directfeeds": [lambda: _provider_fetch("directfeeds", query, page_size)],
         "newsapi": [try_newsapi],
         "auto": [try_gdelt] + ([try_newsapi] if ENABLE_NEWSAPI_FALLBACK else []),
-    }.get(provider_order, [try_gdelt] + ([try_newsapi] if ENABLE_NEWSAPI_FALLBACK else []))
+    }.get(
+        provider_order, [try_gdelt] + ([try_newsapi] if ENABLE_NEWSAPI_FALLBACK else [])
+    )
 
     for fetcher in providers:
         try:
@@ -795,7 +928,9 @@ def _score_article(article: dict, topic: str) -> int:
         ]
     ).lower()
     score = 0
-    raw_terms = " ".join(_normalize_topic_queries(topic)).replace('"', " ").replace("OR", " ")
+    raw_terms = (
+        " ".join(_normalize_topic_queries(topic)).replace('"', " ").replace("OR", " ")
+    )
     for token in raw_terms.lower().split():
         clean = token.strip()
         if not clean or clean in {"or"} or len(clean) < 4:
@@ -823,7 +958,11 @@ def article_quality_score(article: dict, topics: list[str] | None = None) -> int
 
     if source_domain in REGISTERED_ARTICLE_DOMAINS:
         score += 3
-    if source_meta.get("region") and source_meta.get("region") not in {"global", "united-states", "europe"}:
+    if source_meta.get("region") and source_meta.get("region") not in {
+        "global",
+        "united-states",
+        "europe",
+    }:
         score += 2
     if source_meta.get("trust_tier") == "tier_2":
         score += 1
@@ -871,7 +1010,11 @@ def should_promote_article(article: dict, topics: list[str] | None = None) -> bo
         return True
     if source_domain in REGISTERED_ARTICLE_DOMAINS and quality >= 5:
         return True
-    if source_meta.get("region") and source_meta.get("region") not in {"global", "united-states", "europe"} and quality >= 4:
+    if (
+        source_meta.get("region")
+        and source_meta.get("region") not in {"global", "united-states", "europe"}
+        and quality >= 4
+    ):
         return True
     if not is_english_article(article) and quality >= 5:
         return True
@@ -891,7 +1034,15 @@ def diversify_articles(
         articles,
         key=lambda article: (
             -article_quality_score(article, topics),
-            -int((SOURCE_METADATA_BY_DOMAIN.get((article.get("source_domain") or "").strip().lower(), {}) or {}).get("region") not in {"", "global", "united-states", "europe"}),
+            -int(
+                (
+                    SOURCE_METADATA_BY_DOMAIN.get(
+                        (article.get("source_domain") or "").strip().lower(), {}
+                    )
+                    or {}
+                ).get("region")
+                not in {"", "global", "united-states", "europe"}
+            ),
             -int(not is_english_article(article)),
             article.get("published_at", ""),
         ),
@@ -904,7 +1055,11 @@ def diversify_articles(
     per_domain_counts: dict[str, int] = {}
 
     for article in ranked:
-        domain = (article.get("source_domain") or article.get("source") or "unknown").strip().lower()
+        domain = (
+            (article.get("source_domain") or article.get("source") or "unknown")
+            .strip()
+            .lower()
+        )
         limit = max_per_domain
         if domain in DOMINANT_GLOBAL_DOMAINS:
             limit = min(limit, 1)
@@ -930,7 +1085,9 @@ def diversify_articles(
 def fetch_articles(topic: str, page_size: int = 50) -> list[dict]:
     queries = _normalize_topic_queries(topic)
     collected = _collect_query_batch(queries, page_size=page_size)
-    direct_feed_articles = _articles_from_direct_feeds(topic=topic, page_size=max(12, page_size // 2))
+    direct_feed_articles = _articles_from_direct_feeds(
+        topic=topic, page_size=max(12, page_size // 2)
+    )
     deduped = _dedupe(collected + direct_feed_articles)
     if not deduped:
         keyword_fallback = [
@@ -938,11 +1095,19 @@ def fetch_articles(topic: str, page_size: int = 50) -> list[dict]:
             " OR ".join(list(TOPIC_KEYWORDS.get(topic, []))[5:10]),
         ]
         deduped = _dedupe(
-            _collect_query_batch([query for query in keyword_fallback if query.strip()], page_size=page_size)
+            _collect_query_batch(
+                [query for query in keyword_fallback if query.strip()],
+                page_size=page_size,
+            )
             + direct_feed_articles
         )
     if ENABLE_NEWSAPI_FALLBACK and len(deduped) < max(10, page_size // 3):
-        deduped = _dedupe(deduped + fetch_articles_from_provider(topic, "newsapi", page_size=max(12, page_size // 2)))
+        deduped = _dedupe(
+            deduped
+            + fetch_articles_from_provider(
+                topic, "newsapi", page_size=max(12, page_size // 2)
+            )
+        )
     deduped.sort(
         key=lambda article: (
             -article_quality_score(article, [topic]),
@@ -952,10 +1117,14 @@ def fetch_articles(topic: str, page_size: int = 50) -> list[dict]:
         reverse=False,
     )
     ranked = list(reversed(deduped))
-    return diversify_articles(ranked, page_size=page_size, topics=[topic], max_per_domain=2)
+    return diversify_articles(
+        ranked, page_size=page_size, topics=[topic], max_per_domain=2
+    )
 
 
-def fetch_articles_from_provider(topic: str, provider: str, page_size: int = 50) -> list[dict]:
+def fetch_articles_from_provider(
+    topic: str, provider: str, page_size: int = 50
+) -> list[dict]:
     if provider == "directfeeds":
         return _articles_from_direct_feeds(topic=topic, page_size=page_size)
 
@@ -964,9 +1133,13 @@ def fetch_articles_from_provider(topic: str, provider: str, page_size: int = 50)
     per_query = max(8, page_size // max(len(queries), 1))
     for query in queries:
         try:
-            collected.extend(_dedupe(_provider_fetch(provider, query, page_size=per_query)))
+            collected.extend(
+                _dedupe(_provider_fetch(provider, query, page_size=per_query))
+            )
         except Exception as exc:
-            print(f"[news] Provider '{provider}' topic fetch failed for '{topic}': {exc}")
+            print(
+                f"[news] Provider '{provider}' topic fetch failed for '{topic}': {exc}"
+            )
     deduped = _dedupe(collected)
     deduped.sort(
         key=lambda article: (
@@ -977,14 +1150,35 @@ def fetch_articles_from_provider(topic: str, provider: str, page_size: int = 50)
         reverse=False,
     )
     ranked = list(reversed(deduped))
-    return diversify_articles(ranked, page_size=page_size, topics=[topic], max_per_domain=2)
+    return diversify_articles(
+        ranked, page_size=page_size, topics=[topic], max_per_domain=2
+    )
 
 
 def fetch_articles_for_query(question: str, page_size: int = 20) -> list[dict]:
     stop_words = {
-        "what", "why", "how", "when", "where", "who", "is", "are",
-        "the", "a", "an", "do", "does", "will", "can", "should",
-        "tell", "me", "about", "explain", "describe", "think",
+        "what",
+        "why",
+        "how",
+        "when",
+        "where",
+        "who",
+        "is",
+        "are",
+        "the",
+        "a",
+        "an",
+        "do",
+        "does",
+        "will",
+        "can",
+        "should",
+        "tell",
+        "me",
+        "about",
+        "explain",
+        "describe",
+        "think",
     }
     words = question.lower().replace("?", "").replace(",", "").split()
     key_terms = [word for word in words if word not in stop_words and len(word) > 3]
@@ -994,7 +1188,9 @@ def fetch_articles_for_query(question: str, page_size: int = 20) -> list[dict]:
 
 def fetch_global_articles(page_size: int = 90) -> list[dict]:
     deduped = _collect_query_batch(GLOBAL_INGEST_QUERIES, page_size=page_size)
-    direct_feed_articles = _articles_from_direct_feeds(topic=None, page_size=max(16, page_size // 2))
+    direct_feed_articles = _articles_from_direct_feeds(
+        topic=None, page_size=max(16, page_size // 2)
+    )
     deduped = _dedupe(deduped + direct_feed_articles)
     if deduped:
         return diversify_articles(deduped, page_size=page_size, max_per_domain=2)
@@ -1002,13 +1198,22 @@ def fetch_global_articles(page_size: int = 90) -> list[dict]:
     topic_queries = []
     for topic in TOPIC_QUERIES:
         topic_queries.extend(_normalize_topic_queries(topic))
-    deduped = _dedupe(_collect_query_batch(topic_queries, page_size=page_size) + direct_feed_articles)
+    deduped = _dedupe(
+        _collect_query_batch(topic_queries, page_size=page_size) + direct_feed_articles
+    )
     if ENABLE_NEWSAPI_FALLBACK and len(deduped) < max(12, page_size // 3):
-        deduped = _dedupe(deduped + fetch_global_articles_from_provider("newsapi", page_size=max(20, page_size // 2)))
+        deduped = _dedupe(
+            deduped
+            + fetch_global_articles_from_provider(
+                "newsapi", page_size=max(20, page_size // 2)
+            )
+        )
     return diversify_articles(deduped, page_size=page_size, max_per_domain=2)
 
 
-def fetch_global_articles_from_provider(provider: str, page_size: int = 90) -> list[dict]:
+def fetch_global_articles_from_provider(
+    provider: str, page_size: int = 90
+) -> list[dict]:
     if provider == "directfeeds":
         return _articles_from_direct_feeds(topic=None, page_size=page_size)
 
@@ -1016,7 +1221,9 @@ def fetch_global_articles_from_provider(provider: str, page_size: int = 90) -> l
     per_query = max(10, page_size // max(len(GLOBAL_INGEST_QUERIES), 1))
     for query in GLOBAL_INGEST_QUERIES:
         try:
-            collected.extend(_dedupe(_provider_fetch(provider, query, page_size=per_query)))
+            collected.extend(
+                _dedupe(_provider_fetch(provider, query, page_size=per_query))
+            )
         except Exception as exc:
             print(f"[news] Provider '{provider}' global fetch failed: {exc}")
     deduped = _dedupe(collected)
@@ -1048,10 +1255,14 @@ def fetch_gdelt_historic_articles(
     collected: list[dict] = []
 
     def harvest(query: str, left: datetime, right: datetime) -> list[dict]:
-        articles = _dedupe(_fetch_gdelt_window(query, left, right, maxrecords=page_size))
+        articles = _dedupe(
+            _fetch_gdelt_window(query, left, right, maxrecords=page_size)
+        )
         if len(articles) >= page_size and (right - left) > min_window:
             midpoint = left + ((right - left) / 2)
-            return _dedupe(harvest(query, left, midpoint) + harvest(query, midpoint, right))
+            return _dedupe(
+                harvest(query, left, midpoint) + harvest(query, midpoint, right)
+            )
         return articles
 
     for query in queries:
@@ -1059,10 +1270,14 @@ def fetch_gdelt_historic_articles(
 
     deduped = _dedupe(collected)
     deduped.sort(key=lambda article: article.get("published_at", ""), reverse=True)
-    return diversify_articles(deduped, page_size=len(deduped), topics=[topic], max_per_domain=3)
+    return diversify_articles(
+        deduped, page_size=len(deduped), topics=[topic], max_per_domain=3
+    )
 
 
-def probe_gdelt_window(topic: str, start: datetime, end: datetime, page_size: int = 25) -> dict:
+def probe_gdelt_window(
+    topic: str, start: datetime, end: datetime, page_size: int = 25
+) -> dict:
     started_at = datetime.now(timezone.utc).isoformat()
     try:
         articles = fetch_gdelt_historic_articles(
@@ -1076,8 +1291,12 @@ def probe_gdelt_window(topic: str, start: datetime, end: datetime, page_size: in
             "topic": topic,
             "status": "ok" if articles else "empty",
             "article_count": len(articles),
-            "sample_titles": [article.get("title", "Untitled") for article in articles[:5]],
-            "latest_published_at": max((article.get("published_at", "") for article in articles), default=None),
+            "sample_titles": [
+                article.get("title", "Untitled") for article in articles[:5]
+            ],
+            "latest_published_at": max(
+                (article.get("published_at", "") for article in articles), default=None
+            ),
             "window_start": start.astimezone(timezone.utc).isoformat(),
             "window_end": end.astimezone(timezone.utc).isoformat(),
             "checked_at": started_at,

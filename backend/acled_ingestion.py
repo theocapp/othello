@@ -6,7 +6,6 @@ import requests
 
 from corpus import get_source_registry, upsert_structured_events
 
-
 ACLED_AUTH_URL = "https://acleddata.com/oauth/token"
 ACLED_EVENTS_URL = "https://acleddata.com/api/acled/read"
 
@@ -39,7 +38,9 @@ def _get_token(session: requests.Session) -> str:
     username = os.getenv("ACLED_EMAIL") or os.getenv("ACLED_USERNAME")
     password = os.getenv("ACLED_PASSWORD")
     if not username or not password:
-        raise RuntimeError("ACLED_EMAIL/ACLED_PASSWORD are required for ACLED ingestion.")
+        raise RuntimeError(
+            "ACLED_EMAIL/ACLED_PASSWORD are required for ACLED ingestion."
+        )
 
     response = session.post(
         ACLED_AUTH_URL,
@@ -82,12 +83,19 @@ def _normalize_event(record: dict) -> dict:
         country = (record.get("country") or "").strip()
         a1 = (record.get("actor1") or "").strip()
         a2 = (record.get("actor2") or "").strip()
-        fatalities = int(record["fatalities"]) if record.get("fatalities") not in (None, "") else 0
+        fatalities = (
+            int(record["fatalities"])
+            if record.get("fatalities") not in (None, "")
+            else 0
+        )
 
         # Use sub_event_type for specificity when available
         action = sub if sub and sub.lower() != et.lower() else et
-        place = loc or admin1 or country or "an unspecified location"
-        place_in = f"in {loc}" if loc else (f"in {admin1}" if admin1 else (f"in {country}" if country else ""))
+        place_in = (
+            f"in {loc}"
+            if loc
+            else (f"in {admin1}" if admin1 else (f"in {country}" if country else ""))
+        )
 
         parts = []
         if a1 and a2:
@@ -107,21 +115,42 @@ def _normalize_event(record: dict) -> dict:
     return {
         "event_id": f"acled-{record.get('event_id_cnty') or record.get('event_id_no_cnty') or record.get('event_id')}",
         "dataset": "acled",
-        "dataset_event_id": str(record.get("event_id_cnty") or record.get("event_id_no_cnty") or record.get("event_id") or ""),
+        "dataset_event_id": str(
+            record.get("event_id_cnty")
+            or record.get("event_id_no_cnty")
+            or record.get("event_id")
+            or ""
+        ),
         "event_date": event_date,
         "country": record.get("country"),
         "region": record.get("region"),
         "admin1": record.get("admin1"),
         "admin2": record.get("admin2"),
         "location": record.get("location"),
-        "latitude": float(record["latitude"]) if record.get("latitude") not in (None, "") else None,
-        "longitude": float(record["longitude"]) if record.get("longitude") not in (None, "") else None,
+        "latitude": (
+            float(record["latitude"])
+            if record.get("latitude") not in (None, "")
+            else None
+        ),
+        "longitude": (
+            float(record["longitude"])
+            if record.get("longitude") not in (None, "")
+            else None
+        ),
         "event_type": record.get("event_type"),
         "sub_event_type": record.get("sub_event_type"),
         "actor_primary": record.get("actor1"),
         "actor_secondary": record.get("actor2"),
-        "fatalities": int(record["fatalities"]) if record.get("fatalities") not in (None, "") else None,
-        "source_count": int(record["source_scale"]) if str(record.get("source_scale", "")).isdigit() else None,
+        "fatalities": (
+            int(record["fatalities"])
+            if record.get("fatalities") not in (None, "")
+            else None
+        ),
+        "source_count": (
+            int(record["source_scale"])
+            if str(record.get("source_scale", "")).isdigit()
+            else None
+        ),
         "source_urls": source_urls,
         "summary": summary,
         "payload": record,
@@ -172,7 +201,9 @@ def fetch_acled_events(days: int = 2, limit: int = 500) -> tuple[list[dict], dic
             page=page,
         )
         records = payload.get("data") or payload.get("results") or []
-        total_count = int(payload.get("total_count") or payload.get("count") or len(records))
+        total_count = int(
+            payload.get("total_count") or payload.get("count") or len(records)
+        )
         all_events.extend(records)
         if len(records) < limit or len(all_events) >= total_count:
             break

@@ -20,6 +20,7 @@ from corpus import (
     upsert_canonical_events,
     upsert_event_perspectives,
 )
+from causal import CausalGraph
 
 DEFAULT_TOPICS = ("geopolitics", "economics")
 
@@ -66,7 +67,18 @@ _COUNTRY_ALIASES = {
 
 _COUNTRY_CANONICAL_NAMES = frozenset(_COUNTRY_ALIASES.values())
 _COUNTRY_NAME_PATTERN = re.compile(
-    r"\b(" + "|".join(sorted({re.escape(name) for name in set(_COUNTRY_ALIASES) | _COUNTRY_CANONICAL_NAMES}, key=len, reverse=True)) + r")\b",
+    r"\b("
+    + "|".join(
+        sorted(
+            {
+                re.escape(name)
+                for name in set(_COUNTRY_ALIASES) | _COUNTRY_CANONICAL_NAMES
+            },
+            key=len,
+            reverse=True,
+        )
+    )
+    + r")\b",
     flags=re.I,
 )
 
@@ -91,7 +103,9 @@ def _countries_from_text(text: str | None) -> list[str]:
     return countries
 
 
-def _date_range_for_cluster(event: dict, padding_days: int = 2) -> tuple[str | None, str | None]:
+def _date_range_for_cluster(
+    event: dict, padding_days: int = 2
+) -> tuple[str | None, str | None]:
     def to_date(raw: str | None):
         if not raw or not str(raw).strip():
             return None
@@ -102,7 +116,9 @@ def _date_range_for_cluster(event: dict, padding_days: int = 2) -> tuple[str | N
         except ValueError:
             return None
 
-    earliest = to_date(event.get("earliest_update")) or to_date(event.get("latest_update"))
+    earliest = to_date(event.get("earliest_update")) or to_date(
+        event.get("latest_update")
+    )
     latest = to_date(event.get("latest_update")) or earliest
     if earliest is None:
         return None, None
@@ -123,7 +139,9 @@ def _story_country_preferences(event: dict) -> list[str]:
         if canonical in _COUNTRY_CANONICAL_NAMES and canonical not in preferences:
             preferences.append(canonical)
 
-    for country in _countries_from_text(event.get("label")) + _countries_from_text(event.get("summary")):
+    for country in _countries_from_text(event.get("label")) + _countries_from_text(
+        event.get("summary")
+    ):
         if country not in preferences:
             preferences.append(country)
 
@@ -161,25 +179,55 @@ def _perspective_id(event_id: str, article_url: str) -> str:
 def _infer_event_type(event: dict) -> str | None:
     label = (event.get("label") or "").lower()
     anchors = set(event.get("anchors") or [])
-    if "strike" in anchors or "ceasefire" in anchors or any(w in label for w in ("war", "attack", "conflict", "military", "troops", "missile")):
+    if (
+        "strike" in anchors
+        or "ceasefire" in anchors
+        or any(
+            w in label
+            for w in ("war", "attack", "conflict", "military", "troops", "missile")
+        )
+    ):
         return "conflict"
-    if "sanctions" in anchors or "market" in anchors or any(w in label for w in ("trade", "tariff", "economy", "inflation", "rates", "gdp")):
+    if (
+        "sanctions" in anchors
+        or "market" in anchors
+        or any(
+            w in label
+            for w in ("trade", "tariff", "economy", "inflation", "rates", "gdp")
+        )
+    ):
         return "economic"
-    if "meeting" in anchors or "vote" in anchors or any(w in label for w in ("election", "summit", "diplomacy", "treaty", "talks")):
+    if (
+        "meeting" in anchors
+        or "vote" in anchors
+        or any(
+            w in label for w in ("election", "summit", "diplomacy", "treaty", "talks")
+        )
+    ):
         return "diplomatic"
-    if "aid" in anchors or any(w in label for w in ("humanitarian", "relief", "refugee")):
+    if "aid" in anchors or any(
+        w in label for w in ("humanitarian", "relief", "refugee")
+    ):
         return "humanitarian"
-    if "filing" in anchors or "detention" in anchors or any(w in label for w in ("legal", "court", "indictment", "arrest")):
+    if (
+        "filing" in anchors
+        or "detention" in anchors
+        or any(w in label for w in ("legal", "court", "indictment", "arrest"))
+    ):
         return "legal"
     return "political"
 
 
-def _build_canonical_row(event: dict, topic: str, linked: list[str], urls: list[str], cluster_key: str) -> dict:
+def _build_canonical_row(
+    event: dict, topic: str, linked: list[str], urls: list[str], cluster_key: str
+) -> dict:
     articles = event.get("articles") or []
-    sources = {(a.get("source") or "").strip() for a in articles if (a.get("source") or "").strip()}
-    published_dates = [
-        a.get("published_at") for a in articles if a.get("published_at")
-    ]
+    sources = {
+        (a.get("source") or "").strip()
+        for a in articles
+        if (a.get("source") or "").strip()
+    }
+    published_dates = [a.get("published_at") for a in articles if a.get("published_at")]
     first_reported = min(published_dates) if published_dates else None
     last_updated = max(published_dates) if published_dates else None
     return {
@@ -261,7 +309,11 @@ def rebuild_materialized_story_clusters(
     # load source metadata once for all topics
     reliability_by_source = load_latest_source_reliability()
     registry_entries = get_source_registry(active_only=False)
-    registry_by_domain = {(e.get("source_domain") or "").lower(): e for e in registry_entries if e.get("source_domain")}
+    registry_by_domain = {
+        (e.get("source_domain") or "").lower(): e
+        for e in registry_entries
+        if e.get("source_domain")
+    }
 
     for topic in topic_list:
         articles = get_recent_articles(
@@ -271,7 +323,9 @@ def rebuild_materialized_story_clusters(
             headline_corpus_only=True,
         )
         if not articles:
-            replace_materialized_story_clusters(topic=topic, window_hours=window_hours, rows=[])
+            replace_materialized_story_clusters(
+                topic=topic, window_hours=window_hours, rows=[]
+            )
             detail.append({"topic": topic, "clusters": 0})
             continue
         events = enrich_events(cluster_articles(articles, topic=topic))
@@ -283,7 +337,11 @@ def rebuild_materialized_story_clusters(
             cluster_key = event_cluster_key(event)
             linked = _link_structured_ids(event)
             urls = sorted(
-                {(a.get("url") or "").strip() for a in event.get("articles", []) if (a.get("url") or "").strip()}
+                {
+                    (a.get("url") or "").strip()
+                    for a in event.get("articles", [])
+                    if (a.get("url") or "").strip()
+                }
             )
 
             # legacy table (unchanged)
@@ -301,14 +359,14 @@ def rebuild_materialized_story_clusters(
             )
 
             # canonical event
-            canonical_rows.append(_build_canonical_row(event, topic, linked, urls, cluster_key))
+            canonical_rows.append(
+                _build_canonical_row(event, topic, linked, urls, cluster_key)
+            )
 
             # perspectives: load framing + claim resolution for this cluster
             framing_by_url = load_framing_signals_for_article_urls(urls)
             claim_records = load_claim_resolution_for_event_key(cluster_key)
-            claims_by_source = {
-                r["source_name"].lower(): r for r in claim_records
-            }
+            claims_by_source = {r["source_name"].lower(): r for r in claim_records}
             event_articles = event.get("articles") or []
             perspective_rows = _build_perspective_rows(
                 cluster_key,
@@ -320,10 +378,73 @@ def rebuild_materialized_story_clusters(
             )
             all_perspective_rows.extend(perspective_rows)
 
-        total_rows += replace_materialized_story_clusters(topic=topic, window_hours=window_hours, rows=legacy_rows)
+        total_rows += replace_materialized_story_clusters(
+            topic=topic, window_hours=window_hours, rows=legacy_rows
+        )
         upsert_canonical_events(canonical_rows)
         upsert_event_perspectives(all_perspective_rows)
 
         detail.append({"topic": topic, "clusters": len(legacy_rows)})
 
-    return {"topics": topic_list, "window_hours": window_hours, "rows_written": total_rows, "detail": detail}
+    return {
+        "topics": topic_list,
+        "window_hours": window_hours,
+        "rows_written": total_rows,
+        "detail": detail,
+    }
+
+
+def build_causal_graph_for_topic(
+    topic: str,
+    window_hours: int = 96,
+    articles_limit: int = 240,
+    max_lag_days: int = 14,
+    min_score: float = 0.35,
+) -> dict:
+    """Build a lightweight causal graph across event clusters for a topic.
+
+    This function is intentionally non-destructive — it computes a suggested
+    DAG of causal edges based on temporal ordering, shared entities, and
+    lexical cues using the `CausalGraph` scaffold.
+    """
+    articles = get_recent_articles(
+        topic=topic, limit=articles_limit, hours=window_hours, headline_corpus_only=True
+    )
+    if not articles:
+        return {"topic": topic, "nodes": [], "edges": []}
+
+    events = enrich_events(cluster_articles(articles, topic=topic))
+    prepared = []
+    for ev in events:
+        cluster_key = event_cluster_key(ev)
+        published_at = ev.get("earliest_update") or ev.get("latest_update")
+        prepared.append(
+            {
+                "id": cluster_key,
+                "title": ev.get("label") or "",
+                "published_at": published_at,
+                "summary": ev.get("summary") or "",
+                "entities": [e for e in (ev.get("entity_focus") or [])],
+                "country": None,
+            }
+        )
+
+    graph = CausalGraph().build_from_events(
+        prepared, max_lag_days=max_lag_days, min_score=min_score
+    )
+
+    return {
+        "topic": topic,
+        "nodes": [
+            {
+                "id": n.id,
+                "title": n.title,
+                "published_at": (
+                    n.published_at.isoformat() if n.published_at else None
+                ),
+                "entities": n.entities,
+            }
+            for n in graph.nodes.values()
+        ],
+        "edges": graph.edges,
+    }

@@ -14,14 +14,12 @@ When 3+ domains show elevated signals for the same country within the same
 time window, a ConvergenceCard is generated with a composite score.
 """
 
-import math
 import time
 from collections import defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from country_instability import (
     _normalize_country,
-    _sigmoid_score,
     _score_conflict,
     _score_media_attention,
     _score_contradictions,
@@ -57,6 +55,7 @@ _CORRELATION_CACHE_TTL = 900  # 15 minutes
 
 
 # ── Convergence card builder ─────────────────────────────────────────────────
+
 
 def _classify_convergence(active_domains: list[str]) -> str:
     """Classify the type of convergence based on which domains are active."""
@@ -110,6 +109,7 @@ _prev_convergence_scores: dict[str, float] = {}
 
 
 # ── Main correlation function ────────────────────────────────────────────────
+
 
 def compute_correlations(days: int = 3) -> dict:
     """Detect cross-domain signal convergence per country.
@@ -195,48 +195,64 @@ def compute_correlations(days: int = 3) -> dict:
         signals = []
         if "conflict" in active_domains:
             country_events = events_by_country.get(country, [])
-            top_events = sorted(country_events, key=lambda e: e.get("fatalities") or 0, reverse=True)[:3]
+            top_events = sorted(
+                country_events, key=lambda e: e.get("fatalities") or 0, reverse=True
+            )[:3]
             for ev in top_events:
-                signals.append({
-                    "domain": "conflict",
-                    "type": ev.get("event_type", "Unknown"),
-                    "summary": (ev.get("summary") or "")[:200],
-                    "date": ev.get("event_date"),
-                    "severity": "high" if (ev.get("fatalities") or 0) > 0 else "medium",
-                })
+                signals.append(
+                    {
+                        "domain": "conflict",
+                        "type": ev.get("event_type", "Unknown"),
+                        "summary": (ev.get("summary") or "")[:200],
+                        "date": ev.get("event_date"),
+                        "severity": (
+                            "high" if (ev.get("fatalities") or 0) > 0 else "medium"
+                        ),
+                    }
+                )
 
         if "media_attention" in active_domains:
             media_info = media.get(country, {})
-            signals.append({
-                "domain": "media_attention",
-                "type": "Article surge",
-                "summary": f"{media_info.get('weighted_articles', 0):.0f} weighted articles from {media_info.get('source_count', 0)} sources",
-                "severity": "high" if media_info.get("score", 0) > 60 else "medium",
-            })
+            signals.append(
+                {
+                    "domain": "media_attention",
+                    "type": "Article surge",
+                    "summary": f"{media_info.get('weighted_articles', 0):.0f} weighted articles from {media_info.get('source_count', 0)} sources",
+                    "severity": "high" if media_info.get("score", 0) > 60 else "medium",
+                }
+            )
 
         if "contradiction" in active_domains:
             contra_info = contradictions.get(country, {})
-            signals.append({
-                "domain": "contradiction",
-                "type": "Information fog",
-                "summary": f"{contra_info.get('contradiction_count', 0)} contradictions across {contra_info.get('event_count', 0)} events",
-                "severity": "high" if contra_info.get("score", 0) > 50 else "medium",
-            })
+            signals.append(
+                {
+                    "domain": "contradiction",
+                    "type": "Information fog",
+                    "summary": f"{contra_info.get('contradiction_count', 0)} contradictions across {contra_info.get('event_count', 0)} events",
+                    "severity": (
+                        "high" if contra_info.get("score", 0) > 50 else "medium"
+                    ),
+                }
+            )
 
-        cards.append({
-            "country": country,
-            "label": label,
-            "score": composite,
-            "convergence_type": convergence_type,
-            "convergence_description": _CONVERGENCE_DESCRIPTIONS.get(convergence_type, ""),
-            "trend": trend,
-            "active_domains": active_domains,
-            "domain_count": len(active_domains),
-            "domain_scores": {k: round(v, 1) for k, v in domain_scores.items()},
-            "signals": signals,
-            "latitude": lat,
-            "longitude": lon,
-        })
+        cards.append(
+            {
+                "country": country,
+                "label": label,
+                "score": composite,
+                "convergence_type": convergence_type,
+                "convergence_description": _CONVERGENCE_DESCRIPTIONS.get(
+                    convergence_type, ""
+                ),
+                "trend": trend,
+                "active_domains": active_domains,
+                "domain_count": len(active_domains),
+                "domain_scores": {k: round(v, 1) for k, v in domain_scores.items()},
+                "signals": signals,
+                "latitude": lat,
+                "longitude": lon,
+            }
+        )
 
     # Sort by composite score
     cards.sort(key=lambda c: -c["score"])

@@ -19,14 +19,18 @@ def _request_is_internal(request: Request) -> bool:
     return parsed.is_loopback
 
 
-def require_write_access(request: Request, x_api_key: str | None = Header(default=None, alias="X-API-Key")) -> None:
+def require_write_access(
+    request: Request, x_api_key: str | None = Header(default=None, alias="X-API-Key")
+) -> None:
     if _request_is_internal(request):
         return
     if ADMIN_API_KEY and x_api_key == ADMIN_API_KEY:
         return
     detail = "Write access requires an internal client or a valid X-API-Key."
     if not ADMIN_API_KEY:
-        detail = f"{detail} Set OTHELLO_ADMIN_API_KEY to enable authenticated remote access."
+        detail = (
+            f"{detail} Set OTHELLO_ADMIN_API_KEY to enable authenticated remote access."
+        )
     raise HTTPException(status_code=403, detail=detail)
 
 
@@ -41,7 +45,9 @@ def run_exclusive(lock: Lock, label: str, fn):
 
 def run_exclusive_or_skip(lock: Lock, label: str, fn):
     if not lock.acquire(blocking=False):
-        print(f"[{label}] Skipping scheduled run because another {label} is already in progress.")
+        print(
+            f"[{label}] Skipping scheduled run because another {label} is already in progress."
+        )
         return {"status": "skipped", "reason": f"{label} already in progress"}
     try:
         return fn()

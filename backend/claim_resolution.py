@@ -10,30 +10,168 @@ from corpus import (
     replace_claim_resolution_snapshot,
     save_source_reliability_snapshot,
 )
-
+from claim_reconciliation import reconcile_snapshot as _reconcile_snapshot
 
 CLAIM_STOPWORDS = {
-    "the", "and", "that", "with", "from", "this", "into", "after", "over", "under", "amid", "against",
-    "about", "their", "there", "which", "would", "could", "should", "while", "where", "when", "what", "than",
-    "been", "have", "has", "were", "will", "says", "said", "say", "report", "reports", "reported", "according",
+    "the",
+    "and",
+    "that",
+    "with",
+    "from",
+    "this",
+    "into",
+    "after",
+    "over",
+    "under",
+    "amid",
+    "against",
+    "about",
+    "their",
+    "there",
+    "which",
+    "would",
+    "could",
+    "should",
+    "while",
+    "where",
+    "when",
+    "what",
+    "than",
+    "been",
+    "have",
+    "has",
+    "were",
+    "will",
+    "says",
+    "said",
+    "say",
+    "report",
+    "reports",
+    "reported",
+    "according",
 }
 
 CLAIM_VERB_HINTS = {
-    "says", "said", "warns", "warned", "claims", "claimed", "announces", "announced", "vows", "vowed",
-    "confirms", "confirmed", "denies", "denied", "approves", "approved", "rejects", "rejected", "threatens",
-    "threatened", "expects", "expected", "targets", "targeted", "strikes", "struck", "imposes", "imposed",
-    "halts", "halted", "resumes", "resumed", "cuts", "cut", "raises", "raised", "launches", "launched",
+    "says",
+    "said",
+    "warns",
+    "warned",
+    "claims",
+    "claimed",
+    "announces",
+    "announced",
+    "vows",
+    "vowed",
+    "confirms",
+    "confirmed",
+    "denies",
+    "denied",
+    "approves",
+    "approved",
+    "rejects",
+    "rejected",
+    "threatens",
+    "threatened",
+    "expects",
+    "expected",
+    "targets",
+    "targeted",
+    "strikes",
+    "struck",
+    "imposes",
+    "imposed",
+    "halts",
+    "halted",
+    "resumes",
+    "resumed",
+    "cuts",
+    "cut",
+    "raises",
+    "raised",
+    "launches",
+    "launched",
 }
 
 CLAIM_TYPE_KEYWORDS = {
-    "timeline": ["today", "tomorrow", "weeks", "days", "deadline", "by monday", "by friday", "soon", "delayed"],
-    "scale": ["dozens", "hundreds", "thousands", "surge", "record", "largest", "smallest", "major", "minor"],
-    "causality": ["because", "after", "following", "in response", "prompting", "leading to", "caused by"],
-    "intent": ["aims", "seeks", "plans", "intends", "goal", "objective", "strategy", "wants to"],
-    "sanctions": ["sanction", "blacklist", "designation", "asset freeze", "penalty", "ofac"],
-    "markets": ["stocks", "shares", "oil", "prices", "market", "yield", "inflation", "rates", "gdp"],
-    "military": ["strike", "missile", "troops", "drone", "airstrike", "attack", "ceasefire", "offensive"],
-    "diplomacy": ["talks", "negotiation", "envoy", "mediation", "summit", "meeting", "agreement"],
+    "timeline": [
+        "today",
+        "tomorrow",
+        "weeks",
+        "days",
+        "deadline",
+        "by monday",
+        "by friday",
+        "soon",
+        "delayed",
+    ],
+    "scale": [
+        "dozens",
+        "hundreds",
+        "thousands",
+        "surge",
+        "record",
+        "largest",
+        "smallest",
+        "major",
+        "minor",
+    ],
+    "causality": [
+        "because",
+        "after",
+        "following",
+        "in response",
+        "prompting",
+        "leading to",
+        "caused by",
+    ],
+    "intent": [
+        "aims",
+        "seeks",
+        "plans",
+        "intends",
+        "goal",
+        "objective",
+        "strategy",
+        "wants to",
+    ],
+    "sanctions": [
+        "sanction",
+        "blacklist",
+        "designation",
+        "asset freeze",
+        "penalty",
+        "ofac",
+    ],
+    "markets": [
+        "stocks",
+        "shares",
+        "oil",
+        "prices",
+        "market",
+        "yield",
+        "inflation",
+        "rates",
+        "gdp",
+    ],
+    "military": [
+        "strike",
+        "missile",
+        "troops",
+        "drone",
+        "airstrike",
+        "attack",
+        "ceasefire",
+        "offensive",
+    ],
+    "diplomacy": [
+        "talks",
+        "negotiation",
+        "envoy",
+        "mediation",
+        "summit",
+        "meeting",
+        "agreement",
+    ],
 }
 
 
@@ -62,7 +200,15 @@ def _parse_timestamp(value: str | None) -> datetime | None:
     compact = re.match(r"^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$", text)
     if compact:
         year, month, day, hour, minute, second = compact.groups()
-        return datetime(int(year), int(month), int(day), int(hour), int(minute), int(second), tzinfo=timezone.utc)
+        return datetime(
+            int(year),
+            int(month),
+            int(day),
+            int(hour),
+            int(minute),
+            int(second),
+            tzinfo=timezone.utc,
+        )
     try:
         return datetime.fromisoformat(text.replace("Z", "+00:00"))
     except ValueError:
@@ -75,7 +221,13 @@ def _source_key(source_name: str) -> str:
 
 def _claim_key(group_key: str, source_name: str, claim_text: str) -> str:
     return hashlib.sha256(
-        " | ".join([group_key, _normalize_source_name(source_name), _normalize_claim_text(claim_text)]).encode("utf-8")
+        " | ".join(
+            [
+                group_key,
+                _normalize_source_name(source_name),
+                _normalize_claim_text(claim_text),
+            ]
+        ).encode("utf-8")
     ).hexdigest()
 
 
@@ -110,13 +262,21 @@ def _extract_claim_candidates(article: dict, topic: str | None) -> list[dict]:
         if len(_content_tokens(cleaned)) < 4:
             continue
         lowered = cleaned.lower()
-        if not any(hint in lowered for hint in CLAIM_VERB_HINTS) and article.get("title") and cleaned != _normalize_claim_text(article.get("title")):
+        if (
+            not any(hint in lowered for hint in CLAIM_VERB_HINTS)
+            and article.get("title")
+            and cleaned != _normalize_claim_text(article.get("title"))
+        ):
             continue
         sentences.append(cleaned)
 
     if article.get("title"):
         normalized_title = _normalize_claim_text(article["title"])
-        if normalized_title and normalized_title not in sentences and len(_content_tokens(normalized_title)) >= 4:
+        if (
+            normalized_title
+            and normalized_title not in sentences
+            and len(_content_tokens(normalized_title)) >= 4
+        ):
             sentences.insert(0, normalized_title)
 
     deduped = []
@@ -160,10 +320,16 @@ def _claims_are_similar(left: str, right: str) -> bool:
     return overlap >= 4 or overlap >= min(len(left_tokens), len(right_tokens)) * 0.6
 
 
-def _resolve_contradiction_status(source_name: str, credible_source: str | None, unresolved: bool) -> str:
+def _resolve_contradiction_status(
+    source_name: str, credible_source: str | None, unresolved: bool
+) -> str:
     if unresolved or not credible_source:
         return "unresolved"
-    return "corroborated" if _normalize_source_name(source_name) == credible_source else "contradicted"
+    return (
+        "corroborated"
+        if _normalize_source_name(source_name) == credible_source
+        else "contradicted"
+    )
 
 
 def _source_record_for(contradiction: dict, source_name: str) -> dict | None:
@@ -174,7 +340,9 @@ def _source_record_for(contradiction: dict, source_name: str) -> dict | None:
     return None
 
 
-def _build_contradiction_claim_rows(topic: str | None, days: int, generated_at: float) -> list[dict]:
+def _build_contradiction_claim_rows(
+    topic: str | None, days: int, generated_at: float
+) -> list[dict]:
     rows = []
     records = get_recent_contradiction_records(topic=topic, hours=days * 24, limit=800)
     for record in records:
@@ -191,10 +359,14 @@ def _build_contradiction_claim_rows(topic: str | None, days: int, generated_at: 
             if not claim_a or not claim_b:
                 continue
 
-            credible_source = _normalize_source_name(contradiction.get("most_credible_source"))
+            credible_source = _normalize_source_name(
+                contradiction.get("most_credible_source")
+            )
             unresolved = not credible_source or credible_source == "unresolved"
             confidence = float(contradiction.get("confidence", 0) or 0)
-            conflict_type = contradiction.get("conflict_type") or _classify_claim_type(f"{claim_a} {claim_b}")
+            conflict_type = contradiction.get("conflict_type") or _classify_claim_type(
+                f"{claim_a} {claim_b}"
+            )
 
             for source_name, claim_text, opposing_claim in [
                 (sources[0], claim_a, claim_b),
@@ -204,7 +376,9 @@ def _build_contradiction_claim_rows(topic: str | None, days: int, generated_at: 
                 rows.append(
                     {
                         "group_key": f"contradiction:{event_key}:{_claim_signature(claim_text)}",
-                        "claim_record_key": _claim_key(event_key, source_name, claim_text),
+                        "claim_record_key": _claim_key(
+                            event_key, source_name, claim_text
+                        ),
                         "event_key": event_key,
                         "topic": record.get("topic"),
                         "event_label": event_label,
@@ -212,13 +386,18 @@ def _build_contradiction_claim_rows(topic: str | None, days: int, generated_at: 
                         "claim_text": claim_text,
                         "opposing_claim_text": opposing_claim,
                         "conflict_type": conflict_type,
-                        "resolution_status": _resolve_contradiction_status(source_name, credible_source, unresolved),
+                        "resolution_status": _resolve_contradiction_status(
+                            source_name, credible_source, unresolved
+                        ),
                         "confidence": confidence,
                         "evidence_url": (source_record or {}).get("url"),
-                        "published_at": (source_record or {}).get("published_at") or latest_update,
+                        "published_at": (source_record or {}).get("published_at")
+                        or latest_update,
                         "payload": {
                             "origin": "contradiction",
-                            "most_credible_source": contradiction.get("most_credible_source"),
+                            "most_credible_source": contradiction.get(
+                                "most_credible_source"
+                            ),
                             "reasoning": contradiction.get("reasoning"),
                             "sources_in_conflict": sources,
                         },
@@ -228,13 +407,17 @@ def _build_contradiction_claim_rows(topic: str | None, days: int, generated_at: 
     return rows
 
 
-def _build_direct_claim_rows(topic: str | None, days: int, generated_at: float) -> list[dict]:
+def _build_direct_claim_rows(
+    topic: str | None, days: int, generated_at: float
+) -> list[dict]:
     articles = get_recent_articles(topic=topic, limit=700, hours=days * 24)
     rows = []
     for article in articles:
         rows.extend(_extract_claim_candidates(article, topic))
     for row in rows:
-        row["claim_record_key"] = _claim_key(row["group_key"], row["source_name"], row["claim_text"])
+        row["claim_record_key"] = _claim_key(
+            row["group_key"], row["source_name"], row["claim_text"]
+        )
         row["generated_at"] = generated_at
     return rows
 
@@ -246,7 +429,10 @@ def _resolve_direct_claim_rows(rows: list[dict]) -> list[dict]:
 
     resolved = []
     for group_key, group_rows in by_group.items():
-        group_rows.sort(key=lambda row: _parse_timestamp(row.get("published_at")) or datetime.max.replace(tzinfo=timezone.utc))
+        group_rows.sort(
+            key=lambda row: _parse_timestamp(row.get("published_at"))
+            or datetime.max.replace(tzinfo=timezone.utc)
+        )
         canonical_claims: list[dict] = []
         for row in group_rows:
             matched_group = None
@@ -255,7 +441,9 @@ def _resolve_direct_claim_rows(rows: list[dict]) -> list[dict]:
                     matched_group = canonical
                     break
             if matched_group is None:
-                canonical_claims.append({"claim_text": row["claim_text"], "rows": [row]})
+                canonical_claims.append(
+                    {"claim_text": row["claim_text"], "rows": [row]}
+                )
             else:
                 matched_group["rows"].append(row)
 
@@ -265,9 +453,19 @@ def _resolve_direct_claim_rows(rows: list[dict]) -> list[dict]:
             unique_sources.discard("")
             status = "unresolved"
             if len(unique_sources) >= 2:
-                earliest = min((_parse_timestamp(row.get("published_at")) for row in cluster), default=None)
-                latest = max((_parse_timestamp(row.get("published_at")) for row in cluster), default=None)
-                if earliest and latest and (latest - earliest).total_seconds() >= 6 * 3600:
+                earliest = min(
+                    (_parse_timestamp(row.get("published_at")) for row in cluster),
+                    default=None,
+                )
+                latest = max(
+                    (_parse_timestamp(row.get("published_at")) for row in cluster),
+                    default=None,
+                )
+                if (
+                    earliest
+                    and latest
+                    and (latest - earliest).total_seconds() >= 6 * 3600
+                ):
                     status = "vindicated_later"
                 else:
                     status = "corroborated"
@@ -275,19 +473,43 @@ def _resolve_direct_claim_rows(rows: list[dict]) -> list[dict]:
                 resolved.append(
                     {
                         **row,
-                        "resolution_status": status if len(unique_sources) >= 2 else "unresolved",
+                        "resolution_status": (
+                            status if len(unique_sources) >= 2 else "unresolved"
+                        ),
                     }
                 )
             continue
 
-        dominant = max(canonical_claims, key=lambda item: len({_source_key(row["source_name"]) for row in item["rows"]}))
+        dominant = max(
+            canonical_claims,
+            key=lambda item: len(
+                {_source_key(row["source_name"]) for row in item["rows"]}
+            ),
+        )
         dominant_sources = {_source_key(row["source_name"]) for row in dominant["rows"]}
         for cluster in canonical_claims:
-            cluster_sources = {_source_key(row["source_name"]) for row in cluster["rows"]}
             if cluster is dominant and len(dominant_sources) >= 2:
-                earliest = min((_parse_timestamp(row.get("published_at")) for row in cluster["rows"]), default=None)
-                latest = max((_parse_timestamp(row.get("published_at")) for row in cluster["rows"]), default=None)
-                cluster_status = "vindicated_later" if earliest and latest and (latest - earliest).total_seconds() >= 12 * 3600 else "corroborated"
+                earliest = min(
+                    (
+                        _parse_timestamp(row.get("published_at"))
+                        for row in cluster["rows"]
+                    ),
+                    default=None,
+                )
+                latest = max(
+                    (
+                        _parse_timestamp(row.get("published_at"))
+                        for row in cluster["rows"]
+                    ),
+                    default=None,
+                )
+                cluster_status = (
+                    "vindicated_later"
+                    if earliest
+                    and latest
+                    and (latest - earliest).total_seconds() >= 12 * 3600
+                    else "corroborated"
+                )
             elif cluster is dominant:
                 cluster_status = "unresolved"
             else:
@@ -307,7 +529,9 @@ def _resolve_direct_claim_rows(rows: list[dict]) -> list[dict]:
 
 def _topic_breakdowns(claim_rows: list[dict]) -> tuple[dict, dict]:
     by_topic = defaultdict(lambda: {"claim_count": 0, "statuses": defaultdict(int)})
-    by_claim_type = defaultdict(lambda: {"claim_count": 0, "statuses": defaultdict(int)})
+    by_claim_type = defaultdict(
+        lambda: {"claim_count": 0, "statuses": defaultdict(int)}
+    )
     for row in claim_rows:
         topic_key = row.get("topic") or "global"
         claim_type = row.get("conflict_type") or "fact"
@@ -319,7 +543,9 @@ def _topic_breakdowns(claim_rows: list[dict]) -> tuple[dict, dict]:
     return by_topic, by_claim_type
 
 
-def _build_source_rows(source_stats: dict, snapshot_key: str, topic: str | None, generated_at: float) -> list[dict]:
+def _build_source_rows(
+    source_stats: dict, snapshot_key: str, topic: str | None, generated_at: float
+) -> list[dict]:
     rows = []
     for stats in source_stats.values():
         claim_count = stats["claim_count"]
@@ -330,7 +556,14 @@ def _build_source_rows(source_stats: dict, snapshot_key: str, topic: str | None,
         vindicated = stats["vindicated_later_count"]
 
         empirical_score = round(
-            (corroborated + (1.15 * vindicated) + (0.5 * mixed) + (0.3 * unresolved) + 1.0) / (claim_count + 2.0),
+            (
+                corroborated
+                + (1.15 * vindicated)
+                + (0.5 * mixed)
+                + (0.3 * unresolved)
+                + 1.0
+            )
+            / (claim_count + 2.0),
             3,
         )
         weight_multiplier = round(0.65 + (empirical_score * 0.9), 3)
@@ -354,7 +587,9 @@ def _build_source_rows(source_stats: dict, snapshot_key: str, topic: str | None,
                 "generated_at": generated_at,
             }
         )
-    rows.sort(key=lambda row: (row["empirical_score"], row["claim_count"]), reverse=True)
+    rows.sort(
+        key=lambda row: (row["empirical_score"], row["claim_count"]), reverse=True
+    )
     save_source_reliability_snapshot(snapshot_key, rows, topic=topic)
     return rows
 
@@ -363,11 +598,21 @@ def build_claim_resolution_snapshot(topic: str | None = None, days: int = 180) -
     generated_at = datetime.now(timezone.utc).timestamp()
     snapshot_key = f"claim-resolution:{topic or 'global'}:{days}"
 
-    contradiction_rows = _build_contradiction_claim_rows(topic=topic, days=days, generated_at=generated_at)
-    direct_rows = _resolve_direct_claim_rows(_build_direct_claim_rows(topic=topic, days=days, generated_at=generated_at))
+    contradiction_rows = _build_contradiction_claim_rows(
+        topic=topic, days=days, generated_at=generated_at
+    )
+    direct_rows = _resolve_direct_claim_rows(
+        _build_direct_claim_rows(topic=topic, days=days, generated_at=generated_at)
+    )
     claim_rows = contradiction_rows + direct_rows
-    deduped_claim_rows = list({row["claim_record_key"]: row for row in claim_rows}.values())
+    deduped_claim_rows = list(
+        {row["claim_record_key"]: row for row in claim_rows}.values()
+    )
     replace_claim_resolution_snapshot(snapshot_key, deduped_claim_rows)
+    try:
+        reconciliations = _reconcile_snapshot(deduped_claim_rows, topic=topic)
+    except Exception:
+        reconciliations = {}
 
     source_stats: dict[str, dict] = {}
     for row in deduped_claim_rows:
@@ -388,7 +633,13 @@ def build_claim_resolution_snapshot(topic: str | None = None, days: int = 180) -
             },
         )
         status = row.get("resolution_status") or "unresolved"
-        if status not in {"corroborated", "contradicted", "unresolved", "mixed", "vindicated_later"}:
+        if status not in {
+            "corroborated",
+            "contradicted",
+            "unresolved",
+            "mixed",
+            "vindicated_later",
+        }:
             status = "unresolved"
         bucket["claim_count"] += 1
         counter_key = f"{status}_count"
@@ -430,13 +681,20 @@ def build_claim_resolution_snapshot(topic: str | None = None, days: int = 180) -
         "days": days,
         "claim_records": len(deduped_claim_rows),
         "sources": source_rows,
+        "reconciliations": reconciliations,
         "breakdowns": {
             "topics": {
-                key: {"claim_count": value["claim_count"], "statuses": dict(value["statuses"])}
+                key: {
+                    "claim_count": value["claim_count"],
+                    "statuses": dict(value["statuses"]),
+                }
                 for key, value in by_topic.items()
             },
             "claim_types": {
-                key: {"claim_count": value["claim_count"], "statuses": dict(value["statuses"])}
+                key: {
+                    "claim_count": value["claim_count"],
+                    "statuses": dict(value["statuses"]),
+                }
                 for key, value in by_claim_type.items()
             },
         },
@@ -444,11 +702,17 @@ def build_claim_resolution_snapshot(topic: str | None = None, days: int = 180) -
     }
 
 
-def get_source_reliability(topic: str | None = None, days: int = 180, refresh: bool = False) -> dict:
+def get_source_reliability(
+    topic: str | None = None, days: int = 180, refresh: bool = False
+) -> dict:
     if not refresh:
         current = load_latest_source_reliability(topic=topic, max_age_hours=12)
         if current:
-            rows = sorted(current.values(), key=lambda row: (row["empirical_score"], row["claim_count"]), reverse=True)
+            rows = sorted(
+                current.values(),
+                key=lambda row: (row["empirical_score"], row["claim_count"]),
+                reverse=True,
+            )
             breakdowns = {
                 "topics": {},
                 "claim_types": {},
@@ -456,18 +720,27 @@ def get_source_reliability(topic: str | None = None, days: int = 180, refresh: b
             for row in rows:
                 payload = row.get("payload") or {}
                 for topic_key, value in (payload.get("topic_breakdown") or {}).items():
-                    bucket = breakdowns["topics"].setdefault(topic_key, {"claim_count": 0, "statuses": defaultdict(int)})
+                    bucket = breakdowns["topics"].setdefault(
+                        topic_key, {"claim_count": 0, "statuses": defaultdict(int)}
+                    )
                     bucket["claim_count"] += int(value.get("claim_count", 0) or 0)
                     for status, count in (value.get("statuses") or {}).items():
                         bucket["statuses"][status] += int(count or 0)
-                for claim_type, value in (payload.get("claim_type_breakdown") or {}).items():
-                    bucket = breakdowns["claim_types"].setdefault(claim_type, {"claim_count": 0, "statuses": defaultdict(int)})
+                for claim_type, value in (
+                    payload.get("claim_type_breakdown") or {}
+                ).items():
+                    bucket = breakdowns["claim_types"].setdefault(
+                        claim_type, {"claim_count": 0, "statuses": defaultdict(int)}
+                    )
                     bucket["claim_count"] += int(value.get("claim_count", 0) or 0)
                     for status, count in (value.get("statuses") or {}).items():
                         bucket["statuses"][status] += int(count or 0)
             normalized_breakdowns = {
                 group: {
-                    key: {"claim_count": value["claim_count"], "statuses": dict(value["statuses"])}
+                    key: {
+                        "claim_count": value["claim_count"],
+                        "statuses": dict(value["statuses"]),
+                    }
                     for key, value in bucket.items()
                 }
                 for group, bucket in breakdowns.items()

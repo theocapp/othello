@@ -21,9 +21,35 @@ from corpus import (
 load_dotenv(Path(__file__).with_name(".env"))
 
 STOPWORDS = {
-    "the", "and", "that", "with", "from", "this", "into", "after", "over", "under",
-    "amid", "against", "about", "their", "there", "which", "would", "could", "should",
-    "while", "where", "when", "what", "than", "been", "have", "has", "were", "will",
+    "the",
+    "and",
+    "that",
+    "with",
+    "from",
+    "this",
+    "into",
+    "after",
+    "over",
+    "under",
+    "amid",
+    "against",
+    "about",
+    "their",
+    "there",
+    "which",
+    "would",
+    "could",
+    "should",
+    "while",
+    "where",
+    "when",
+    "what",
+    "than",
+    "been",
+    "have",
+    "has",
+    "were",
+    "will",
 }
 
 CONTRADICTION_STATUS_DIMENSIONS = {
@@ -32,8 +58,22 @@ CONTRADICTION_STATUS_DIMENSIONS = {
         "negative": {"closed", "closure", "shut", "blocked", "suspended", "halted"},
     },
     "ceasefire": {
-        "positive": {"agreed", "agreement", "accept", "accepted", "holding", "observed"},
-        "negative": {"reject", "rejected", "collapse", "collapsed", "violated", "resumed"},
+        "positive": {
+            "agreed",
+            "agreement",
+            "accept",
+            "accepted",
+            "holding",
+            "observed",
+        },
+        "negative": {
+            "reject",
+            "rejected",
+            "collapse",
+            "collapsed",
+            "violated",
+            "resumed",
+        },
     },
     "control": {
         "positive": {"captured", "secured", "retook", "controls", "seized"},
@@ -59,15 +99,64 @@ FRAMING_LABELS = {
 }
 
 EVENT_ANCHORS = {
-    "strike": {"strike", "airstrike", "attack", "raid", "bombing", "drone", "missile", "shelling", "offensive", "assault"},
+    "strike": {
+        "strike",
+        "airstrike",
+        "attack",
+        "raid",
+        "bombing",
+        "drone",
+        "missile",
+        "shelling",
+        "offensive",
+        "assault",
+    },
     "ceasefire": {"ceasefire", "truce", "pause", "de-escalation", "armistice"},
-    "sanctions": {"sanction", "sanctions", "blacklist", "designate", "designation", "tariff", "embargo", "penalty"},
-    "meeting": {"meeting", "talks", "summit", "negotiation", "negotiations", "dialogue", "consultation"},
-    "filing": {"filing", "petition", "indictment", "warrant", "complaint", "case", "lawsuit", "submission"},
+    "sanctions": {
+        "sanction",
+        "sanctions",
+        "blacklist",
+        "designate",
+        "designation",
+        "tariff",
+        "embargo",
+        "penalty",
+    },
+    "meeting": {
+        "meeting",
+        "talks",
+        "summit",
+        "negotiation",
+        "negotiations",
+        "dialogue",
+        "consultation",
+    },
+    "filing": {
+        "filing",
+        "petition",
+        "indictment",
+        "warrant",
+        "complaint",
+        "case",
+        "lawsuit",
+        "submission",
+    },
     "vote": {"vote", "ballot", "election", "referendum", "resolution"},
     "detention": {"arrest", "detained", "detention", "custody", "jailed", "sentence"},
     "aid": {"aid", "relief", "humanitarian", "shipment", "delivery", "assistance"},
-    "market": {"stocks", "shares", "market", "inflation", "gdp", "rates", "yield", "currency", "trade", "exports", "imports"},
+    "market": {
+        "stocks",
+        "shares",
+        "market",
+        "inflation",
+        "gdp",
+        "rates",
+        "yield",
+        "currency",
+        "trade",
+        "exports",
+        "imports",
+    },
     "policy": {"policy", "bill", "law", "decree", "reform", "budget", "package"},
 }
 
@@ -85,8 +174,22 @@ ANCHOR_CONFLICTS = {
 }
 
 SENSATIONAL_TITLE_TERMS = {
-    "blasts", "blast", "slams", "slam", "explodes", "explode", "shocking", "shock",
-    "dramatic", "chaos", "chaotic", "furious", "stuns", "stun", "panic", "warpath",
+    "blasts",
+    "blast",
+    "slams",
+    "slam",
+    "explodes",
+    "explode",
+    "shocking",
+    "shock",
+    "dramatic",
+    "chaos",
+    "chaotic",
+    "furious",
+    "stuns",
+    "stun",
+    "panic",
+    "warpath",
 }
 
 _nlp = None
@@ -115,7 +218,10 @@ def get_client():
     api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key:
         return None
-    if _client_unavailable_until and _client_unavailable_until > datetime.now().timestamp():
+    if (
+        _client_unavailable_until
+        and _client_unavailable_until > datetime.now().timestamp()
+    ):
         return None
     if _client is None:
         try:
@@ -146,10 +252,14 @@ def _parse_published_at(value: str | None) -> datetime | None:
             return datetime.fromisoformat(text.replace("Z", "+00:00"))
         return datetime.fromisoformat(text)
     except ValueError:
-        compact_match = re.fullmatch(r"(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z", text)
+        compact_match = re.fullmatch(
+            r"(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z", text
+        )
         if compact_match:
             year, month, day, hour, minute, second = compact_match.groups()
-            return datetime.fromisoformat(f"{year}-{month}-{day}T{hour}:{minute}:{second}+00:00")
+            return datetime.fromisoformat(
+                f"{year}-{month}-{day}T{hour}:{minute}:{second}+00:00"
+            )
     return None
 
 
@@ -212,7 +322,11 @@ def _article_entities(text: str) -> set[str]:
 
 def _keyword_snippet(text: str, limit: int = 18) -> str:
     lowered = _normalize_text(text).lower()
-    tokens = [token for token in re.findall(r"[A-Za-z0-9][A-Za-z0-9\-']*", lowered) if token not in STOPWORDS]
+    tokens = [
+        token
+        for token in re.findall(r"[A-Za-z0-9][A-Za-z0-9\-']*", lowered)
+        if token not in STOPWORDS
+    ]
     return " ".join(tokens[:limit])
 
 
@@ -243,7 +357,9 @@ def _article_framing_labels(text: str) -> set[str]:
 
 
 def _article_claim_features(article: dict) -> dict:
-    text = _normalize_text(f"{article.get('title', '')}. {article.get('description', '')}")
+    text = _normalize_text(
+        f"{article.get('title', '')}. {article.get('description', '')}"
+    )
     entities = _article_entities(text)
     keywords = _token_keywords(text)
     return {
@@ -282,7 +398,13 @@ def _dedupe_contradictions(items: list[dict]) -> list[dict]:
     for item in items:
         key = (
             item.get("conflict_type"),
-            tuple(sorted(label.lower() for label in item.get("sources_in_conflict", []) if label)),
+            tuple(
+                sorted(
+                    label.lower()
+                    for label in item.get("sources_in_conflict", [])
+                    if label
+                )
+            ),
             item.get("claim_a", "").strip().lower(),
             item.get("claim_b", "").strip().lower(),
         )
@@ -310,18 +432,37 @@ def heuristic_contradictions(event: dict, max_items: int = 6) -> list[dict]:
             if not _claims_share_context(left_features, right_features):
                 continue
 
-            shared_entities = sorted(left_features["entities"] & right_features["entities"])
-            focus = ", ".join(shared_entities[:3]) if shared_entities else "the same event"
+            shared_entities = sorted(
+                left_features["entities"] & right_features["entities"]
+            )
+            focus = (
+                ", ".join(shared_entities[:3]) if shared_entities else "the same event"
+            )
 
-            left_numbers = {_normalize_numeric_token(token) for token in left_features["numbers"]}
-            right_numbers = {_normalize_numeric_token(token) for token in right_features["numbers"]}
+            left_numbers = {
+                _normalize_numeric_token(token) for token in left_features["numbers"]
+            }
+            right_numbers = {
+                _normalize_numeric_token(token) for token in right_features["numbers"]
+            }
             divergent_numbers = sorted((left_numbers ^ right_numbers) - {"0", "1"})
-            if left_numbers and right_numbers and left_numbers != right_numbers and divergent_numbers:
+            if (
+                left_numbers
+                and right_numbers
+                and left_numbers != right_numbers
+                and divergent_numbers
+            ):
                 contradictions.append(
                     {
                         "conflict_type": "scale",
-                        "sources_in_conflict": [left.get("source"), right.get("source")],
-                        "source_records": [_resolve_article_record(left), _resolve_article_record(right)],
+                        "sources_in_conflict": [
+                            left.get("source"),
+                            right.get("source"),
+                        ],
+                        "source_records": [
+                            _resolve_article_record(left),
+                            _resolve_article_record(right),
+                        ],
                         "claim_a": f"{left.get('source')}: {left_features['snippet']}",
                         "claim_b": f"{right.get('source')}: {right_features['snippet']}",
                         "confidence": 0.78,
@@ -331,14 +472,30 @@ def heuristic_contradictions(event: dict, max_items: int = 6) -> list[dict]:
                     }
                 )
 
-            for dimension in sorted(set(left_features["status_markers"]) & set(right_features["status_markers"])):
-                if left_features["status_markers"][dimension] == right_features["status_markers"][dimension]:
+            for dimension in sorted(
+                set(left_features["status_markers"])
+                & set(right_features["status_markers"])
+            ):
+                if (
+                    left_features["status_markers"][dimension]
+                    == right_features["status_markers"][dimension]
+                ):
                     continue
                 contradictions.append(
                     {
-                        "conflict_type": "timeline" if dimension in {"closure", "ceasefire", "detention"} else "fact",
-                        "sources_in_conflict": [left.get("source"), right.get("source")],
-                        "source_records": [_resolve_article_record(left), _resolve_article_record(right)],
+                        "conflict_type": (
+                            "timeline"
+                            if dimension in {"closure", "ceasefire", "detention"}
+                            else "fact"
+                        ),
+                        "sources_in_conflict": [
+                            left.get("source"),
+                            right.get("source"),
+                        ],
+                        "source_records": [
+                            _resolve_article_record(left),
+                            _resolve_article_record(right),
+                        ],
                         "claim_a": f"{left.get('source')}: {left.get('title')}",
                         "claim_b": f"{right.get('source')}: {right.get('title')}",
                         "confidence": 0.77,
@@ -351,12 +508,23 @@ def heuristic_contradictions(event: dict, max_items: int = 6) -> list[dict]:
             left_labels = left_features["framing_labels"]
             right_labels = right_features["framing_labels"]
             framing_delta = left_labels ^ right_labels
-            if left_labels and right_labels and framing_delta and left_labels != right_labels:
+            if (
+                left_labels
+                and right_labels
+                and framing_delta
+                and left_labels != right_labels
+            ):
                 contradictions.append(
                     {
                         "conflict_type": "intent",
-                        "sources_in_conflict": [left.get("source"), right.get("source")],
-                        "source_records": [_resolve_article_record(left), _resolve_article_record(right)],
+                        "sources_in_conflict": [
+                            left.get("source"),
+                            right.get("source"),
+                        ],
+                        "source_records": [
+                            _resolve_article_record(left),
+                            _resolve_article_record(right),
+                        ],
                         "claim_a": f"{left.get('source')}: {left.get('title')}",
                         "claim_b": f"{right.get('source')}: {right.get('title')}",
                         "confidence": 0.65,
@@ -368,7 +536,10 @@ def heuristic_contradictions(event: dict, max_items: int = 6) -> list[dict]:
 
     ranked = sorted(
         _dedupe_contradictions(contradictions),
-        key=lambda item: (item.get("confidence", 0), item.get("conflict_type") != "scale"),
+        key=lambda item: (
+            item.get("confidence", 0),
+            item.get("conflict_type") != "scale",
+        ),
         reverse=True,
     )
     return ranked[:max_items]
@@ -399,15 +570,29 @@ def detect_narrative_fractures(event: dict, max_items: int = 4) -> list[dict]:
         for right_index in range(left_index + 1, len(ranked_labels)):
             left_label, left_articles = ranked_labels[left_index]
             right_label, right_articles = ranked_labels[right_index]
-            left_sources = {(row.get("source") or "").lower() for row in left_articles if row.get("source")}
-            right_sources = {(row.get("source") or "").lower() for row in right_articles if row.get("source")}
+            left_sources = {
+                (row.get("source") or "").lower()
+                for row in left_articles
+                if row.get("source")
+            }
+            right_sources = {
+                (row.get("source") or "").lower()
+                for row in right_articles
+                if row.get("source")
+            }
             if not left_sources or not right_sources or left_sources == right_sources:
                 continue
 
             left_sample = left_articles[0]
             right_sample = right_articles[0]
-            shared_entities = _article_claim_features(left_sample).get("entities", set()) & _article_claim_features(right_sample).get("entities", set())
-            focus = ", ".join(sorted(shared_entities)[:3]) if shared_entities else (event.get("entity_focus") or ["this event"])[0]
+            shared_entities = _article_claim_features(left_sample).get(
+                "entities", set()
+            ) & _article_claim_features(right_sample).get("entities", set())
+            focus = (
+                ", ".join(sorted(shared_entities)[:3])
+                if shared_entities
+                else (event.get("entity_focus") or ["this event"])[0]
+            )
             fractures.append(
                 {
                     "fracture_type": "framing",
@@ -416,8 +601,12 @@ def detect_narrative_fractures(event: dict, max_items: int = 4) -> list[dict]:
                     "label_b": right_label,
                     "sources_a": [row.get("source") for row in left_articles[:3]],
                     "sources_b": [row.get("source") for row in right_articles[:3]],
-                    "source_records_a": [_resolve_article_record(row) for row in left_articles[:3]],
-                    "source_records_b": [_resolve_article_record(row) for row in right_articles[:3]],
+                    "source_records_a": [
+                        _resolve_article_record(row) for row in left_articles[:3]
+                    ],
+                    "source_records_b": [
+                        _resolve_article_record(row) for row in right_articles[:3]
+                    ],
                     "reasoning": f"Sources are labeling {focus} differently, using '{left_label}' versus '{right_label}' framing for the same event cluster.",
                     "confidence": 0.64,
                 }
@@ -435,7 +624,9 @@ def detect_narrative_fractures(event: dict, max_items: int = 4) -> list[dict]:
 
 
 def _article_signature(article: dict) -> dict:
-    text = _normalize_text(f"{article.get('title', '')}. {article.get('description', '')}")
+    text = _normalize_text(
+        f"{article.get('title', '')}. {article.get('description', '')}"
+    )
     entities = _article_entities(text)
     keywords = _token_keywords(text)
     anchors = _extract_event_anchors(keywords, text)
@@ -463,7 +654,11 @@ def _text_signature(text: str) -> dict:
 
 
 def _source_key(article: dict) -> str:
-    return (article.get("source") or article.get("source_domain") or "unknown").strip().lower()
+    return (
+        (article.get("source") or article.get("source_domain") or "unknown")
+        .strip()
+        .lower()
+    )
 
 
 def _cluster_consensus_counters(signatures: list[dict]) -> dict:
@@ -484,7 +679,11 @@ def _cluster_consensus_counters(signatures: list[dict]) -> dict:
 def _candidate_bias_penalty(text: str, signature: dict) -> float:
     lowered = text.lower()
     penalty = float(len(signature.get("framing_labels", set())) * 2.8)
-    penalty += sum(1.2 for term in SENSATIONAL_TITLE_TERMS if re.search(rf"\b{re.escape(term)}\b", lowered))
+    penalty += sum(
+        1.2
+        for term in SENSATIONAL_TITLE_TERMS
+        if re.search(rf"\b{re.escape(term)}\b", lowered)
+    )
     if "?" in text or "!" in text:
         penalty += 1.5
     if text.count('"') >= 2 or text.count("'") >= 2:
@@ -509,9 +708,18 @@ def _score_consensus_candidate(
     keyword_counter = counters["keywords"]
     anchor_counter = counters["anchors"]
     score = source_weight * 4.0
-    score += sum(min(entity_counter.get(entity, 0), 4) for entity in signature.get("entities", set()))
-    score += 0.32 * sum(max(keyword_counter.get(keyword, 0) - 1, 0) for keyword in signature.get("keywords", set()))
-    score += 1.25 * sum(max(anchor_counter.get(anchor, 0) - 1, 0) for anchor in signature.get("anchors", set()))
+    score += sum(
+        min(entity_counter.get(entity, 0), 4)
+        for entity in signature.get("entities", set())
+    )
+    score += 0.32 * sum(
+        max(keyword_counter.get(keyword, 0) - 1, 0)
+        for keyword in signature.get("keywords", set())
+    )
+    score += 1.25 * sum(
+        max(anchor_counter.get(anchor, 0) - 1, 0)
+        for anchor in signature.get("anchors", set())
+    )
 
     if kind == "title":
         if 28 <= len(text) <= 110:
@@ -530,15 +738,26 @@ def _score_consensus_candidate(
         if headline and text.lower() == headline.lower():
             score -= 8.0
         if headline_signature is not None:
-            score += 2.0 * len(signature.get("entities", set()) & headline_signature.get("entities", set()))
-            score += 1.4 * len(signature.get("anchors", set()) & headline_signature.get("anchors", set()))
-            score += 0.24 * len(signature.get("keywords", set()) & headline_signature.get("keywords", set()))
+            score += 2.0 * len(
+                signature.get("entities", set())
+                & headline_signature.get("entities", set())
+            )
+            score += 1.4 * len(
+                signature.get("anchors", set())
+                & headline_signature.get("anchors", set())
+            )
+            score += 0.24 * len(
+                signature.get("keywords", set())
+                & headline_signature.get("keywords", set())
+            )
 
     score -= _candidate_bias_penalty(text, signature)
     return round(score, 3)
 
 
-def _select_consensus_title(cluster: list[dict], counters: dict, source_profiles: dict, topic: str | None = None) -> str:
+def _select_consensus_title(
+    cluster: list[dict], counters: dict, source_profiles: dict, topic: str | None = None
+) -> str:
     best_title = ""
     best_score = -10_000.0
     for article in cluster:
@@ -546,8 +765,12 @@ def _select_consensus_title(cluster: list[dict], counters: dict, source_profiles
         if not title:
             continue
         signature = _text_signature(title)
-        profile = source_profiles.get(_source_key(article)) or _source_profile(article, topic=topic)
-        score = _score_consensus_candidate(title, signature, counters, profile["quality_weight"], kind="title")
+        profile = source_profiles.get(_source_key(article)) or _source_profile(
+            article, topic=topic
+        )
+        score = _score_consensus_candidate(
+            title, signature, counters, profile["quality_weight"], kind="title"
+        )
         if score > best_score:
             best_title = title
             best_score = score
@@ -565,11 +788,15 @@ def _select_consensus_summary(
     best_score = -10_000.0
     headline_signature = _text_signature(headline)
     for article in cluster:
-        summary = normalize_article_description(article.get("description"), article.get("title"), limit=220)
+        summary = normalize_article_description(
+            article.get("description"), article.get("title"), limit=220
+        )
         if not summary:
             continue
         signature = _text_signature(summary)
-        profile = source_profiles.get(_source_key(article)) or _source_profile(article, topic=topic)
+        profile = source_profiles.get(_source_key(article)) or _source_profile(
+            article, topic=topic
+        )
         score = _score_consensus_candidate(
             summary,
             signature,
@@ -584,7 +811,10 @@ def _select_consensus_summary(
             best_score = score
     if best_summary:
         return best_summary
-    return normalize_article_description(headline, headline, limit=220) or "No summary available."
+    return (
+        normalize_article_description(headline, headline, limit=220)
+        or "No summary available."
+    )
 
 
 def _source_registry_maps() -> dict:
@@ -609,7 +839,9 @@ def _source_reliability_map(topic: str | None = None) -> dict:
     now = datetime.now().timestamp()
     cache_age = now - _source_reliability_cache_time.get(cache_key, 0)
     if cache_key not in _source_reliability_cache or cache_age > 900:
-        _source_reliability_cache[cache_key] = load_latest_source_reliability(topic=topic, max_age_hours=24 * 14)
+        _source_reliability_cache[cache_key] = load_latest_source_reliability(
+            topic=topic, max_age_hours=24 * 14
+        )
         _source_reliability_cache_time[cache_key] = now
     return _source_reliability_cache[cache_key]
 
@@ -626,8 +858,14 @@ def _source_profile(article: dict, topic: str | None = None) -> dict:
             "source_type": "article",
             "trust_tier": "tier_2",
             "region": "global",
-            "reliability_score": float((reliability_row or {}).get("empirical_score", 0.5) or 0.5),
-            "quality_weight": round(0.95 * float((reliability_row or {}).get("weight_multiplier", 1.0) or 1.0), 2),
+            "reliability_score": float(
+                (reliability_row or {}).get("empirical_score", 0.5) or 0.5
+            ),
+            "quality_weight": round(
+                0.95
+                * float((reliability_row or {}).get("weight_multiplier", 1.0) or 1.0),
+                2,
+            ),
         }
 
     tier_weight = {
@@ -641,12 +879,16 @@ def _source_profile(article: dict, topic: str | None = None) -> dict:
         "article": 1.0,
         "monitored_channel": 0.35,
     }.get(matched.get("source_type"), 1.0)
-    reliability_weight = float((reliability_row or {}).get("weight_multiplier", 1.0) or 1.0)
+    reliability_weight = float(
+        (reliability_row or {}).get("weight_multiplier", 1.0) or 1.0
+    )
     return {
         "source_type": matched.get("source_type"),
         "trust_tier": matched.get("trust_tier"),
         "region": matched.get("region") or "global",
-        "reliability_score": float((reliability_row or {}).get("empirical_score", 0.5) or 0.5),
+        "reliability_score": float(
+            (reliability_row or {}).get("empirical_score", 0.5) or 0.5
+        ),
         "quality_weight": round(tier_weight * type_weight * reliability_weight, 2),
     }
 
@@ -671,7 +913,9 @@ def _relatedness_score(left: dict, right: dict) -> float:
     entity_similarity = _soft_jaccard(left["entities"], right["entities"])
     keyword_similarity = _soft_jaccard(left["keywords"], right["keywords"])
     anchor_similarity = _soft_jaccard(left["anchors"], right["anchors"])
-    hours_apart = _time_distance_hours(left.get("published_dt"), right.get("published_dt"))
+    hours_apart = _time_distance_hours(
+        left.get("published_dt"), right.get("published_dt")
+    )
     time_weight = _temporal_weight(hours_apart)
 
     score = (
@@ -683,7 +927,9 @@ def _relatedness_score(left: dict, right: dict) -> float:
         + (anchor_similarity * 1.5)
     ) * time_weight
 
-    if _anchor_conflict(left["anchors"], right["anchors"]) and (hours_apart is None or hours_apart > 6):
+    if _anchor_conflict(left["anchors"], right["anchors"]) and (
+        hours_apart is None or hours_apart > 6
+    ):
         score -= 2.6
     if hours_apart is not None and hours_apart > 168 and entity_overlap < 3:
         score -= 2.2
@@ -696,14 +942,28 @@ def _is_related(left: dict, right: dict) -> bool:
     entity_overlap = len(left["entities"] & right["entities"])
     keyword_overlap = len(left["keywords"] & right["keywords"])
     anchor_overlap = len(left["anchors"] & right["anchors"])
-    hours_apart = _time_distance_hours(left.get("published_dt"), right.get("published_dt"))
+    hours_apart = _time_distance_hours(
+        left.get("published_dt"), right.get("published_dt")
+    )
     score = _relatedness_score(left, right)
 
-    if anchor_overlap >= 1 and entity_overlap >= 1 and (hours_apart is None or hours_apart <= 96):
+    if (
+        anchor_overlap >= 1
+        and entity_overlap >= 1
+        and (hours_apart is None or hours_apart <= 96)
+    ):
         return True
-    if entity_overlap >= 2 and keyword_overlap >= 2 and (hours_apart is None or hours_apart <= 120):
+    if (
+        entity_overlap >= 2
+        and keyword_overlap >= 2
+        and (hours_apart is None or hours_apart <= 120)
+    ):
         return True
-    if keyword_overlap >= 6 and anchor_overlap >= 1 and (hours_apart is None or hours_apart <= 48):
+    if (
+        keyword_overlap >= 6
+        and anchor_overlap >= 1
+        and (hours_apart is None or hours_apart <= 48)
+    ):
         return True
     if _anchor_conflict(left["anchors"], right["anchors"]) and entity_overlap < 3:
         return False
@@ -721,9 +981,16 @@ def cluster_articles(articles: list[dict], topic: str | None = None) -> list[dic
         placed = False
         for group in groups:
             comparisons = [signatures[other] for other in group]
-            related_count = sum(1 for other in comparisons if _is_related(signature, other))
-            best_score = max((_relatedness_score(signature, other) for other in comparisons), default=0.0)
-            if related_count >= 1 and (best_score >= 4.1 or related_count >= math.ceil(len(group) / 2)):
+            related_count = sum(
+                1 for other in comparisons if _is_related(signature, other)
+            )
+            best_score = max(
+                (_relatedness_score(signature, other) for other in comparisons),
+                default=0.0,
+            )
+            if related_count >= 1 and (
+                best_score >= 4.1 or related_count >= math.ceil(len(group) / 2)
+            ):
                 group.append(index)
                 placed = True
                 break
@@ -736,7 +1003,9 @@ def cluster_articles(articles: list[dict], topic: str | None = None) -> list[dic
         source_profiles = {}
         region_counts: dict[str, int] = {}
         for article in cluster:
-            key = (article.get("source") or article.get("source_domain") or "unknown").strip().lower() or "unknown"
+            key = (
+                article.get("source") or article.get("source_domain") or "unknown"
+            ).strip().lower() or "unknown"
             if key not in source_profiles:
                 source_profiles[key] = _source_profile(article, topic=topic)
             region = (source_profiles[key].get("region") or "global").strip().lower()
@@ -754,24 +1023,38 @@ def cluster_articles(articles: list[dict], topic: str | None = None) -> list[dic
         representative = sorted(
             cluster,
             key=lambda article: (
-                -(len(_normalize_text(article.get("description", ""))) + len(_normalize_text(article.get("title", "")))),
+                -(
+                    len(_normalize_text(article.get("description", "")))
+                    + len(_normalize_text(article.get("title", "")))
+                ),
                 article.get("published_at", ""),
             ),
         )[0]
-        consensus_title = _select_consensus_title(cluster, counters, source_profiles, topic=topic)
-        consensus_summary = _select_consensus_summary(cluster, counters, source_profiles, consensus_title, topic=topic)
+        consensus_title = _select_consensus_title(
+            cluster, counters, source_profiles, topic=topic
+        )
+        consensus_summary = _select_consensus_summary(
+            cluster, counters, source_profiles, consensus_title, topic=topic
+        )
 
         events.append(
             {
                 "event_id": f"{topic or 'global'}-{event_index}",
                 "topic": topic,
-                "label": consensus_title or representative.get("title", "Emerging event"),
-                "summary": consensus_summary or representative.get("description", "") or "No summary available.",
+                "label": consensus_title
+                or representative.get("title", "Emerging event"),
+                "summary": consensus_summary
+                or representative.get("description", "")
+                or "No summary available.",
                 "entity_focus": [entity for entity, _ in ranked_entities[:6]],
                 "source_count": len({article.get("source") for article in cluster}),
                 "article_count": len(cluster),
-                "latest_update": max((article.get("published_at", "") for article in cluster), default=""),
-                "earliest_update": min((article.get("published_at", "") for article in cluster), default=""),
+                "latest_update": max(
+                    (article.get("published_at", "") for article in cluster), default=""
+                ),
+                "earliest_update": min(
+                    (article.get("published_at", "") for article in cluster), default=""
+                ),
                 "story_anchor_focus": sorted(
                     {
                         anchor
@@ -779,11 +1062,33 @@ def cluster_articles(articles: list[dict], topic: str | None = None) -> list[dic
                         for anchor in signatures[i].get("anchors", set())
                     }
                 )[:4],
-                "source_quality_score": round(sum(profile["quality_weight"] for profile in source_profiles.values()), 2),
-                "official_source_count": sum(1 for profile in source_profiles.values() if profile["source_type"] == "official_update"),
-                "structured_source_count": sum(1 for profile in source_profiles.values() if profile["source_type"] == "structured_event"),
-                "monitored_channel_count": sum(1 for profile in source_profiles.values() if profile["source_type"] == "monitored_channel"),
-                "tier_1_source_count": sum(1 for profile in source_profiles.values() if profile["trust_tier"] == "tier_1"),
+                "source_quality_score": round(
+                    sum(
+                        profile["quality_weight"]
+                        for profile in source_profiles.values()
+                    ),
+                    2,
+                ),
+                "official_source_count": sum(
+                    1
+                    for profile in source_profiles.values()
+                    if profile["source_type"] == "official_update"
+                ),
+                "structured_source_count": sum(
+                    1
+                    for profile in source_profiles.values()
+                    if profile["source_type"] == "structured_event"
+                ),
+                "monitored_channel_count": sum(
+                    1
+                    for profile in source_profiles.values()
+                    if profile["source_type"] == "monitored_channel"
+                ),
+                "tier_1_source_count": sum(
+                    1
+                    for profile in source_profiles.values()
+                    if profile["trust_tier"] == "tier_1"
+                ),
                 "region_counts": region_counts,
                 "dominant_region": _dominant_region(region_counts),
                 "articles": cluster,
@@ -807,14 +1112,12 @@ def cluster_articles(articles: list[dict], topic: str | None = None) -> list[dic
 def _build_contradiction_prompt(event: dict) -> str:
     article_lines = []
     for index, article in enumerate(event["articles"], 1):
-        article_lines.append(
-            f"""Source Record {index}
+        article_lines.append(f"""Source Record {index}
 Source: {article['source']}
 Published: {article.get('published_at', 'Unknown')}
 Title: {article['title']}
 URL: {article.get('url', 'Unknown')}
-Summary: {article.get('description', 'No description')}"""
-        )
+Summary: {article.get('description', 'No description')}""")
 
     joined = "\n\n".join(article_lines)
     return f"""You are comparing reporting on the same geopolitical event.
@@ -868,20 +1171,28 @@ def _replace_article_refs(text: str, catalog: dict) -> str:
             return match.group(0)
         return article.get("source") or match.group(0)
 
-    return re.sub(r"\b(?:Article|Record|Source Record)\s+(\d+)\b", repl, text, flags=re.IGNORECASE)
+    return re.sub(
+        r"\b(?:Article|Record|Source Record)\s+(\d+)\b", repl, text, flags=re.IGNORECASE
+    )
 
 
 def _resolve_source_record(label: str, catalog: dict) -> dict | None:
     if not label:
         return None
-    match = re.search(r"\b(?:Article|Record|Source Record)\s+(\d+)\b", label, flags=re.IGNORECASE)
+    match = re.search(
+        r"\b(?:Article|Record|Source Record)\s+(\d+)\b", label, flags=re.IGNORECASE
+    )
     if match:
         return catalog["by_index"].get(int(match.group(1)))
     return catalog["by_source"].get(label.strip().lower())
 
 
 def _event_key(event: dict) -> str:
-    urls = sorted(article.get("url", "") for article in event.get("articles", []) if article.get("url"))
+    urls = sorted(
+        article.get("url", "")
+        for article in event.get("articles", [])
+        if article.get("url")
+    )
     material = " | ".join(
         [
             event.get("topic") or "global",
@@ -919,7 +1230,13 @@ def detect_contradictions(event: dict) -> list[dict]:
             max_tokens=700,
             messages=[{"role": "user", "content": prompt}],
         )
-        text = message.content[0].text.strip().replace("```json", "").replace("```", "").strip()
+        text = (
+            message.content[0]
+            .text.strip()
+            .replace("```json", "")
+            .replace("```", "")
+            .strip()
+        )
         import json
 
         payload = json.loads(text)
@@ -927,7 +1244,10 @@ def detect_contradictions(event: dict) -> list[dict]:
         catalog = _article_reference_catalog(event)
         normalized = []
         for contradiction in contradictions:
-            source_labels = [_replace_article_refs(label, catalog) for label in contradiction.get("sources_in_conflict", [])]
+            source_labels = [
+                _replace_article_refs(label, catalog)
+                for label in contradiction.get("sources_in_conflict", [])
+            ]
             source_records = []
             for label in source_labels[:2]:
                 article = _resolve_source_record(label, catalog)
@@ -936,28 +1256,56 @@ def detect_contradictions(event: dict) -> list[dict]:
                         "source": label or "Unknown source",
                         "title": article.get("title") if article else None,
                         "url": article.get("url") if article else None,
-                        "published_at": article.get("published_at") if article else None,
+                        "published_at": (
+                            article.get("published_at") if article else None
+                        ),
                     }
                 )
 
-            most_credible_source = _replace_article_refs(contradiction.get("most_credible_source", "unresolved"), catalog)
-            most_credible_article = _resolve_source_record(most_credible_source, catalog)
+            most_credible_source = _replace_article_refs(
+                contradiction.get("most_credible_source", "unresolved"), catalog
+            )
+            most_credible_article = _resolve_source_record(
+                most_credible_source, catalog
+            )
             normalized.append(
                 {
                     "conflict_type": contradiction.get("conflict_type", "fact"),
                     "sources_in_conflict": source_labels,
                     "source_records": source_records,
-                    "claim_a": _replace_article_refs(contradiction.get("claim_a", ""), catalog),
-                    "claim_b": _replace_article_refs(contradiction.get("claim_b", ""), catalog),
+                    "claim_a": _replace_article_refs(
+                        contradiction.get("claim_a", ""), catalog
+                    ),
+                    "claim_b": _replace_article_refs(
+                        contradiction.get("claim_b", ""), catalog
+                    ),
                     "confidence": float(contradiction.get("confidence", 0) or 0),
                     "most_credible_source": most_credible_source or "unresolved",
-                    "most_credible_record": {
-                        "source": most_credible_source,
-                        "title": most_credible_article.get("title") if most_credible_article else None,
-                        "url": most_credible_article.get("url") if most_credible_article else None,
-                        "published_at": most_credible_article.get("published_at") if most_credible_article else None,
-                    } if most_credible_article else None,
-                    "reasoning": _replace_article_refs(contradiction.get("reasoning", ""), catalog),
+                    "most_credible_record": (
+                        {
+                            "source": most_credible_source,
+                            "title": (
+                                most_credible_article.get("title")
+                                if most_credible_article
+                                else None
+                            ),
+                            "url": (
+                                most_credible_article.get("url")
+                                if most_credible_article
+                                else None
+                            ),
+                            "published_at": (
+                                most_credible_article.get("published_at")
+                                if most_credible_article
+                                else None
+                            ),
+                        }
+                        if most_credible_article
+                        else None
+                    ),
+                    "reasoning": _replace_article_refs(
+                        contradiction.get("reasoning", ""), catalog
+                    ),
                 }
             )
         merged = _dedupe_contradictions(normalized + heuristic)

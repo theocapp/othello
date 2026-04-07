@@ -1,6 +1,11 @@
 from fastapi import APIRouter
 
-from services.query_service import QueryRequest, chroma_stats_payload, query_payload, timeline_payload
+from services.query_service import (
+    QueryRequest,
+    chroma_stats_payload,
+    query_payload,
+    timeline_payload,
+)
 
 router = APIRouter()
 

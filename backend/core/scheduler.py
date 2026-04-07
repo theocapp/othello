@@ -60,23 +60,86 @@ def build_scheduler(
         }
     )
     if include_ingestion:
-        scheduler.add_job(run_scheduled_ingest_cycle, "interval", minutes=15, id="refresh_corpus")
-        scheduler.add_job(run_scheduled_gdelt_backfill, "interval", minutes=10, id="gdelt_backfill")
-        scheduler.add_job(refresh_direct_feed_layer, "interval", minutes=DIRECT_FEED_REFRESH_MINUTES, id="refresh_directfeeds")
-        scheduler.add_job(run_scheduled_historical_queue_fetch, "interval", minutes=HISTORICAL_FETCH_REFRESH_MINUTES, id="historical_queue_fetch")
-        scheduler.add_job(ingest_article_fallback, "interval", minutes=ARTICLE_FALLBACK_REFRESH_MINUTES, id="article_fallback")
-        scheduler.add_job(sync_registry_mirror, "interval", hours=6, id="mirror_registry_articles")
-        scheduler.add_job(refresh_official_updates, "interval", minutes=OFFICIAL_UPDATE_REFRESH_MINUTES, id="refresh_official_updates")
-        scheduler.add_job(refresh_acled_events, "interval", minutes=ACLED_REFRESH_MINUTES, id="refresh_acled_events")
-        scheduler.add_job(refresh_gdelt_gkg_events, "interval", minutes=GDELT_GKG_REFRESH_MINUTES, id="refresh_gdelt_gkg_events")
-        scheduler.add_job(run_scheduled_story_materialization, "interval", minutes=STORY_MATERIALIZATION_REFRESH_MINUTES, id="materialize_story_clusters")
+        scheduler.add_job(
+            run_scheduled_ingest_cycle, "interval", minutes=15, id="refresh_corpus"
+        )
+        scheduler.add_job(
+            run_scheduled_gdelt_backfill, "interval", minutes=10, id="gdelt_backfill"
+        )
+        scheduler.add_job(
+            refresh_direct_feed_layer,
+            "interval",
+            minutes=DIRECT_FEED_REFRESH_MINUTES,
+            id="refresh_directfeeds",
+        )
+        scheduler.add_job(
+            run_scheduled_historical_queue_fetch,
+            "interval",
+            minutes=HISTORICAL_FETCH_REFRESH_MINUTES,
+            id="historical_queue_fetch",
+        )
+        scheduler.add_job(
+            ingest_article_fallback,
+            "interval",
+            minutes=ARTICLE_FALLBACK_REFRESH_MINUTES,
+            id="article_fallback",
+        )
+        scheduler.add_job(
+            sync_registry_mirror, "interval", hours=6, id="mirror_registry_articles"
+        )
+        scheduler.add_job(
+            refresh_official_updates,
+            "interval",
+            minutes=OFFICIAL_UPDATE_REFRESH_MINUTES,
+            id="refresh_official_updates",
+        )
+        scheduler.add_job(
+            refresh_acled_events,
+            "interval",
+            minutes=ACLED_REFRESH_MINUTES,
+            id="refresh_acled_events",
+        )
+        scheduler.add_job(
+            refresh_gdelt_gkg_events,
+            "interval",
+            minutes=GDELT_GKG_REFRESH_MINUTES,
+            id="refresh_gdelt_gkg_events",
+        )
+        scheduler.add_job(
+            run_scheduled_story_materialization,
+            "interval",
+            minutes=STORY_MATERIALIZATION_REFRESH_MINUTES,
+            id="materialize_story_clusters",
+        )
     if include_translations:
-        scheduler.add_job(refresh_recent_translations, "interval", minutes=30, id="refresh_translations")
+        scheduler.add_job(
+            refresh_recent_translations,
+            "interval",
+            minutes=30,
+            id="refresh_translations",
+        )
     if include_analytics:
-        scheduler.add_job(refresh_source_reliability, "interval", minutes=SOURCE_RELIABILITY_REFRESH_MINUTES, id="refresh_source_reliability")
-        scheduler.add_job(refresh_foresight_layer, "interval", minutes=FORESIGHT_REFRESH_MINUTES, id="refresh_foresight_layer")
-        scheduler.add_job(refresh_narrative_drift_layer, "interval", minutes=NARRATIVE_DRIFT_REFRESH_MINUTES, id="refresh_narrative_drift_layer")
-        scheduler.add_job(refresh_snapshot_layer, "interval", hours=1, id="refresh_snapshots")
+        scheduler.add_job(
+            refresh_source_reliability,
+            "interval",
+            minutes=SOURCE_RELIABILITY_REFRESH_MINUTES,
+            id="refresh_source_reliability",
+        )
+        scheduler.add_job(
+            refresh_foresight_layer,
+            "interval",
+            minutes=FORESIGHT_REFRESH_MINUTES,
+            id="refresh_foresight_layer",
+        )
+        scheduler.add_job(
+            refresh_narrative_drift_layer,
+            "interval",
+            minutes=NARRATIVE_DRIFT_REFRESH_MINUTES,
+            id="refresh_narrative_drift_layer",
+        )
+        scheduler.add_job(
+            refresh_snapshot_layer, "interval", hours=1, id="refresh_snapshots"
+        )
 
     global _scheduler
     _scheduler = scheduler
@@ -105,18 +168,43 @@ def schedule_initial_analytics_warm(scheduler: BackgroundScheduler) -> None:
     from services.briefing_service import refresh_snapshot_layer
 
     warm_jobs = [
-        ("refresh_snapshots_initial", refresh_snapshot_layer, ANALYTICS_WARM_DELAY_SECONDS),
-        ("refresh_source_reliability_initial", refresh_source_reliability, ANALYTICS_WARM_DELAY_SECONDS + 30),
-        ("refresh_foresight_initial", refresh_foresight_layer, ANALYTICS_WARM_DELAY_SECONDS + 60),
-        ("refresh_narrative_drift_initial", refresh_narrative_drift_layer, ANALYTICS_WARM_DELAY_SECONDS + 90),
-        ("refresh_acled_initial", refresh_acled_events, ANALYTICS_WARM_DELAY_SECONDS + 120),
-        ("refresh_gdelt_gkg_initial", refresh_gdelt_gkg_events, ANALYTICS_WARM_DELAY_SECONDS + 150),
+        (
+            "refresh_snapshots_initial",
+            refresh_snapshot_layer,
+            ANALYTICS_WARM_DELAY_SECONDS,
+        ),
+        (
+            "refresh_source_reliability_initial",
+            refresh_source_reliability,
+            ANALYTICS_WARM_DELAY_SECONDS + 30,
+        ),
+        (
+            "refresh_foresight_initial",
+            refresh_foresight_layer,
+            ANALYTICS_WARM_DELAY_SECONDS + 60,
+        ),
+        (
+            "refresh_narrative_drift_initial",
+            refresh_narrative_drift_layer,
+            ANALYTICS_WARM_DELAY_SECONDS + 90,
+        ),
+        (
+            "refresh_acled_initial",
+            refresh_acled_events,
+            ANALYTICS_WARM_DELAY_SECONDS + 120,
+        ),
+        (
+            "refresh_gdelt_gkg_initial",
+            refresh_gdelt_gkg_events,
+            ANALYTICS_WARM_DELAY_SECONDS + 150,
+        ),
     ]
     for job_id, job_func, delay_seconds in warm_jobs:
         scheduler.add_job(
             job_func,
             "date",
-            run_date=datetime.now(timezone.utc) + timedelta(seconds=max(0, delay_seconds)),
+            run_date=datetime.now(timezone.utc)
+            + timedelta(seconds=max(0, delay_seconds)),
             id=job_id,
             replace_existing=True,
         )

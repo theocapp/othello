@@ -14,7 +14,10 @@ from services.events_service import (
     get_structured_events_payload,
     get_topic_events_payload,
 )
-from services.map_service import get_hotspot_attention_map_payload, get_region_attention_payload
+from services.map_service import (
+    get_hotspot_attention_map_payload,
+    get_region_attention_payload,
+)
 
 router = APIRouter()
 
@@ -25,8 +28,15 @@ def get_events(limit: int = 12):
 
 
 @router.get("/events/structured")
-def get_structured_events(days: int = 3, limit: int = 12, country: str | None = None, event_type: str | None = None):
-    return get_structured_events_payload(days=days, limit=limit, country=country, event_type=event_type)
+def get_structured_events(
+    days: int = 3,
+    limit: int = 12,
+    country: str | None = None,
+    event_type: str | None = None,
+):
+    return get_structured_events_payload(
+        days=days, limit=limit, country=country, event_type=event_type
+    )
 
 
 @router.get("/coverage/regions")
@@ -55,12 +65,18 @@ def get_correlations(days: int = 3):
 
 
 @router.get("/events/materialized")
-def get_materialized_story_clusters(topic: str | None = None, window_hours: int | None = None, limit: int = 40):
-    return get_materialized_story_clusters_payload(topic=topic, window_hours=window_hours, limit=limit)
+def get_materialized_story_clusters(
+    topic: str | None = None, window_hours: int | None = None, limit: int = 40
+):
+    return get_materialized_story_clusters_payload(
+        topic=topic, window_hours=window_hours, limit=limit
+    )
 
 
 @router.get("/events/canonical")
-def get_canonical_events_route(topic: str | None = None, status: str | None = None, limit: int = 40):
+def get_canonical_events_route(
+    topic: str | None = None, status: str | None = None, limit: int = 40
+):
     return get_canonical_events_payload(topic=topic, status=status, limit=limit)
 
 

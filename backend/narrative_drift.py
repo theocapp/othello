@@ -4,56 +4,140 @@ from datetime import datetime, timezone
 
 from corpus import (
     get_recent_articles,
-    load_article_framing_signals,
     load_narrative_drift_snapshot,
     save_article_framing_signals,
     save_narrative_drift_snapshot,
 )
 
-
 FRAME_LEXICON = {
     "terrorism": [
-        "terrorist", "terrorists", "terror group", "terror groups", "extremist", "extremists",
-        "jihadist", "jihadists", "designated terrorist", "foreign terrorist organization",
+        "terrorist",
+        "terrorists",
+        "terror group",
+        "terror groups",
+        "extremist",
+        "extremists",
+        "jihadist",
+        "jihadists",
+        "designated terrorist",
+        "foreign terrorist organization",
     ],
     "militancy": [
-        "militant", "militants", "armed group", "armed groups", "fighters", "gunmen", "operatives",
-        "paramilitary", "militia", "militias",
+        "militant",
+        "militants",
+        "armed group",
+        "armed groups",
+        "fighters",
+        "gunmen",
+        "operatives",
+        "paramilitary",
+        "militia",
+        "militias",
     ],
     "rebellion": [
-        "rebel", "rebels", "insurgent", "insurgents", "uprising", "opposition fighter", "opposition fighters",
-        "anti-government", "anti government",
+        "rebel",
+        "rebels",
+        "insurgent",
+        "insurgents",
+        "uprising",
+        "opposition fighter",
+        "opposition fighters",
+        "anti-government",
+        "anti government",
     ],
     "governance": [
-        "government", "administration", "authorities", "state media", "officials", "regime", "junta",
-        "state security", "security forces", "interior ministry",
+        "government",
+        "administration",
+        "authorities",
+        "state media",
+        "officials",
+        "regime",
+        "junta",
+        "state security",
+        "security forces",
+        "interior ministry",
     ],
     "resistance": [
-        "resistance", "freedom fighter", "freedom fighters", "liberation", "movement",
+        "resistance",
+        "freedom fighter",
+        "freedom fighters",
+        "liberation",
+        "movement",
     ],
     "criminality": [
-        "criminal", "criminals", "gang", "gangs", "cartel", "cartels", "smuggler", "smugglers",
+        "criminal",
+        "criminals",
+        "gang",
+        "gangs",
+        "cartel",
+        "cartels",
+        "smuggler",
+        "smugglers",
     ],
     "separatism": [
-        "separatist", "separatists", "breakaway region", "self-proclaimed republic", "self declared republic",
+        "separatist",
+        "separatists",
+        "breakaway region",
+        "self-proclaimed republic",
+        "self declared republic",
     ],
     "proxy": [
-        "proxy", "proxy force", "proxy forces", "proxy militia", "proxy militias", "proxy war",
-        "iran-backed", "iran backed", "russia-backed", "russia backed", "turkey-backed", "turkey backed",
-        "us-backed", "u.s.-backed", "western-backed", "western backed",
+        "proxy",
+        "proxy force",
+        "proxy forces",
+        "proxy militia",
+        "proxy militias",
+        "proxy war",
+        "iran-backed",
+        "iran backed",
+        "russia-backed",
+        "russia backed",
+        "turkey-backed",
+        "turkey backed",
+        "us-backed",
+        "u.s.-backed",
+        "western-backed",
+        "western backed",
     ],
     "occupation": [
-        "occupation", "occupying force", "occupying forces", "occupier", "occupiers", "annexed", "annexation",
+        "occupation",
+        "occupying force",
+        "occupying forces",
+        "occupier",
+        "occupiers",
+        "annexed",
+        "annexation",
     ],
     "legitimacy": [
-        "recognized government", "internationally recognized", "de facto authority", "de facto authorities",
-        "self-styled", "self styled", "self-proclaimed", "self proclaimed", "interim government",
+        "recognized government",
+        "internationally recognized",
+        "de facto authority",
+        "de facto authorities",
+        "self-styled",
+        "self styled",
+        "self-proclaimed",
+        "self proclaimed",
+        "interim government",
     ],
     "diplomacy": [
-        "ceasefire", "truce", "talks", "negotiations", "peace talks", "mediated", "backchannel", "envoy",
+        "ceasefire",
+        "truce",
+        "talks",
+        "negotiations",
+        "peace talks",
+        "mediated",
+        "backchannel",
+        "envoy",
     ],
     "humanitarian": [
-        "aid convoy", "humanitarian", "displaced", "refugees", "civilians", "relief effort", "famine", "starvation",
+        "aid convoy",
+        "humanitarian",
+        "displaced",
+        "refugees",
+        "civilians",
+        "relief effort",
+        "famine",
+        "starvation",
     ],
 }
 
@@ -69,7 +153,15 @@ def _parse_timestamp(value: str | None) -> datetime | None:
     compact = re.match(r"^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$", text)
     if compact:
         year, month, day, hour, minute, second = compact.groups()
-        return datetime(int(year), int(month), int(day), int(hour), int(minute), int(second), tzinfo=timezone.utc)
+        return datetime(
+            int(year),
+            int(month),
+            int(day),
+            int(hour),
+            int(minute),
+            int(second),
+            tzinfo=timezone.utc,
+        )
     try:
         return datetime.fromisoformat(text.replace("Z", "+00:00"))
     except ValueError:
@@ -91,7 +183,9 @@ def _mentions_subject(article: dict, subject: str) -> bool:
     if normalized in text:
         return True
     pieces = [piece for piece in re.split(r"\s+", normalized) if len(piece) >= 4]
-    return bool(pieces) and sum(1 for piece in pieces if piece in text) >= max(1, min(2, len(pieces)))
+    return bool(pieces) and sum(1 for piece in pieces if piece in text) >= max(
+        1, min(2, len(pieces))
+    )
 
 
 def _matched_terms(text: str) -> dict[str, list[str]]:
@@ -107,7 +201,9 @@ def _matched_terms(text: str) -> dict[str, list[str]]:
     return matches
 
 
-def _article_signal(article: dict, subject: str, topic: str | None = None) -> dict | None:
+def _article_signal(
+    article: dict, subject: str, topic: str | None = None
+) -> dict | None:
     if not _mentions_subject(article, subject):
         return None
     text = _article_text(article)
@@ -138,7 +234,9 @@ def _article_signal(article: dict, subject: str, topic: str | None = None) -> di
     }
 
 
-def build_article_framing_signals(subject: str, topic: str | None = None, days: int = 180, limit: int = 600) -> list[dict]:
+def build_article_framing_signals(
+    subject: str, topic: str | None = None, days: int = 180, limit: int = 600
+) -> list[dict]:
     articles = get_recent_articles(topic=topic, limit=limit, hours=days * 24)
     signals = []
     for article in articles:
@@ -180,7 +278,11 @@ def _period_summary(signals: list[dict]) -> dict:
 
     total_frame_mentions = sum(frames.values()) or 1
     top_frames = [
-        {"frame": frame, "mentions": count, "share": round(count / total_frame_mentions, 3)}
+        {
+            "frame": frame,
+            "mentions": count,
+            "share": round(count / total_frame_mentions, 3),
+        }
         for frame, count in frames.most_common(5)
     ]
     top_terms = [
@@ -191,13 +293,18 @@ def _period_summary(signals: list[dict]) -> dict:
         "article_count": len(signals),
         "top_frames": top_frames,
         "top_terms": top_terms,
-        "top_sources": [{"source": source, "count": count} for source, count in sources.most_common(6)],
+        "top_sources": [
+            {"source": source, "count": count}
+            for source, count in sources.most_common(6)
+        ],
         "examples": dict(examples),
     }
 
 
 def _share_map(period: dict) -> dict[str, float]:
-    return {item["frame"]: float(item["share"]) for item in period.get("top_frames", [])}
+    return {
+        item["frame"]: float(item["share"]) for item in period.get("top_frames", [])
+    }
 
 
 def _frame_share_from_counts(counts: Counter) -> list[dict]:
@@ -274,13 +381,21 @@ def _source_frame_profiles(signals: list[dict]) -> list[dict]:
                 "examples": bucket["examples"],
             }
         )
-    profiles.sort(key=lambda item: (item["article_count"], item["source"]), reverse=True)
+    profiles.sort(
+        key=lambda item: (item["article_count"], item["source"]), reverse=True
+    )
     return profiles[:12]
 
 
-def _source_shift_analysis(early_signals: list[dict], recent_signals: list[dict]) -> list[dict]:
-    early_profiles = {item["source"]: item for item in _source_frame_profiles(early_signals)}
-    recent_profiles = {item["source"]: item for item in _source_frame_profiles(recent_signals)}
+def _source_shift_analysis(
+    early_signals: list[dict], recent_signals: list[dict]
+) -> list[dict]:
+    early_profiles = {
+        item["source"]: item for item in _source_frame_profiles(early_signals)
+    }
+    recent_profiles = {
+        item["source"]: item for item in _source_frame_profiles(recent_signals)
+    }
     shared_sources = sorted(set(early_profiles) & set(recent_profiles))
 
     comparisons = []
@@ -333,7 +448,9 @@ def analyze_narrative_drift(
     refresh: bool = False,
 ) -> dict:
     if not refresh:
-        cached = load_narrative_drift_snapshot(subject, topic=topic, window_days=days, max_age_hours=12)
+        cached = load_narrative_drift_snapshot(
+            subject, topic=topic, window_days=days, max_age_hours=12
+        )
         if cached:
             payload = cached["payload"] or {}
             payload.setdefault("source_profiles", [])
@@ -351,14 +468,28 @@ def analyze_narrative_drift(
             "earliest_published_at": None,
             "latest_published_at": None,
             "timeline": [],
-            "early_period": {"article_count": 0, "top_frames": [], "top_terms": [], "top_sources": [], "examples": {}},
-            "recent_period": {"article_count": 0, "top_frames": [], "top_terms": [], "top_sources": [], "examples": {}},
+            "early_period": {
+                "article_count": 0,
+                "top_frames": [],
+                "top_terms": [],
+                "top_sources": [],
+                "examples": {},
+            },
+            "recent_period": {
+                "article_count": 0,
+                "top_frames": [],
+                "top_terms": [],
+                "top_sources": [],
+                "examples": {},
+            },
             "shifts": [],
             "source_profiles": [],
             "source_shifts": [],
             "reference_note": "Heuristic framing tracker based on article wording over time. It does not affect Othello scoring or contradiction detection.",
         }
-        save_narrative_drift_snapshot(subject, topic=topic, window_days=days, payload=payload)
+        save_narrative_drift_snapshot(
+            subject, topic=topic, window_days=days, payload=payload
+        )
         return {**payload, "cached": False}
 
     dated_signals = []
@@ -379,14 +510,28 @@ def analyze_narrative_drift(
             "earliest_published_at": None,
             "latest_published_at": None,
             "timeline": [],
-            "early_period": {"article_count": 0, "top_frames": [], "top_terms": [], "top_sources": [], "examples": {}},
-            "recent_period": {"article_count": 0, "top_frames": [], "top_terms": [], "top_sources": [], "examples": {}},
+            "early_period": {
+                "article_count": 0,
+                "top_frames": [],
+                "top_terms": [],
+                "top_sources": [],
+                "examples": {},
+            },
+            "recent_period": {
+                "article_count": 0,
+                "top_frames": [],
+                "top_terms": [],
+                "top_sources": [],
+                "examples": {},
+            },
             "shifts": [],
             "source_profiles": [],
             "source_shifts": [],
             "reference_note": "Heuristic framing tracker based on article wording over time. It does not affect Othello scoring or contradiction detection.",
         }
-        save_narrative_drift_snapshot(subject, topic=topic, window_days=days, payload=payload)
+        save_narrative_drift_snapshot(
+            subject, topic=topic, window_days=days, payload=payload
+        )
         return {**payload, "cached": False}
 
     midpoint = max(1, len(dated_signals) // 2)
@@ -420,7 +565,11 @@ def analyze_narrative_drift(
             {
                 "bucket": label,
                 "frames": [
-                    {"frame": frame, "mentions": count, "share": round(count / total, 3)}
+                    {
+                        "frame": frame,
+                        "mentions": count,
+                        "share": round(count / total, 3),
+                    }
                     for frame, count in counts.most_common()
                 ],
                 "examples": source_examples.get(label, []),
@@ -450,7 +599,9 @@ def analyze_narrative_drift(
         "source_shifts": source_shifts,
         "reference_note": "Heuristic framing tracker based on article wording over time. It does not affect Othello scoring or contradiction detection.",
     }
-    save_narrative_drift_snapshot(subject, topic=topic, window_days=days, payload=payload)
+    save_narrative_drift_snapshot(
+        subject, topic=topic, window_days=days, payload=payload
+    )
     payload.setdefault("source_profiles", [])
     payload.setdefault("source_shifts", [])
     return {**payload, "cached": False}

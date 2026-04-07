@@ -4,7 +4,6 @@ import json
 
 from spacy.cli import download as spacy_download
 
-
 DEFAULT_MODELS = [
     "xx_ent_wiki_sm",
     "fr_core_news_md",
@@ -35,10 +34,21 @@ def warm_models(models: list[str]) -> dict[str, str]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Download and cache spaCy models for multilingual entity extraction.")
-    parser.add_argument("--models", nargs="*", default=DEFAULT_MODELS, help="spaCy model package names to warm.")
+    parser = argparse.ArgumentParser(
+        description="Download and cache spaCy models for multilingual entity extraction."
+    )
+    parser.add_argument(
+        "--models",
+        nargs="*",
+        default=DEFAULT_MODELS,
+        help="spaCy model package names to warm.",
+    )
     args = parser.parse_args()
-    print(json.dumps({"models": args.models, "results": warm_models(args.models)}, indent=2))
+    print(
+        json.dumps(
+            {"models": args.models, "results": warm_models(args.models)}, indent=2
+        )
+    )
 
 
 if __name__ == "__main__":

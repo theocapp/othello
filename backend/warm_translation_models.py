@@ -3,7 +3,6 @@ import json
 
 from analyst import LOCAL_TRANSLATION_MODEL_MAP, warm_local_translation_models
 
-
 DEFAULT_LANGUAGES = [
     "zh",
     "ar",
@@ -20,7 +19,9 @@ DEFAULT_LANGUAGES = [
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Download and cache local translation models for Othello V2.")
+    parser = argparse.ArgumentParser(
+        description="Download and cache local translation models for Othello V2."
+    )
     parser.add_argument(
         "--languages",
         nargs="*",

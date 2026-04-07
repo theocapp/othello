@@ -5,12 +5,40 @@ from datetime import datetime, timezone
 
 from corpus import get_recent_structured_events
 
-
 ACTOR_STOPWORDS = {
-    "the", "and", "for", "with", "from", "against", "group", "groups", "forces", "force",
-    "military", "armed", "civilian", "civilians", "government", "state", "security", "police",
-    "protesters", "protester", "people", "residents", "supporters", "fighters", "worker", "workers",
-    "party", "parties", "members", "students", "union", "front", "movement",
+    "the",
+    "and",
+    "for",
+    "with",
+    "from",
+    "against",
+    "group",
+    "groups",
+    "forces",
+    "force",
+    "military",
+    "armed",
+    "civilian",
+    "civilians",
+    "government",
+    "state",
+    "security",
+    "police",
+    "protesters",
+    "protester",
+    "people",
+    "residents",
+    "supporters",
+    "fighters",
+    "worker",
+    "workers",
+    "party",
+    "parties",
+    "members",
+    "students",
+    "union",
+    "front",
+    "movement",
 }
 
 EVENT_TYPE_WEIGHTS = {
@@ -48,14 +76,15 @@ def _actor_name(value: str | None) -> str:
 def _actor_token_set(value: str | None) -> set[str]:
     tokens = re.findall(r"[A-Za-z][A-Za-z-]{2,}", (value or "").lower())
     return {
-        token
-        for token in tokens
-        if token not in ACTOR_STOPWORDS and len(token) >= 3
+        token for token in tokens if token not in ACTOR_STOPWORDS and len(token) >= 3
     }
 
 
 def _event_signature(event: dict) -> dict:
-    actors = {_actor_name(event.get("actor_primary")), _actor_name(event.get("actor_secondary"))}
+    actors = {
+        _actor_name(event.get("actor_primary")),
+        _actor_name(event.get("actor_secondary")),
+    }
     actors.discard("")
     actor_tokens = set()
     for actor in actors:
@@ -115,7 +144,12 @@ def _related_score(left: dict, right: dict) -> float:
         elif gap_days <= 2.0:
             score += 0.5
 
-    if exact_actor_overlap == 0 and token_overlap == 0 and not _same_non_empty(left["admin1"], right["admin1"]) and not _same_non_empty(left["location"], right["location"]):
+    if (
+        exact_actor_overlap == 0
+        and token_overlap == 0
+        and not _same_non_empty(left["admin1"], right["admin1"])
+        and not _same_non_empty(left["location"], right["location"])
+    ):
         score -= 1.5
     return round(score, 3)
 
@@ -126,12 +160,20 @@ def _is_related(left: dict, right: dict) -> bool:
     if left["event_type"] != right["event_type"]:
         return False
     gap_days = _days_apart(left, right)
-    if _same_non_empty(left["location"], right["location"]) and _same_non_empty(left["sub_event_type"], right["sub_event_type"]) and (gap_days is None or gap_days <= 3.0):
+    if (
+        _same_non_empty(left["location"], right["location"])
+        and _same_non_empty(left["sub_event_type"], right["sub_event_type"])
+        and (gap_days is None or gap_days <= 3.0)
+    ):
         return True
     score = _related_score(left, right)
     if score >= 3.4:
         return True
-    if len(left["actors"] & right["actors"]) >= 1 and _same_non_empty(left["admin1"], right["admin1"]) and (gap_days is None or gap_days <= 3.0):
+    if (
+        len(left["actors"] & right["actors"]) >= 1
+        and _same_non_empty(left["admin1"], right["admin1"])
+        and (gap_days is None or gap_days <= 3.0)
+    ):
         return True
     return False
 
@@ -147,9 +189,20 @@ def _shorten_summary(text: str | None, limit: int = 220) -> str:
     return clean[: limit - 1].rstrip() + "…"
 
 
-def _cluster_label(country: str, event_type: str, sub_event_type: str, actors: list[str], locations: list[str]) -> str:
+def _cluster_label(
+    country: str,
+    event_type: str,
+    sub_event_type: str,
+    actors: list[str],
+    locations: list[str],
+) -> str:
     # Skip CAMEO numeric codes as sub-event types
-    base = (sub_event_type if sub_event_type and not sub_event_type.isdigit() else None) or event_type or "Incident"
+    base = (
+        (sub_event_type if sub_event_type and not sub_event_type.isdigit() else None)
+        or event_type
+        or "Incident"
+    )
+
     # Build a narrative-style label rather than a generic "EventType in Country"
     def _needs_country(loc: str) -> bool:
         return country.lower() not in loc.lower() and loc.lower() != country.lower()
@@ -160,10 +213,18 @@ def _cluster_label(country: str, event_type: str, sub_event_type: str, actors: l
             suffix = f" in {country}" if _needs_country(locations[0]) else ""
             location_detail = f" across {locations[0]}, {locations[1]}, and {len(locations) - 2} other locations{suffix}"
         elif len(locations) == 2:
-            suffix = f", {country}" if _needs_country(locations[0]) and _needs_country(locations[1]) else ""
+            suffix = (
+                f", {country}"
+                if _needs_country(locations[0]) and _needs_country(locations[1])
+                else ""
+            )
             location_detail = f" in {locations[0]} and {locations[1]}{suffix}"
         else:
-            location_detail = f" in {locations[0]}, {country}" if _needs_country(locations[0]) else f" in {locations[0]}"
+            location_detail = (
+                f" in {locations[0]}, {country}"
+                if _needs_country(locations[0])
+                else f" in {locations[0]}"
+            )
     else:
         location_detail = f" in {country}"
 
@@ -194,8 +255,12 @@ def _cluster_summary(
     incident_count = len(cluster)
     raw_sample_text = _clean_text(sample.get("summary"))
     # Strip CAMEO jargon from old GDELT summaries
-    raw_sample_text = re.sub(r"\s*\(CAMEO\s+\d+,?\s*root\s+\d+\)", "", raw_sample_text).strip()
-    raw_sample_text = re.sub(r"\s*\[?\d{3}\]?\s*$", "", raw_sample_text).strip().rstrip(",").strip()
+    raw_sample_text = re.sub(
+        r"\s*\(CAMEO\s+\d+,?\s*root\s+\d+\)", "", raw_sample_text
+    ).strip()
+    raw_sample_text = (
+        re.sub(r"\s*\[?\d{3}\]?\s*$", "", raw_sample_text).strip().rstrip(",").strip()
+    )
     sample_text = _shorten_summary(raw_sample_text)
 
     # Build location context — avoid appending country if it's already in the location string
@@ -204,10 +269,17 @@ def _cluster_summary(
 
     if locations:
         if len(locations) >= 3:
-            suffix = f" in {country}" if _loc_needs_country(locations[0], country) else ""
+            suffix = (
+                f" in {country}" if _loc_needs_country(locations[0], country) else ""
+            )
             location_note = f" across {locations[0]}, {locations[1]}, and {len(locations) - 2} other areas{suffix}"
         elif len(locations) == 2:
-            suffix = f", {country}" if _loc_needs_country(locations[0], country) and _loc_needs_country(locations[1], country) else ""
+            suffix = (
+                f", {country}"
+                if _loc_needs_country(locations[0], country)
+                and _loc_needs_country(locations[1], country)
+                else ""
+            )
             location_note = f" in {locations[0]} and {locations[1]}{suffix}"
         else:
             if _loc_needs_country(locations[0], country):
@@ -257,9 +329,13 @@ def _cluster_summary(
     ).strip()
 
 
-def _cluster_priority(cluster: list[dict], event_type: str, fatalities: int, source_count: int) -> float:
+def _cluster_priority(
+    cluster: list[dict], event_type: str, fatalities: int, source_count: int
+) -> float:
     base = EVENT_TYPE_WEIGHTS.get(event_type, 4.0)
-    return round(base + (fatalities * 1.8) + (len(cluster) * 1.1) + (source_count * 0.6), 2)
+    return round(
+        base + (fatalities * 1.8) + (len(cluster) * 1.1) + (source_count * 0.6), 2
+    )
 
 
 def build_map_structured_story_clusters(
@@ -306,9 +382,16 @@ def build_structured_story_clusters(
         placed = False
         for group in groups:
             comparisons = [signatures[other] for other in group]
-            related_count = sum(1 for other in comparisons if _is_related(signature, other))
-            best_score = max((_related_score(signature, other) for other in comparisons), default=-100.0)
-            if related_count >= 1 and (best_score >= 3.4 or related_count >= max(1, len(group) // 2)):
+            related_count = sum(
+                1 for other in comparisons if _is_related(signature, other)
+            )
+            best_score = max(
+                (_related_score(signature, other) for other in comparisons),
+                default=-100.0,
+            )
+            if related_count >= 1 and (
+                best_score >= 3.4 or related_count >= max(1, len(group) // 2)
+            ):
                 group.append(index)
                 placed = True
                 break
@@ -318,7 +401,13 @@ def build_structured_story_clusters(
     clusters = []
     for group_index, group in enumerate(groups, 1):
         cluster = [structured_events[i] for i in group]
-        cluster.sort(key=lambda item: (item.get("event_date") or "", int(item.get("fatalities") or 0)), reverse=True)
+        cluster.sort(
+            key=lambda item: (
+                item.get("event_date") or "",
+                int(item.get("fatalities") or 0),
+            ),
+            reverse=True,
+        )
         sigs = [signatures[i] for i in group]
 
         # Resolve GDELT/FIPS 2-letter country codes to full names for display
@@ -328,25 +417,29 @@ def build_structured_story_clusters(
             if c and len(c) == 2 and c.isupper():
                 try:
                     from gdelt_gkg_ingestion import COUNTRY_CODE_TO_NAME
+
                     c = COUNTRY_CODE_TO_NAME.get(c, c)
                 except ImportError:
                     pass
             if c:
                 _resolved_countries.append(c)
         country_counter = Counter(_resolved_countries)
-        event_type_counter = Counter(_clean_text(item.get("event_type")) for item in cluster if item.get("event_type"))
+        event_type_counter = Counter(
+            _clean_text(item.get("event_type"))
+            for item in cluster
+            if item.get("event_type")
+        )
         # Filter out raw CAMEO numeric codes from sub_event_type counts
         sub_event_counter = Counter(
             _clean_text(item.get("sub_event_type"))
             for item in cluster
-            if item.get("sub_event_type") and not str(item.get("sub_event_type")).strip().isdigit()
+            if item.get("sub_event_type")
+            and not str(item.get("sub_event_type")).strip().isdigit()
         )
         actor_counter = Counter(
-            actor
-            for sig in sigs
-            for actor in sig["actor_labels"]
-            if actor
+            actor for sig in sigs for actor in sig["actor_labels"] if actor
         )
+
         # Filter and clean location values: remove admin codes, country codes, GDELT qualifiers, and dedup
         def _clean_location_value(raw: str) -> str:
             """Clean a raw location/admin value for display."""
@@ -369,7 +462,11 @@ def build_structured_story_clusters(
         location_counter = Counter(
             cleaned
             for item in cluster
-            for raw in (_clean_text(item.get("location")), _clean_text(item.get("admin2")), _clean_text(item.get("admin1")))
+            for raw in (
+                _clean_text(item.get("location")),
+                _clean_text(item.get("admin2")),
+                _clean_text(item.get("admin1")),
+            )
             for cleaned in [_clean_location_value(raw)]
             if cleaned
         )
@@ -379,30 +476,62 @@ def build_structured_story_clusters(
             if (item.get("payload") or {}).get("source")
         )
 
-        dataset_counter = Counter(_clean_text(item.get("dataset")) for item in cluster if item.get("dataset"))
+        dataset_counter = Counter(
+            _clean_text(item.get("dataset")) for item in cluster if item.get("dataset")
+        )
         if not dataset_counter:
             dataset_label = "ACLED"
         elif len(dataset_counter) == 1:
             ds = _top_values(dataset_counter, limit=1)[0]
-            dataset_label = "ACLED" if ds == "acled" else "GDELT" if ds == "gdelt_gkg" else ds.upper()
+            dataset_label = (
+                "ACLED"
+                if ds == "acled"
+                else "GDELT" if ds == "gdelt_gkg" else ds.upper()
+            )
         else:
             dataset_label = "Reported"
 
-        primary_country = _top_values(country_counter, limit=1)[0] if country_counter else "Unknown country"
-        primary_event_type = _top_values(event_type_counter, limit=1)[0] if event_type_counter else "Structured event"
-        primary_sub_event_type = _top_values(sub_event_counter, limit=1)[0] if sub_event_counter else primary_event_type
+        primary_country = (
+            _top_values(country_counter, limit=1)[0]
+            if country_counter
+            else "Unknown country"
+        )
+        primary_event_type = (
+            _top_values(event_type_counter, limit=1)[0]
+            if event_type_counter
+            else "Structured event"
+        )
+        primary_sub_event_type = (
+            _top_values(sub_event_counter, limit=1)[0]
+            if sub_event_counter
+            else primary_event_type
+        )
         actor_focus = _top_values(actor_counter, limit=6)
         location_focus = _top_values(location_counter, limit=6)
         sources = _top_values(source_counter, limit=6)
         fatalities = sum(int(item.get("fatalities") or 0) for item in cluster)
-        earliest = min((item.get("event_date") for item in cluster if item.get("event_date")), default=None)
-        latest = max((item.get("event_date") for item in cluster if item.get("event_date")), default=None)
+        earliest = min(
+            (item.get("event_date") for item in cluster if item.get("event_date")),
+            default=None,
+        )
+        latest = max(
+            (item.get("event_date") for item in cluster if item.get("event_date")),
+            default=None,
+        )
 
         material = "|".join(sorted(item["event_id"] for item in cluster))
         cluster_id = hashlib.sha256(material.encode("utf-8")).hexdigest()[:16]
-        label = _cluster_label(primary_country, primary_event_type, primary_sub_event_type, actor_focus, location_focus)
+        label = _cluster_label(
+            primary_country,
+            primary_event_type,
+            primary_sub_event_type,
+            actor_focus,
+            location_focus,
+        )
 
-        primary_dataset = _top_values(dataset_counter, limit=1)[0] if dataset_counter else "acled"
+        primary_dataset = (
+            _top_values(dataset_counter, limit=1)[0] if dataset_counter else "acled"
+        )
 
         clusters.append(
             {
@@ -423,14 +552,20 @@ def build_structured_story_clusters(
                 "entity_focus": actor_focus,
                 "country_focus": _top_values(country_counter, limit=4),
                 "location_focus": location_focus,
-                "story_anchor_focus": [value for value in [primary_event_type, primary_sub_event_type] if value][:4],
+                "story_anchor_focus": [
+                    value
+                    for value in [primary_event_type, primary_sub_event_type]
+                    if value
+                ][:4],
                 "source_count": len(source_counter),
                 "article_count": 0,
                 "structured_event_count": len(cluster),
                 "fatality_total": fatalities,
                 "latest_update": latest,
                 "earliest_update": earliest,
-                "analysis_priority": _cluster_priority(cluster, primary_event_type, fatalities, len(source_counter)),
+                "analysis_priority": _cluster_priority(
+                    cluster, primary_event_type, fatalities, len(source_counter)
+                ),
                 "sources": sources,
                 "events": [
                     {

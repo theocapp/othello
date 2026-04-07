@@ -67,9 +67,33 @@ SOURCE_PACKS = {
 
 
 SOURCE_SEEDS = [
-    _seed("Reuters", "reuters.com", "article", "tier_1", "global", "en", {"adapter": "gdelt_enriched", "pack": "global_wires"}),
-    _seed("Associated Press", "apnews.com", "article", "tier_1", "global", "en", {"adapter": "gdelt_enriched", "pack": "global_wires"}),
-    _seed("AFP", "afp.com", "article", "tier_1", "global", "fr", {"adapter": "gdelt_enriched", "pack": "global_wires"}),
+    _seed(
+        "Reuters",
+        "reuters.com",
+        "article",
+        "tier_1",
+        "global",
+        "en",
+        {"adapter": "gdelt_enriched", "pack": "global_wires"},
+    ),
+    _seed(
+        "Associated Press",
+        "apnews.com",
+        "article",
+        "tier_1",
+        "global",
+        "en",
+        {"adapter": "gdelt_enriched", "pack": "global_wires"},
+    ),
+    _seed(
+        "AFP",
+        "afp.com",
+        "article",
+        "tier_1",
+        "global",
+        "fr",
+        {"adapter": "gdelt_enriched", "pack": "global_wires"},
+    ),
     _seed(
         "BBC News",
         "bbc.co.uk",
@@ -81,12 +105,26 @@ SOURCE_SEEDS = [
             "adapter": "rss",
             "pack": "global_wires",
             "feeds": [
-                {"url": "https://feeds.bbci.co.uk/news/world/rss.xml", "topic_hints": ["geopolitics"]},
-                {"url": "https://feeds.bbci.co.uk/news/business/rss.xml", "topic_hints": ["economics"]},
+                {
+                    "url": "https://feeds.bbci.co.uk/news/world/rss.xml",
+                    "topic_hints": ["geopolitics"],
+                },
+                {
+                    "url": "https://feeds.bbci.co.uk/news/business/rss.xml",
+                    "topic_hints": ["economics"],
+                },
             ],
         },
     ),
-    _seed("Financial Times", "ft.com", "article", "tier_1", "global", "en", {"adapter": "gdelt_enriched", "pack": "global_wires"}),
+    _seed(
+        "Financial Times",
+        "ft.com",
+        "article",
+        "tier_1",
+        "global",
+        "en",
+        {"adapter": "gdelt_enriched", "pack": "global_wires"},
+    ),
     _seed(
         "Le Monde",
         "lemonde.fr",
@@ -98,11 +136,22 @@ SOURCE_SEEDS = [
             "adapter": "rss",
             "pack": "regional_flagships",
             "feeds": [
-                {"url": "https://www.lemonde.fr/en/rss/une.xml", "topic_hints": ["geopolitics", "economics"]},
+                {
+                    "url": "https://www.lemonde.fr/en/rss/une.xml",
+                    "topic_hints": ["geopolitics", "economics"],
+                },
             ],
         },
     ),
-    _seed("Al-Monitor", "al-monitor.com", "article", "tier_2", "middle-east", "en", {"adapter": "gdelt_enriched", "pack": "conflict_region_outlets"}),
+    _seed(
+        "Al-Monitor",
+        "al-monitor.com",
+        "article",
+        "tier_2",
+        "middle-east",
+        "en",
+        {"adapter": "gdelt_enriched", "pack": "conflict_region_outlets"},
+    ),
     _seed(
         "The Diplomat",
         "thediplomat.com",
@@ -114,7 +163,10 @@ SOURCE_SEEDS = [
             "adapter": "rss",
             "pack": "regional_flagships",
             "feeds": [
-                {"url": "https://thediplomat.com/feed/", "topic_hints": ["geopolitics"]},
+                {
+                    "url": "https://thediplomat.com/feed/",
+                    "topic_hints": ["geopolitics"],
+                },
             ],
         },
     ),
@@ -129,11 +181,22 @@ SOURCE_SEEDS = [
             "adapter": "rss",
             "pack": "regional_flagships",
             "feeds": [
-                {"url": "https://africanarguments.org/feed/", "topic_hints": ["geopolitics"]},
+                {
+                    "url": "https://africanarguments.org/feed/",
+                    "topic_hints": ["geopolitics"],
+                },
             ],
         },
     ),
-    _seed("Eurasia Daily Monitor", "jamestown.org", "article", "tier_2", "eurasia", "en", {"adapter": "gdelt_enriched", "pack": "conflict_region_outlets"}),
+    _seed(
+        "Eurasia Daily Monitor",
+        "jamestown.org",
+        "article",
+        "tier_2",
+        "eurasia",
+        "en",
+        {"adapter": "gdelt_enriched", "pack": "conflict_region_outlets"},
+    ),
     _seed(
         "Middle East Eye",
         "middleeasteye.net",
@@ -145,11 +208,22 @@ SOURCE_SEEDS = [
             "adapter": "rss",
             "pack": "conflict_region_outlets",
             "feeds": [
-                {"url": "https://www.middleeasteye.net/rss", "topic_hints": ["geopolitics"]},
+                {
+                    "url": "https://www.middleeasteye.net/rss",
+                    "topic_hints": ["geopolitics"],
+                },
             ],
         },
     ),
-    _seed("Agence Afrique", None, "article", "tier_2", "africa", "fr", {"adapter": "registry_only"}),
+    _seed(
+        "Agence Afrique",
+        None,
+        "article",
+        "tier_2",
+        "africa",
+        "fr",
+        {"adapter": "registry_only"},
+    ),
     _seed(
         "Dawn",
         "dawn.com",
@@ -161,12 +235,31 @@ SOURCE_SEEDS = [
             "adapter": "rss",
             "pack": "regional_flagships",
             "feeds": [
-                {"url": "https://www.dawn.com/feeds/home", "topic_hints": ["geopolitics", "economics"]},
+                {
+                    "url": "https://www.dawn.com/feeds/home",
+                    "topic_hints": ["geopolitics", "economics"],
+                },
             ],
         },
     ),
-    _seed("Haaretz", "haaretz.com", "article", "tier_2", "middle-east", "en", {"adapter": "gdelt_enriched", "pack": "conflict_region_outlets"}),
-    _seed("Novaya Gazeta Europe", "novayagazeta.eu", "article", "tier_2", "europe", "ru", {"adapter": "gdelt_enriched", "pack": "regional_flagships"}),
+    _seed(
+        "Haaretz",
+        "haaretz.com",
+        "article",
+        "tier_2",
+        "middle-east",
+        "en",
+        {"adapter": "gdelt_enriched", "pack": "conflict_region_outlets"},
+    ),
+    _seed(
+        "Novaya Gazeta Europe",
+        "novayagazeta.eu",
+        "article",
+        "tier_2",
+        "europe",
+        "ru",
+        {"adapter": "gdelt_enriched", "pack": "regional_flagships"},
+    ),
     _seed(
         "Al Jazeera English",
         "aljazeera.com",
@@ -178,7 +271,10 @@ SOURCE_SEEDS = [
             "adapter": "rss",
             "pack": "conflict_region_outlets",
             "feeds": [
-                {"url": "https://www.aljazeera.com/xml/rss/all.xml", "topic_hints": ["geopolitics", "economics"]},
+                {
+                    "url": "https://www.aljazeera.com/xml/rss/all.xml",
+                    "topic_hints": ["geopolitics", "economics"],
+                },
             ],
         },
     ),
@@ -211,8 +307,21 @@ SOURCE_SEEDS = [
                 "https://www.unhcr.org/us/news/press-releases",
             ],
             "allowed_domains": ["www.unhcr.org", "unhcr.org"],
-            "allowed_href_parts": ["/us/news/", "/us/news/press-releases", "/us/news/briefing-notes"],
-            "title_keywords": ["unhcr", "displaced", "refugee", "asylum", "briefing", "protection", "returns", "emergency"],
+            "allowed_href_parts": [
+                "/us/news/",
+                "/us/news/press-releases",
+                "/us/news/briefing-notes",
+            ],
+            "title_keywords": [
+                "unhcr",
+                "displaced",
+                "refugee",
+                "asylum",
+                "briefing",
+                "protection",
+                "returns",
+                "emergency",
+            ],
             "mirror_to_articles": True,
         },
     ),
@@ -232,8 +341,19 @@ SOURCE_SEEDS = [
                 "https://www.unocha.org/publications",
             ],
             "allowed_domains": ["www.unocha.org", "unocha.org", "reports.unocha.org"],
-            "allowed_href_parts": ["/publications/", "reports.unocha.org/en/", "/situation-report/"],
-            "title_keywords": ["ocha", "humanitarian", "flash update", "situation report", "appeal", "funding"],
+            "allowed_href_parts": [
+                "/publications/",
+                "reports.unocha.org/en/",
+                "/situation-report/",
+            ],
+            "title_keywords": [
+                "ocha",
+                "humanitarian",
+                "flash update",
+                "situation report",
+                "appeal",
+                "funding",
+            ],
             "mirror_to_articles": True,
         },
     ),
@@ -254,7 +374,14 @@ SOURCE_SEEDS = [
             ],
             "allowed_domains": ["www.wfp.org", "wfp.org"],
             "allowed_href_parts": ["/news/", "/stories/"],
-            "title_keywords": ["wfp", "food", "hunger", "nutrition", "aid", "emergency"],
+            "title_keywords": [
+                "wfp",
+                "food",
+                "hunger",
+                "nutrition",
+                "aid",
+                "emergency",
+            ],
             "mirror_to_articles": True,
         },
     ),
@@ -285,7 +412,17 @@ SOURCE_SEEDS = [
             "pack": "official_un_judicial_feeds",
             "collection": "sanctions",
             "recent_actions_url": "https://ofac.treasury.gov/recent-actions",
-            "match_keywords": ["designation", "sanctions list", "sdn", "removal", "delisting", "non-proliferation", "counter terrorism", "counter narcotics", "magnitsky"],
+            "match_keywords": [
+                "designation",
+                "sanctions list",
+                "sdn",
+                "removal",
+                "delisting",
+                "non-proliferation",
+                "counter terrorism",
+                "counter narcotics",
+                "magnitsky",
+            ],
             "mirror_to_articles": True,
         },
     ),
@@ -417,7 +554,9 @@ def source_pack_for(source: dict) -> str | None:
     return None
 
 
-def source_in_pack(source: dict, packs: list[str] | tuple[str, ...] | set[str] | None) -> bool:
+def source_in_pack(
+    source: dict, packs: list[str] | tuple[str, ...] | set[str] | None
+) -> bool:
     if not packs:
         return True
     return source_pack_for(source) in set(packs)

@@ -45,7 +45,9 @@ def store_articles(articles: list[dict], topic: str):
         stored_at = datetime.now().isoformat()
 
         for article in batch:
-            article_id = article["url"].replace("https://", "").replace("http://", "")[:512]
+            article_id = (
+                article["url"].replace("https://", "").replace("http://", "")[:512]
+            )
             documents.append(f"{article['title']}. {article['description']}")
             metadatas.append(
                 {
@@ -72,7 +74,9 @@ def store_articles(articles: list[dict], topic: str):
 def search_articles(query: str, n_results: int = 8, topic: str = None) -> list[dict]:
     try:
         where = {"topic": topic} if topic else None
-        results = get_collection().query(query_texts=[query], n_results=n_results, where=where)
+        results = get_collection().query(
+            query_texts=[query], n_results=n_results, where=where
+        )
         if not results["documents"] or not results["documents"][0]:
             return []
 

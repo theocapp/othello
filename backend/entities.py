@@ -2,6 +2,7 @@ import importlib.util
 import os
 import spacy
 import sqlite3
+import requests
 from datetime import datetime, timedelta
 
 # ─── Model ────────────────────────────────────────────────────────────────────
@@ -45,22 +46,32 @@ def _language_key(language: str | None) -> str:
     if value in aliases:
         return aliases[value]
     for code in LANGUAGE_MODEL_CANDIDATES:
-        if value == code or value.startswith(f"{code}-") or value.startswith(f"{code}_"):
+        if (
+            value == code
+            or value.startswith(f"{code}-")
+            or value.startswith(f"{code}_")
+        ):
             return code
     return value.split("-")[0].split("_")[0]
 
 
-def _candidate_models(language: str | None, include_english_fallback: bool = True) -> list[str]:
+def _candidate_models(
+    language: str | None, include_english_fallback: bool = True
+) -> list[str]:
     key = _language_key(language)
     candidates = list(LANGUAGE_MODEL_CANDIDATES.get(key, []))
     if key != "en":
         candidates.extend(MULTILINGUAL_MODEL_CANDIDATES)
-    if include_english_fallback and not any(c.startswith("en_core_web") for c in candidates):
+    if include_english_fallback and not any(
+        c.startswith("en_core_web") for c in candidates
+    ):
         candidates.extend(["en_core_web_sm", "en_core_web_md", "en_core_web_lg"])
     return candidates
 
 
-def _resolve_model_name(language: str | None, include_english_fallback: bool = True) -> str:
+def _resolve_model_name(
+    language: str | None, include_english_fallback: bool = True
+) -> str:
     key = _language_key(language)
     cached = _MODEL_NAME_CACHE.get(key)
     if cached:
@@ -70,7 +81,9 @@ def _resolve_model_name(language: str | None, include_english_fallback: bool = T
             return cached
 
     last_error = None
-    for model_name in _candidate_models(language, include_english_fallback=include_english_fallback):
+    for model_name in _candidate_models(
+        language, include_english_fallback=include_english_fallback
+    ):
         try:
             model = spacy.load(model_name)
             _NLP_CACHE[key] = model
@@ -84,15 +97,16 @@ def _resolve_model_name(language: str | None, include_english_fallback: bool = T
             "No compatible spaCy model is available for entity extraction. "
             "Install at minimum: python3 -m spacy download en_core_web_sm"
         ) from last_error
-    raise RuntimeError(f"No non-English spaCy model is available for language '{key}'.") from last_error
+    raise RuntimeError(
+        f"No non-English spaCy model is available for language '{key}'."
+    ) from last_error
 
 
 def get_nlp(language: str | None = None):
     key = _language_key(language)
     if key in _NLP_CACHE:
         return _NLP_CACHE[key]
-
-    model_name = _resolve_model_name(language)
+    _resolve_model_name(language)
     return _NLP_CACHE[key]
 
 
@@ -118,25 +132,35 @@ def _classify_model_path(model_name: str | None) -> str:
     return "native_specific"
 
 
-def _find_installed_model(language: str | None, include_english_fallback: bool = True) -> str | None:
+def _find_installed_model(
+    language: str | None, include_english_fallback: bool = True
+) -> str | None:
     key = _language_key(language)
     cached = _MODEL_NAME_CACHE.get(key)
     if cached:
         return cached
 
-    for model_name in _candidate_models(language, include_english_fallback=include_english_fallback):
+    for model_name in _candidate_models(
+        language, include_english_fallback=include_english_fallback
+    ):
         if importlib.util.find_spec(model_name):
             return model_name
     return None
 
 
 def describe_entity_extraction(article: dict) -> dict:
-    article_language = article.get("translation_source_language") or article.get("language") or "en"
+    article_language = (
+        article.get("translation_source_language") or article.get("language") or "en"
+    )
     normalized_language = _language_key(article_language)
-    has_translation = bool(article.get("translated_title") or article.get("translated_description"))
+    has_translation = bool(
+        article.get("translated_title") or article.get("translated_description")
+    )
 
     if has_native_language_model(article_language):
-        model_name = _resolve_model_name(article_language, include_english_fallback=False)
+        model_name = _resolve_model_name(
+            article_language, include_english_fallback=False
+        )
         extraction_language = article_language
         path = _classify_model_path(model_name)
         text_source = "original"
@@ -161,7 +185,19 @@ def describe_entity_extraction(article: dict) -> dict:
 
 
 def get_entity_model_capabilities() -> dict:
-    tracked_languages = ["en", "fr", "es", "de", "pt", "it", "zh", "ar", "uk", "tr", "he"]
+    tracked_languages = [
+        "en",
+        "fr",
+        "es",
+        "de",
+        "pt",
+        "it",
+        "zh",
+        "ar",
+        "uk",
+        "tr",
+        "he",
+    ]
     language_support = {}
     path_totals = {
         "native_specific": 0,
@@ -193,38 +229,109 @@ def get_entity_model_capabilities() -> dict:
         "path_totals": path_totals,
     }
 
+
 # ─── Config ───────────────────────────────────────────────────────────────────
 RELEVANT_TYPES = {"PERSON", "GPE", "ORG", "NORP"}
 
 # Hard blocklist — pure noise, never meaningful signal under any circumstances
 BLOCKLIST = {
-    "government", "administration", "officials", "authorities", "spokesperson",
-    "minister", "president", "prime minister", "secretary", "department",
-    "committee", "parliament", "analysts", "experts", "sources", "investors",
-    "traders", "police", "military", "army", "navy", "court", "media", "press",
-    "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
-    "january", "february", "march", "april", "may", "june", "july", "august",
-    "september", "october", "november", "december",
-    "reuters", "ap", "associated press", "bloomberg", "bbc", "cnn", "fox news",
-    "the new york times", "the washington post", "wall street journal",
-    "western", "eastern", "northern", "southern",
+    "government",
+    "administration",
+    "officials",
+    "authorities",
+    "spokesperson",
+    "minister",
+    "president",
+    "prime minister",
+    "secretary",
+    "department",
+    "committee",
+    "parliament",
+    "analysts",
+    "experts",
+    "sources",
+    "investors",
+    "traders",
+    "police",
+    "military",
+    "army",
+    "navy",
+    "court",
+    "media",
+    "press",
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
+    "january",
+    "february",
+    "march",
+    "april",
+    "may",
+    "june",
+    "july",
+    "august",
+    "september",
+    "october",
+    "november",
+    "december",
+    "reuters",
+    "ap",
+    "associated press",
+    "bloomberg",
+    "bbc",
+    "cnn",
+    "fox news",
+    "the new york times",
+    "the washington post",
+    "wall street journal",
+    "western",
+    "eastern",
+    "northern",
+    "southern",
 }
 
 # High-frequency entities — real actors but appear constantly
 # Only surface if spike ratio exceeds HIGH_FREQUENCY_THRESHOLD
 HIGH_FREQUENCY = {
-    "united states", "the united states", "american", "americans",
-    "congress", "senate", "white house", "pentagon", "kremlin",
-    "european union", "united nations", "nato", "imf", "world bank",
-    "supreme court", "the supreme court", "justice department", "capitol hill",
-    "federal government", "u.s. government", "state department",
-    "republican party", "democratic party", "gop",
-    "russia", "china", "iran", "israel", "ukraine",
-    "federal reserve", "wall street",
+    "united states",
+    "the united states",
+    "american",
+    "americans",
+    "congress",
+    "senate",
+    "white house",
+    "pentagon",
+    "kremlin",
+    "european union",
+    "united nations",
+    "nato",
+    "imf",
+    "world bank",
+    "supreme court",
+    "the supreme court",
+    "justice department",
+    "capitol hill",
+    "federal government",
+    "u.s. government",
+    "state department",
+    "republican party",
+    "democratic party",
+    "gop",
+    "russia",
+    "china",
+    "iran",
+    "israel",
+    "ukraine",
+    "federal reserve",
+    "wall street",
 }
 
 HIGH_FREQUENCY_THRESHOLD = 3.0  # must spike 3x to surface
-DEFAULT_THRESHOLD = 1.5          # normal entities need 1.5x
+DEFAULT_THRESHOLD = 1.5  # normal entities need 1.5x
 
 # Alias map — normalize variants to canonical names
 # None = discard entirely
@@ -312,6 +419,7 @@ def _connect():
             raise
     return conn
 
+
 # ─── DB init ──────────────────────────────────────────────────────────────────
 def init_db():
     conn = _connect()
@@ -340,7 +448,9 @@ def init_db():
     """)
 
     c.execute("CREATE INDEX IF NOT EXISTS idx_entity ON entity_mentions(entity)")
-    c.execute("CREATE INDEX IF NOT EXISTS idx_mentioned_at ON entity_mentions(mentioned_at)")
+    c.execute(
+        "CREATE INDEX IF NOT EXISTS idx_mentioned_at ON entity_mentions(mentioned_at)"
+    )
     c.execute("CREATE INDEX IF NOT EXISTS idx_cooc_a ON entity_cooccurrences(entity_a)")
     c.execute("CREATE INDEX IF NOT EXISTS idx_cooc_b ON entity_cooccurrences(entity_b)")
     c.execute("""
@@ -352,9 +462,26 @@ def init_db():
         ON entity_cooccurrences(topic, article_url, entity_a, entity_b)
     """)
 
+    # Cached external KB links (e.g., Wikidata)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS entity_links (
+            entity TEXT NOT NULL,
+            qid TEXT NOT NULL,
+            label TEXT,
+            description TEXT,
+            source TEXT,
+            retrieved_at TIMESTAMP,
+            PRIMARY KEY(entity, qid)
+        )
+    """)
+    c.execute(
+        "CREATE INDEX IF NOT EXISTS idx_entity_links_entity ON entity_links(entity)"
+    )
+
     conn.commit()
     conn.close()
     print("[entities] Database initialized")
+
 
 # ─── Normalization ────────────────────────────────────────────────────────────
 def normalize_entity(text: str) -> str | None:
@@ -419,12 +546,15 @@ def extract_entities(text: str, language: str | None = None) -> list[dict]:
             continue
         seen.add(key)
 
-        entities.append({
-            "entity": normalized,
-            "type": ent.label_,
-        })
+        entities.append(
+            {
+                "entity": normalized,
+                "type": ent.label_,
+            }
+        )
 
     return entities
+
 
 # ─── Storage ──────────────────────────────────────────────────────────────────
 def store_entity_mentions(articles: list[dict], topic: str):
@@ -447,10 +577,22 @@ def store_entity_mentions(articles: list[dict], topic: str):
 
         if extraction["text_source"] == "original":
             title = article.get("original_title") or article.get("title") or ""
-            description = article.get("original_description") or article.get("description") or ""
+            description = (
+                article.get("original_description") or article.get("description") or ""
+            )
         else:
-            title = article.get("translated_title") or article.get("title") or article.get("original_title") or ""
-            description = article.get("translated_description") or article.get("description") or article.get("original_description") or ""
+            title = (
+                article.get("translated_title")
+                or article.get("title")
+                or article.get("original_title")
+                or ""
+            )
+            description = (
+                article.get("translated_description")
+                or article.get("description")
+                or article.get("original_description")
+                or ""
+            )
         extraction_language = extraction["extraction_language"]
         text = f"{title}. {description}"
         entities = extract_entities(text, language=extraction_language)
@@ -469,18 +611,27 @@ def store_entity_mentions(articles: list[dict], topic: str):
             },
         )
         language_entry["articles"] += 1
-        language_entry["path_counts"][path] = language_entry["path_counts"].get(path, 0) + 1
+        language_entry["path_counts"][path] = (
+            language_entry["path_counts"].get(path, 0) + 1
+        )
         if model_name:
-            language_entry["model_counts"][model_name] = language_entry["model_counts"].get(model_name, 0) + 1
+            language_entry["model_counts"][model_name] = (
+                language_entry["model_counts"].get(model_name, 0) + 1
+            )
         text_source = extraction["text_source"]
-        language_entry["text_sources"][text_source] = language_entry["text_sources"].get(text_source, 0) + 1
+        language_entry["text_sources"][text_source] = (
+            language_entry["text_sources"].get(text_source, 0) + 1
+        )
 
         for entity in entities:
-            c.execute("""
+            c.execute(
+                """
                 INSERT INTO entity_mentions (entity, entity_type, topic, article_url, mentioned_at)
                 VALUES (?, ?, ?, ?, ?)
                 ON CONFLICT(topic, article_url, entity) DO NOTHING
-            """, (entity["entity"], entity["type"], topic, article["url"], now))
+            """,
+                (entity["entity"], entity["type"], topic, article["url"], now),
+            )
             total_mentions += c.rowcount
 
         for i in range(len(entities)):
@@ -489,16 +640,21 @@ def store_entity_mentions(articles: list[dict], topic: str):
                 b = entities[j]["entity"]
                 if a > b:
                     a, b = b, a
-                c.execute("""
+                c.execute(
+                    """
                     INSERT INTO entity_cooccurrences (entity_a, entity_b, topic, article_url, mentioned_at)
                     VALUES (?, ?, ?, ?, ?)
                     ON CONFLICT(topic, article_url, entity_a, entity_b) DO NOTHING
-                """, (a, b, topic, article["url"], now))
+                """,
+                    (a, b, topic, article["url"], now),
+                )
                 total_cooc += c.rowcount
 
     conn.commit()
     conn.close()
-    print(f"[entities] Stored {total_mentions} mentions, {total_cooc} co-occurrences for '{topic}'")
+    print(
+        f"[entities] Stored {total_mentions} mentions, {total_cooc} co-occurrences for '{topic}'"
+    )
     return {
         "topic": topic,
         "articles_processed": len(articles),
@@ -510,8 +666,11 @@ def store_entity_mentions(articles: list[dict], topic: str):
         "language_paths": language_paths,
     }
 
+
 # ─── Frequency / spike detection ─────────────────────────────────────────────
-def get_entity_frequencies(days_recent: int = 2, days_baseline: int = 7, topic: str = None) -> list[dict]:
+def get_entity_frequencies(
+    days_recent: int = 2, days_baseline: int = 7, topic: str = None
+) -> list[dict]:
     """
     Compare recent vs baseline mentions to detect spikes.
     Applies tier-based thresholds — high-frequency entities need a bigger
@@ -529,23 +688,29 @@ def get_entity_frequencies(days_recent: int = 2, days_baseline: int = 7, topic: 
     params_baseline = [baseline_cutoff, recent_cutoff] + ([topic] if topic else [])
 
     # Deduplicate by entity name only (ignore spaCy type inconsistencies)
-    c.execute(f"""
+    c.execute(
+        f"""
         SELECT entity, entity_type, COUNT(*) as count
         FROM entity_mentions
         WHERE mentioned_at > ?
         {topic_filter}
         GROUP BY entity
         ORDER BY count DESC
-    """, params_recent)
+    """,
+        params_recent,
+    )
     recent = {row[0]: {"type": row[1], "recent": row[2]} for row in c.fetchall()}
 
-    c.execute(f"""
+    c.execute(
+        f"""
         SELECT entity, COUNT(*) as count
         FROM entity_mentions
         WHERE mentioned_at > ? AND mentioned_at <= ?
         {topic_filter}
         GROUP BY entity
-    """, params_baseline)
+    """,
+        params_baseline,
+    )
     baseline = {row[0]: row[1] for row in c.fetchall()}
 
     conn.close()
@@ -559,7 +724,9 @@ def get_entity_frequencies(days_recent: int = 2, days_baseline: int = 7, topic: 
             spike_ratio = recent_count * 2
             trend = "NEW"
         else:
-            spike_ratio = recent_count / (baseline_count / (days_baseline / days_recent))
+            spike_ratio = recent_count / (
+                baseline_count / (days_baseline / days_recent)
+            )
             if spike_ratio > 1.5:
                 trend = "RISING"
             elif spike_ratio < 0.5:
@@ -568,20 +735,27 @@ def get_entity_frequencies(days_recent: int = 2, days_baseline: int = 7, topic: 
                 trend = "STABLE"
 
         # Tier-based threshold — high-frequency entities need a bigger spike
-        threshold = HIGH_FREQUENCY_THRESHOLD if entity.lower() in HIGH_FREQUENCY else DEFAULT_THRESHOLD
+        threshold = (
+            HIGH_FREQUENCY_THRESHOLD
+            if entity.lower() in HIGH_FREQUENCY
+            else DEFAULT_THRESHOLD
+        )
 
         if spike_ratio >= threshold:
-            results.append({
-                "entity": entity,
-                "type": data["type"],
-                "recent_mentions": recent_count,
-                "baseline_mentions": baseline_count,
-                "spike_ratio": round(spike_ratio, 2),
-                "trend": trend,
-            })
+            results.append(
+                {
+                    "entity": entity,
+                    "type": data["type"],
+                    "recent_mentions": recent_count,
+                    "baseline_mentions": baseline_count,
+                    "spike_ratio": round(spike_ratio, 2),
+                    "trend": trend,
+                }
+            )
 
     results.sort(key=lambda x: x["spike_ratio"], reverse=True)
     return results[:20]
+
 
 def get_top_entities(topic: str = None, days: int = 7, limit: int = 10) -> list[dict]:
     """Get most mentioned entities over a time period, deduplicated by name."""
@@ -592,7 +766,8 @@ def get_top_entities(topic: str = None, days: int = 7, limit: int = 10) -> list[
     topic_filter = "AND topic = ?" if topic else ""
     params = [cutoff] + ([topic] if topic else [])
 
-    c.execute(f"""
+    c.execute(
+        f"""
         SELECT entity, entity_type, COUNT(*) as count
         FROM entity_mentions
         WHERE mentioned_at > ?
@@ -600,11 +775,16 @@ def get_top_entities(topic: str = None, days: int = 7, limit: int = 10) -> list[
         GROUP BY entity
         ORDER BY count DESC
         LIMIT ?
-    """, params + [limit])
+    """,
+        params + [limit],
+    )
 
-    results = [{"entity": row[0], "type": row[1], "mentions": row[2]} for row in c.fetchall()]
+    results = [
+        {"entity": row[0], "type": row[1], "mentions": row[2]} for row in c.fetchall()
+    ]
     conn.close()
     return results
+
 
 # ─── Co-occurrence / relationships ───────────────────────────────────────────
 def get_entity_relationships(entity: str, days: int = 7, limit: int = 10) -> list[dict]:
@@ -614,7 +794,8 @@ def get_entity_relationships(entity: str, days: int = 7, limit: int = 10) -> lis
 
     cutoff = (datetime.now() - timedelta(days=days)).isoformat()
 
-    c.execute("""
+    c.execute(
+        """
         SELECT
             CASE WHEN entity_a = ? THEN entity_b ELSE entity_a END as related_entity,
             COUNT(*) as co_mentions
@@ -624,13 +805,18 @@ def get_entity_relationships(entity: str, days: int = 7, limit: int = 10) -> lis
         GROUP BY related_entity
         ORDER BY co_mentions DESC
         LIMIT ?
-    """, (entity, entity, entity, cutoff, limit))
+    """,
+        (entity, entity, entity, cutoff, limit),
+    )
 
     results = [{"entity": row[0], "co_mentions": row[1]} for row in c.fetchall()]
     conn.close()
     return results
 
-def get_relationship_graph(days: int = 7, min_cooccurrences: int = 2, topic: str = None) -> dict:
+
+def get_relationship_graph(
+    days: int = 7, min_cooccurrences: int = 2, topic: str = None
+) -> dict:
     """Return full entity relationship graph for visualization."""
     conn = _connect()
     c = conn.cursor()
@@ -639,7 +825,8 @@ def get_relationship_graph(days: int = 7, min_cooccurrences: int = 2, topic: str
     topic_filter = "AND topic = ?" if topic else ""
     params = [cutoff] + ([topic] if topic else []) + [min_cooccurrences]
 
-    c.execute(f"""
+    c.execute(
+        f"""
         SELECT entity_a, entity_b, COUNT(*) as weight
         FROM entity_cooccurrences
         WHERE mentioned_at > ?
@@ -647,9 +834,13 @@ def get_relationship_graph(days: int = 7, min_cooccurrences: int = 2, topic: str
         GROUP BY entity_a, entity_b
         HAVING weight >= ?
         ORDER BY weight DESC
-    """, params)
+    """,
+        params,
+    )
 
-    edges = [{"source": row[0], "target": row[1], "weight": row[2]} for row in c.fetchall()]
+    edges = [
+        {"source": row[0], "target": row[1], "weight": row[2]} for row in c.fetchall()
+    ]
 
     nodes = set()
     for edge in edges:
@@ -662,6 +853,7 @@ def get_relationship_graph(days: int = 7, min_cooccurrences: int = 2, topic: str
         "edges": edges,
     }
 
+
 # ─── Briefing signal formatter ────────────────────────────────────────────────
 def format_signals_for_briefing(topic: str) -> str:
     """Generate signal summary to inject into briefing prompts."""
@@ -673,14 +865,20 @@ def format_signals_for_briefing(topic: str) -> str:
 
     lines = ["ENTITY TRACKING SIGNALS (based on historical article analysis):"]
 
-    rising = [e for e in spikes if e["trend"] in ("RISING", "NEW") and e["spike_ratio"] > 1.5][:5]
+    rising = [
+        e for e in spikes if e["trend"] in ("RISING", "NEW") and e["spike_ratio"] > 1.5
+    ][:5]
     if rising:
         lines.append("\nSurging mentions (potential emerging stories):")
         for e in rising:
             if e["trend"] == "NEW":
-                lines.append(f"  - {e['entity']} ({e['type']}): NEW — {e['recent_mentions']} mentions, no prior history")
+                lines.append(
+                    f"  - {e['entity']} ({e['type']}): NEW — {e['recent_mentions']} mentions, no prior history"
+                )
             else:
-                lines.append(f"  - {e['entity']} ({e['type']}): {e['spike_ratio']}x spike — {e['recent_mentions']} recent vs {e['baseline_mentions']} baseline")
+                lines.append(
+                    f"  - {e['entity']} ({e['type']}): {e['spike_ratio']}x spike — {e['recent_mentions']} recent vs {e['baseline_mentions']} baseline"
+                )
 
     if top:
         lines.append("\nMost discussed entities this week:")
@@ -688,3 +886,150 @@ def format_signals_for_briefing(topic: str) -> str:
             lines.append(f"  - {e['entity']} ({e['type']}): {e['mentions']} mentions")
 
     return "\n".join(lines)
+
+
+# ─── Entity linking (Wikidata) ───────────────────────────────────────────────
+def lookup_entity_links(
+    entity: str,
+    language: str = "en",
+    limit: int = 5,
+    refresh: bool = False,
+    allow_remote: bool = True,
+) -> list[dict]:
+    """Lookup candidate KB links for an `entity` string via Wikidata.
+
+    Results are cached in the local `entity_links` table to avoid
+    repeated remote calls. If `refresh` is True, the remote lookup is
+    forced and the cache is updated. Set `allow_remote=False` to
+    return cached candidates only.
+    """
+    if not entity or not str(entity).strip():
+        return []
+
+    normalized = str(entity).strip()
+    conn = _connect()
+    c = conn.cursor()
+
+    if not refresh:
+        c.execute(
+            "SELECT qid, label, description, source, retrieved_at FROM entity_links WHERE entity = ? ORDER BY retrieved_at DESC LIMIT ?",
+            (normalized, limit),
+        )
+        rows = c.fetchall()
+        if rows:
+            conn.close()
+            return [
+                {
+                    "qid": r[0],
+                    "label": r[1],
+                    "description": r[2],
+                    "source": r[3],
+                    "retrieved_at": r[4],
+                }
+                for r in rows
+            ]
+
+    if not allow_remote:
+        conn.close()
+        return []
+
+    # Remote lookup against Wikidata
+    try:
+        resp = requests.get(
+            "https://www.wikidata.org/w/api.php",
+            params={
+                "action": "wbsearchentities",
+                "search": normalized,
+                "language": language or "en",
+                "format": "json",
+                "limit": limit,
+                "type": "item",
+            },
+            timeout=8,
+        )
+        resp.raise_for_status()
+        payload = resp.json() or {}
+        results = []
+        now = datetime.utcnow().isoformat()
+        for item in payload.get("search", []):
+            qid = item.get("id")
+            label = item.get("label")
+            desc = item.get("description")
+            results.append(
+                {"qid": qid, "label": label, "description": desc, "source": "wikidata"}
+            )
+            try:
+                c.execute(
+                    "INSERT OR REPLACE INTO entity_links (entity, qid, label, description, source, retrieved_at) VALUES (?, ?, ?, ?, ?, ?)",
+                    (normalized, qid, label, desc, "wikidata", now),
+                )
+            except Exception:
+                # non-fatal cache write error
+                pass
+        conn.commit()
+        conn.close()
+        return results
+    except Exception:
+        # On failure, return any cached rows if available, otherwise empty
+        try:
+            c.execute(
+                "SELECT qid, label, description, source, retrieved_at FROM entity_links WHERE entity = ? ORDER BY retrieved_at DESC LIMIT ?",
+                (normalized, limit),
+            )
+            rows = c.fetchall()
+            conn.close()
+            return [
+                {
+                    "qid": r[0],
+                    "label": r[1],
+                    "description": r[2],
+                    "source": r[3],
+                    "retrieved_at": r[4],
+                }
+                for r in rows
+            ]
+        except Exception:
+            conn.close()
+            return []
+
+
+def batch_lookup_entity_links(
+    entities: list[str],
+    language: str = "en",
+    limit: int = 5,
+    refresh: bool = False,
+    allow_remote: bool = True,
+) -> dict:
+    """Lookup multiple entity strings and return a mapping of entity->candidates."""
+    result = {}
+    for ent in entities:
+        try:
+            result[ent] = lookup_entity_links(
+                ent,
+                language=language,
+                limit=limit,
+                refresh=refresh,
+                allow_remote=allow_remote,
+            )
+        except Exception:
+            result[ent] = []
+    return result
+
+
+def get_best_entity_link(
+    entity: str,
+    language: str = "en",
+    refresh: bool = False,
+    allow_remote: bool = True,
+) -> dict | None:
+    """Return the top candidate (if any) for the entity string."""
+    candidates = lookup_entity_links(
+        entity,
+        language=language,
+        limit=1,
+        refresh=refresh,
+        allow_remote=allow_remote,
+    )
+    if not candidates:
+        return None
+    return candidates[0]

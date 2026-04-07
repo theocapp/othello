@@ -218,7 +218,9 @@ def _infer_topic_guess(record: dict) -> str | None:
     return best_topic if best_score else None
 
 
-def _normalize_queue_record(record: dict, discovered_via: str, archive_member: str | None = None) -> dict | None:
+def _normalize_queue_record(
+    record: dict, discovered_via: str, archive_member: str | None = None
+) -> dict | None:
     url = _extract_value(record, URL_KEYS)
     if not url:
         return None
@@ -235,8 +237,12 @@ def _normalize_queue_record(record: dict, discovered_via: str, archive_member: s
         "discovered_via": discovered_via,
         "topic_guess": _infer_topic_guess(record),
         "gdelt_query": _extract_value(record, QUERY_KEYS),
-        "gdelt_window_start": _normalize_timestamp(_extract_value(record, WINDOW_START_KEYS)),
-        "gdelt_window_end": _normalize_timestamp(_extract_value(record, WINDOW_END_KEYS)),
+        "gdelt_window_start": _normalize_timestamp(
+            _extract_value(record, WINDOW_START_KEYS)
+        ),
+        "gdelt_window_end": _normalize_timestamp(
+            _extract_value(record, WINDOW_END_KEYS)
+        ),
         "fetch_status": "pending",
         "attempt_count": 0,
         "payload": {
@@ -258,7 +264,12 @@ def _looks_like_gdelt_mentions(lines: list[str]) -> bool:
     parts = first.split("\t")
     if len(parts) < 6:
         return False
-    return parts[0].isdigit() and parts[1].isdigit() and parts[2].isdigit() and parts[5].startswith("http")
+    return (
+        parts[0].isdigit()
+        and parts[1].isdigit()
+        and parts[2].isdigit()
+        and parts[5].startswith("http")
+    )
 
 
 def _looks_like_gdelt_gkg(lines: list[str]) -> bool:
@@ -284,7 +295,7 @@ def _load_gdelt_mentions_records(lines: list[str]) -> list[dict]:
         parts = text.split("\t")
         if len(parts) < len(GDELT_MENTIONS_COLUMNS):
             parts.extend([""] * (len(GDELT_MENTIONS_COLUMNS) - len(parts)))
-        row = dict(zip(GDELT_MENTIONS_COLUMNS, parts[:len(GDELT_MENTIONS_COLUMNS)]))
+        row = dict(zip(GDELT_MENTIONS_COLUMNS, parts[: len(GDELT_MENTIONS_COLUMNS)]))
         row["source_domain"] = row.get("MentionSourceName")
         row["url"] = row.get("MentionIdentifier")
         row["published_at"] = row.get("MentionTimeDate")
@@ -293,7 +304,9 @@ def _load_gdelt_mentions_records(lines: list[str]) -> list[dict]:
 
 
 def _page_title_from_extras(raw: str) -> str | None:
-    match = re.search(r"<PAGE_TITLE>(.*?)</PAGE_TITLE>", raw or "", flags=re.IGNORECASE | re.DOTALL)
+    match = re.search(
+        r"<PAGE_TITLE>(.*?)</PAGE_TITLE>", raw or "", flags=re.IGNORECASE | re.DOTALL
+    )
     if not match:
         return None
     return match.group(1).strip() or None
@@ -308,7 +321,7 @@ def _load_gdelt_gkg_records(lines: list[str]) -> list[dict]:
         parts = text.split("\t")
         if len(parts) < len(GDELT_GKG_COLUMNS):
             parts.extend([""] * (len(GDELT_GKG_COLUMNS) - len(parts)))
-        row = dict(zip(GDELT_GKG_COLUMNS, parts[:len(GDELT_GKG_COLUMNS)]))
+        row = dict(zip(GDELT_GKG_COLUMNS, parts[: len(GDELT_GKG_COLUMNS)]))
         row["source_domain"] = row.get("SourceCommonName")
         row["source_name"] = row.get("SourceCommonName")
         row["url"] = row.get("DocumentIdentifier")
@@ -324,7 +337,10 @@ def _load_csv_records(handle, delimiter: str = ",") -> list[dict]:
         return _load_gdelt_mentions_records(lines)
     if delimiter == "\t" and _looks_like_gdelt_gkg(lines[:5]):
         return _load_gdelt_gkg_records(lines)
-    return [dict(row) for row in csv.DictReader(StringIO("".join(lines)), delimiter=delimiter)]
+    return [
+        dict(row)
+        for row in csv.DictReader(StringIO("".join(lines)), delimiter=delimiter)
+    ]
 
 
 def _load_json_records(handle) -> list[dict]:
@@ -392,7 +408,9 @@ def _detect_format(path: Path, explicit: str) -> str:
     return _detect_member_format(path.name)
 
 
-def _load_archive_records(path: Path, format_name: str) -> list[tuple[dict, str | None]]:
+def _load_archive_records(
+    path: Path, format_name: str
+) -> list[tuple[dict, str | None]]:
     records: list[tuple[dict, str | None]] = []
     if format_name == "zip":
         with zipfile.ZipFile(path) as archive:
@@ -404,11 +422,15 @@ def _load_archive_records(path: Path, format_name: str) -> list[tuple[dict, str 
                 except ValueError:
                     continue
                 with archive.open(member) as raw_handle:
-                    text_handle = (line.decode("utf-8", errors="replace") for line in raw_handle)
+                    text_handle = (
+                        line.decode("utf-8", errors="replace") for line in raw_handle
+                    )
                     if member_format in {"csv", "tsv"}:
                         loaded = _load_records_from_handle(text_handle, member_format)
                     else:
-                        loaded = _load_records_from_handle(StringIO("".join(text_handle)), member_format)
+                        loaded = _load_records_from_handle(
+                            StringIO("".join(text_handle)), member_format
+                        )
                 records.extend((record, member) for record in loaded)
         return records
 
@@ -418,10 +440,15 @@ def _load_archive_records(path: Path, format_name: str) -> list[tuple[dict, str 
 
 
 def _batch(records: list[dict], batch_size: int) -> list[list[dict]]:
-    return [records[index:index + batch_size] for index in range(0, len(records), batch_size)]
+    return [
+        records[index : index + batch_size]
+        for index in range(0, len(records), batch_size)
+    ]
 
 
-def import_gdelt_bulk_archive(path: Path, format_name: str, discovered_via: str, batch_size: int) -> dict:
+def import_gdelt_bulk_archive(
+    path: Path, format_name: str, discovered_via: str, batch_size: int
+) -> dict:
     init_cache_db()
     init_corpus_db()
 
@@ -431,7 +458,9 @@ def import_gdelt_bulk_archive(path: Path, format_name: str, discovered_via: str,
     topic_counts = {topic: 0 for topic in TOPICS}
 
     for record, archive_member in loaded_records:
-        normalized = _normalize_queue_record(record, discovered_via=discovered_via, archive_member=archive_member)
+        normalized = _normalize_queue_record(
+            record, discovered_via=discovered_via, archive_member=archive_member
+        )
         if not normalized:
             skipped += 1
             continue
@@ -457,11 +486,25 @@ def import_gdelt_bulk_archive(path: Path, format_name: str, discovered_via: str,
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Queue GDELT bulk discovery records into Othello's historical URL queue.")
-    parser.add_argument("path", help="Path to a GDELT bulk CSV, TSV, JSON, JSONL, or zip archive.")
-    parser.add_argument("--format", default="auto", choices=["auto", "csv", "tsv", "json", "jsonl", "zip"])
-    parser.add_argument("--discovered-via", default="gdelt-bulk", help="Discovery label stored on queued URLs.")
-    parser.add_argument("--batch-size", type=int, default=500, help="Batch size for queue writes.")
+    parser = argparse.ArgumentParser(
+        description="Queue GDELT bulk discovery records into Othello's historical URL queue."
+    )
+    parser.add_argument(
+        "path", help="Path to a GDELT bulk CSV, TSV, JSON, JSONL, or zip archive."
+    )
+    parser.add_argument(
+        "--format",
+        default="auto",
+        choices=["auto", "csv", "tsv", "json", "jsonl", "zip"],
+    )
+    parser.add_argument(
+        "--discovered-via",
+        default="gdelt-bulk",
+        help="Discovery label stored on queued URLs.",
+    )
+    parser.add_argument(
+        "--batch-size", type=int, default=500, help="Batch size for queue writes."
+    )
     return parser.parse_args()
 
 

@@ -83,7 +83,6 @@ from core.locks import (
 )
 from core.runtime import parse_timestamp, topic_counts
 
-
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
@@ -141,17 +140,30 @@ def _article_translation_priority(article: dict) -> int:
     score = article_quality_score(article, topics)
     published_at = parse_timestamp(article.get("published_at"))
     if published_at:
-        age_hours = max(0.0, (datetime.now(timezone.utc) - published_at.astimezone(timezone.utc)).total_seconds() / 3600)
+        age_hours = max(
+            0.0,
+            (
+                datetime.now(timezone.utc) - published_at.astimezone(timezone.utc)
+            ).total_seconds()
+            / 3600,
+        )
         if age_hours <= 24:
             score += 2
         elif age_hours <= 72:
             score += 1
-    if article.get("source_domain") in {"reuters.com", "apnews.com", "bbc.com", "ft.com"}:
+    if article.get("source_domain") in {
+        "reuters.com",
+        "apnews.com",
+        "bbc.com",
+        "ft.com",
+    }:
         score += 1
     return score
 
 
-def _needs_translation(article: dict, min_priority: int = TRANSLATION_MIN_SCORE) -> bool:
+def _needs_translation(
+    article: dict, min_priority: int = TRANSLATION_MIN_SCORE
+) -> bool:
     return (
         REQUEST_ENABLE_TRANSLATION
         and not is_english_article(article)
@@ -160,7 +172,11 @@ def _needs_translation(article: dict, min_priority: int = TRANSLATION_MIN_SCORE)
     )
 
 
-def ensure_article_translations(articles: list[dict], max_articles: int = 6, min_priority: int = TRANSLATION_MIN_SCORE) -> list[dict]:
+def ensure_article_translations(
+    articles: list[dict],
+    max_articles: int = 6,
+    min_priority: int = TRANSLATION_MIN_SCORE,
+) -> list[dict]:
     if not REQUEST_ENABLE_TRANSLATION:
         return articles
 
@@ -189,11 +205,17 @@ def ensure_article_translations(articles: list[dict], max_articles: int = 6, min
                 target_language=translation.get("target_language", "en"),
             )
             article["translated_title"] = translation["translated_title"]
-            article["translated_description"] = translation.get("translated_description")
+            article["translated_description"] = translation.get(
+                "translated_description"
+            )
             article["translation_provider"] = translation.get("provider", "translation")
-            article["translation_target_language"] = translation.get("target_language", "en")
+            article["translation_target_language"] = translation.get(
+                "target_language", "en"
+            )
             article["title"] = translation["translated_title"] or article.get("title")
-            article["description"] = translation.get("translated_description") or article.get("description")
+            article["description"] = translation.get(
+                "translated_description"
+            ) or article.get("description")
             translated_count += 1
         except Exception as exc:
             print(f"[translation] Failed for {article.get('url')}: {exc}")
@@ -211,18 +233,43 @@ def ingest_topic(topic: str, page_size: int = 60) -> dict:
     try:
         articles = fetch_articles(topic, page_size=page_size)
         provider = articles[0].get("provider", "unknown") if articles else "unknown"
-        archive_summary = archive_provider_articles(articles, provider=provider, topic_hint=topic)
+        archive_summary = archive_provider_articles(
+            articles, provider=provider, topic_hint=topic
+        )
         if not articles:
             fallback_provider = "directfeeds"
-            fallback_articles = fetch_articles_from_provider(topic, fallback_provider, page_size=max(20, page_size // 2)) if source_status()["directfeeds"]["enabled"] else []
+            fallback_articles = (
+                fetch_articles_from_provider(
+                    topic, fallback_provider, page_size=max(20, page_size // 2)
+                )
+                if source_status()["directfeeds"]["enabled"]
+                else []
+            )
             if fallback_articles:
                 articles = fallback_articles
                 provider = f"{fallback_provider}-fallback"
-                archive_summary = archive_provider_articles(articles, provider=provider, topic_hint=topic)
+                archive_summary = archive_provider_articles(
+                    articles, provider=provider, topic_hint=topic
+                )
             else:
                 message = f"No fresh articles returned for topic '{topic}' from configured providers."
-                record_ingestion_run(topic, provider, 0, started_at, "empty", error=message)
-                save_ingestion_state(state_key, topic, provider, None, None, "empty", error=message, payload={"fetched": 0, "promoted": 0, "archived_documents": archive_summary["documents_written"]})
+                record_ingestion_run(
+                    topic, provider, 0, started_at, "empty", error=message
+                )
+                save_ingestion_state(
+                    state_key,
+                    topic,
+                    provider,
+                    None,
+                    None,
+                    "empty",
+                    error=message,
+                    payload={
+                        "fetched": 0,
+                        "promoted": 0,
+                        "archived_documents": archive_summary["documents_written"],
+                    },
+                )
                 print(f"[ingest] {message}")
                 return {
                     "topic": topic,
@@ -234,15 +281,41 @@ def ingest_topic(topic: str, page_size: int = 60) -> dict:
                     "status": "empty",
                     "error": message,
                 }
-        quality_scores = {a["url"]: article_quality_score(a, [topic]) for a in articles if a.get("url")}
-        promoted = [article for article in articles if should_promote_article(article, [topic])]
-        rejected = [article for article in articles if not should_promote_article(article, [topic])]
+        quality_scores = {
+            a["url"]: article_quality_score(a, [topic])
+            for a in articles
+            if a.get("url")
+        }
+        promoted = [
+            article for article in articles if should_promote_article(article, [topic])
+        ]
+        rejected = [
+            article
+            for article in articles
+            if not should_promote_article(article, [topic])
+        ]
         if rejected:
-            upsert_article_summaries(rejected, topic=topic, quality_scores=quality_scores)
+            upsert_article_summaries(
+                rejected, topic=topic, quality_scores=quality_scores
+            )
         if not promoted:
             message = f"Fetched {len(articles)} articles for '{topic}', but none passed analytic promotion."
             record_ingestion_run(topic, provider, 0, started_at, "empty", error=message)
-            save_ingestion_state(state_key, topic, provider, None, None, "empty", error=message, payload={"fetched": len(articles), "promoted": 0, "rejected": len(articles), "archived_documents": archive_summary["documents_written"]})
+            save_ingestion_state(
+                state_key,
+                topic,
+                provider,
+                None,
+                None,
+                "empty",
+                error=message,
+                payload={
+                    "fetched": len(articles),
+                    "promoted": 0,
+                    "rejected": len(articles),
+                    "archived_documents": archive_summary["documents_written"],
+                },
+            )
             return {
                 "topic": topic,
                 "provider": provider,
@@ -255,13 +328,33 @@ def ingest_topic(topic: str, page_size: int = 60) -> dict:
                 "status": "empty",
                 "error": message,
             }
-        write_provider = "newsapi" if provider == "newsapi-fallback" else ("directfeeds" if provider == "directfeeds-fallback" else provider)
+        write_provider = (
+            "newsapi"
+            if provider == "newsapi-fallback"
+            else ("directfeeds" if provider == "directfeeds-fallback" else provider)
+        )
         inserted = upsert_articles(promoted, topic=topic, provider=write_provider)
         existing_or_unchanged = max(len(promoted) - inserted, 0)
         _store_articles_safe(promoted, topic)
         entity_stats = _store_entity_mentions_with_translation(promoted, topic)
         record_ingestion_run(topic, provider, len(promoted), started_at, "ok")
-        save_ingestion_state(state_key, topic, provider, None, None, "ok", payload={"fetched": len(articles), "promoted": len(promoted), "rejected": max(len(articles) - len(promoted), 0), "archived_documents": archive_summary["documents_written"], "inserted_or_updated": inserted, "existing_or_unchanged": existing_or_unchanged, "entity_extraction": entity_stats})
+        save_ingestion_state(
+            state_key,
+            topic,
+            provider,
+            None,
+            None,
+            "ok",
+            payload={
+                "fetched": len(articles),
+                "promoted": len(promoted),
+                "rejected": max(len(articles) - len(promoted), 0),
+                "archived_documents": archive_summary["documents_written"],
+                "inserted_or_updated": inserted,
+                "existing_or_unchanged": existing_or_unchanged,
+                "entity_extraction": entity_stats,
+            },
+        )
         _clear_headlines_resilient()
         return {
             "topic": topic,
@@ -275,7 +368,9 @@ def ingest_topic(topic: str, page_size: int = 60) -> dict:
         }
     except Exception as exc:
         record_ingestion_run(topic, "unknown", 0, started_at, "error", error=str(exc))
-        save_ingestion_state(state_key, topic, "unknown", None, None, "error", error=str(exc), payload={})
+        save_ingestion_state(
+            state_key, topic, "unknown", None, None, "error", error=str(exc), payload={}
+        )
         print(f"[ingest] Topic '{topic}' failed: {exc}")
         return {
             "topic": topic,
@@ -295,17 +390,43 @@ def ingest_global(page_size: int = 100) -> dict:
     try:
         articles = fetch_global_articles(page_size=page_size)
         provider = articles[0].get("provider", "unknown") if articles else "unknown"
-        archive_summary = archive_provider_articles(articles, provider=provider, topic_hint="global")
+        archive_summary = archive_provider_articles(
+            articles, provider=provider, topic_hint="global"
+        )
         if not articles and source_status()["directfeeds"]["enabled"]:
-            articles = fetch_global_articles_from_provider("directfeeds", page_size=max(30, page_size // 2))
+            articles = fetch_global_articles_from_provider(
+                "directfeeds", page_size=max(30, page_size // 2)
+            )
             provider = "directfeeds-fallback" if articles else provider
-            archive_summary = archive_provider_articles(articles, provider=provider, topic_hint="global-fallback") if articles else archive_summary
+            archive_summary = (
+                archive_provider_articles(
+                    articles, provider=provider, topic_hint="global-fallback"
+                )
+                if articles
+                else archive_summary
+            )
 
         if not articles:
-            message = "Global ingest returned no fresh articles from configured providers."
+            message = (
+                "Global ingest returned no fresh articles from configured providers."
+            )
             for topic in TOPICS:
-                record_ingestion_run(topic, "unknown", 0, started_at, "empty", error=message)
-            save_ingestion_state(state_key, "global", "unknown", None, None, "empty", error=message, payload={"fetched": 0, "archived_documents": archive_summary["documents_written"]})
+                record_ingestion_run(
+                    topic, "unknown", 0, started_at, "empty", error=message
+                )
+            save_ingestion_state(
+                state_key,
+                "global",
+                "unknown",
+                None,
+                None,
+                "empty",
+                error=message,
+                payload={
+                    "fetched": 0,
+                    "archived_documents": archive_summary["documents_written"],
+                },
+            )
             print(f"[ingest] {message}")
             return {
                 "provider": "unknown",
@@ -334,46 +455,94 @@ def ingest_global(page_size: int = 100) -> dict:
             topic_buckets[article_topics[0]].append(article)
 
         if tier2_articles:
-            global_quality_scores = {a["url"]: article_quality_score(a) for a in articles if a.get("url")}
+            global_quality_scores = {
+                a["url"]: article_quality_score(a) for a in articles if a.get("url")
+            }
             for entry in tier2_articles:
                 if isinstance(entry, tuple):
                     art, t2_topic = entry
-                    upsert_article_summaries([art], topic=t2_topic, quality_scores=global_quality_scores)
+                    upsert_article_summaries(
+                        [art], topic=t2_topic, quality_scores=global_quality_scores
+                    )
                 else:
-                    upsert_article_summaries([entry], topic=None, quality_scores=global_quality_scores)
+                    upsert_article_summaries(
+                        [entry], topic=None, quality_scores=global_quality_scores
+                    )
 
         total_written = 0
         entity_stats_by_topic = {}
-        write_provider = "newsapi" if provider == "newsapi-fallback" else ("directfeeds" if provider == "directfeeds-fallback" else provider)
+        write_provider = (
+            "newsapi"
+            if provider == "newsapi-fallback"
+            else ("directfeeds" if provider == "directfeeds-fallback" else provider)
+        )
         for topic, topic_articles in topic_buckets.items():
             if not topic_articles:
-                record_ingestion_run(topic, provider, 0, started_at, "empty", error=f"No classified articles for topic '{topic}' in this ingest batch.")
+                record_ingestion_run(
+                    topic,
+                    provider,
+                    0,
+                    started_at,
+                    "empty",
+                    error=f"No classified articles for topic '{topic}' in this ingest batch.",
+                )
                 continue
-            total_written += upsert_articles(topic_articles, topic=topic, provider=write_provider)
+            total_written += upsert_articles(
+                topic_articles, topic=topic, provider=write_provider
+            )
             _store_articles_safe(topic_articles, topic)
-            entity_stats_by_topic[topic] = _store_entity_mentions_with_translation(topic_articles, topic)
+            entity_stats_by_topic[topic] = _store_entity_mentions_with_translation(
+                topic_articles, topic
+            )
             record_ingestion_run(topic, provider, len(topic_articles), started_at, "ok")
         classified_total = sum(len(items) for items in topic_buckets.values())
         existing_or_unchanged = max(classified_total - total_written, 0)
 
-        if total_written == 0 and provider != "directfeeds-fallback" and source_status()["directfeeds"]["enabled"]:
+        if (
+            total_written == 0
+            and provider != "directfeeds-fallback"
+            and source_status()["directfeeds"]["enabled"]
+        ):
             fallback_result = ingest_article_fallback(page_size=max(30, page_size // 2))
             if fallback_result.get("inserted_or_updated", 0) > 0:
                 return {
                     "provider": fallback_result.get("provider", "directfeeds-fallback"),
                     "fetched": len(articles),
-                    "classified": {topic: len(items) for topic, items in topic_buckets.items()},
+                    "classified": {
+                        topic: len(items) for topic, items in topic_buckets.items()
+                    },
                     "rejected": rejected,
                     "archived_documents": archive_summary["documents_written"],
                     "inserted_or_updated": fallback_result["inserted_or_updated"],
-                    "existing_or_unchanged": fallback_result.get("existing_or_unchanged", 0),
+                    "existing_or_unchanged": fallback_result.get(
+                        "existing_or_unchanged", 0
+                    ),
                     "unclassified": unclassified,
                     "status": "ok",
                     "fallback": fallback_result,
                 }
 
         _clear_headlines_resilient()
-        save_ingestion_state(state_key, "global", provider, None, None, "ok" if total_written else "empty", payload={"fetched": len(articles), "classified": {topic: len(items) for topic, items in topic_buckets.items()}, "rejected": rejected, "unclassified": unclassified, "archived_documents": archive_summary["documents_written"], "inserted_or_updated": total_written, "existing_or_unchanged": existing_or_unchanged, "entity_extraction": entity_stats_by_topic})
+        save_ingestion_state(
+            state_key,
+            "global",
+            provider,
+            None,
+            None,
+            "ok" if total_written else "empty",
+            payload={
+                "fetched": len(articles),
+                "classified": {
+                    topic: len(items) for topic, items in topic_buckets.items()
+                },
+                "rejected": rejected,
+                "unclassified": unclassified,
+                "archived_documents": archive_summary["documents_written"],
+                "inserted_or_updated": total_written,
+                "existing_or_unchanged": existing_or_unchanged,
+                "entity_extraction": entity_stats_by_topic,
+            },
+        )
         return {
             "provider": provider,
             "fetched": len(articles),
@@ -387,8 +556,19 @@ def ingest_global(page_size: int = 100) -> dict:
         }
     except Exception as exc:
         for topic in TOPICS:
-            record_ingestion_run(topic, "unknown", 0, started_at, "error", error=str(exc))
-        save_ingestion_state(state_key, "global", "unknown", None, None, "error", error=str(exc), payload={})
+            record_ingestion_run(
+                topic, "unknown", 0, started_at, "error", error=str(exc)
+            )
+        save_ingestion_state(
+            state_key,
+            "global",
+            "unknown",
+            None,
+            None,
+            "error",
+            error=str(exc),
+            payload={},
+        )
         print(f"[ingest] Global ingest failed: {exc}")
         return {
             "provider": "unknown",
@@ -404,7 +584,9 @@ def ingest_global(page_size: int = 100) -> dict:
 def ingest_all_topics() -> list[dict]:
     global_result = ingest_global(page_size=100)
     results = [global_result]
-    sparse_topics = [topic for topic, count in topic_counts().items() if count < MIN_TOPIC_ARTICLES]
+    sparse_topics = [
+        topic for topic, count in topic_counts().items() if count < MIN_TOPIC_ARTICLES
+    ]
     for topic in sparse_topics:
         results.append(ingest_topic(topic))
     return results
@@ -420,7 +602,9 @@ def run_scheduled_ingest_cycle():
 
 
 def run_scheduled_gdelt_backfill():
-    return run_exclusive_or_skip(BACKFILL_JOB_LOCK, "gdelt backfill", run_incremental_gdelt_backfill)
+    return run_exclusive_or_skip(
+        BACKFILL_JOB_LOCK, "gdelt backfill", run_incremental_gdelt_backfill
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -440,9 +624,13 @@ def _cursor_start_for_topic(topic: str) -> datetime:
     state = load_ingestion_state(_backfill_state_key(topic))
     if state:
         if state.get("status") == "error" and state.get("cursor_start"):
-            return parse_timestamp(state["cursor_start"]) or datetime.now(timezone.utc) - timedelta(days=1)
+            return parse_timestamp(state["cursor_start"]) or datetime.now(
+                timezone.utc
+            ) - timedelta(days=1)
         if state.get("cursor_end"):
-            return parse_timestamp(state["cursor_end"]) or datetime.now(timezone.utc) - timedelta(days=1)
+            return parse_timestamp(state["cursor_end"]) or datetime.now(
+                timezone.utc
+            ) - timedelta(days=1)
 
     if GDELT_BACKFILL_START:
         configured = parse_timestamp(GDELT_BACKFILL_START)
@@ -506,7 +694,9 @@ def _next_scheduled_topics(topics: list[str] | None) -> list[str]:
 
 
 def run_incremental_gdelt_backfill(topics: list[str] | None = None) -> list[dict]:
-    target_end = datetime.now(timezone.utc) - timedelta(minutes=GDELT_BACKFILL_LAG_MINUTES)
+    target_end = datetime.now(timezone.utc) - timedelta(
+        minutes=GDELT_BACKFILL_LAG_MINUTES
+    )
     selected_topics = _next_scheduled_topics(topics)
     results = []
 
@@ -565,7 +755,9 @@ def run_incremental_gdelt_backfill(topics: list[str] | None = None) -> list[dict
                 if GDELT_BACKFILL_CHROMA:
                     _store_articles_safe(articles, topic)
                 entity_stats = _store_entity_mentions_with_translation(articles, topic)
-                record_ingestion_run(topic, "gdelt-backfill", len(articles), started_at, "ok")
+                record_ingestion_run(
+                    topic, "gdelt-backfill", len(articles), started_at, "ok"
+                )
                 save_ingestion_state(
                     state_key,
                     topic=topic,
@@ -579,11 +771,19 @@ def run_incremental_gdelt_backfill(topics: list[str] | None = None) -> list[dict
                         "retry_after": None,
                         "window_hours": min(
                             GDELT_BACKFILL_WINDOW_HOURS,
-                            window_hours * 2 if len(articles) < max(4, page_size // 2) else window_hours,
+                            (
+                                window_hours * 2
+                                if len(articles) < max(4, page_size // 2)
+                                else window_hours
+                            ),
                         ),
                         "page_size": min(
                             GDELT_BACKFILL_PAGE_SIZE,
-                            page_size + 1 if len(articles) >= max(4, page_size // 2) else page_size,
+                            (
+                                page_size + 1
+                                if len(articles) >= max(4, page_size // 2)
+                                else page_size
+                            ),
                         ),
                         "failure_count": 0,
                         "entity_extraction": entity_stats,
@@ -603,7 +803,9 @@ def run_incremental_gdelt_backfill(topics: list[str] | None = None) -> list[dict
                 )
             else:
                 message = "No GDELT articles returned for this backfill window."
-                record_ingestion_run(topic, "gdelt-backfill", 0, started_at, "empty", error=message)
+                record_ingestion_run(
+                    topic, "gdelt-backfill", 0, started_at, "empty", error=message
+                )
                 save_ingestion_state(
                     state_key,
                     topic=topic,
@@ -614,8 +816,12 @@ def run_incremental_gdelt_backfill(topics: list[str] | None = None) -> list[dict
                     error=message,
                     payload={
                         "retry_after": None,
-                        "window_hours": min(GDELT_BACKFILL_WINDOW_HOURS, window_hours * 2),
-                        "page_size": max(4, page_size - 1) if page_size > 4 else page_size,
+                        "window_hours": min(
+                            GDELT_BACKFILL_WINDOW_HOURS, window_hours * 2
+                        ),
+                        "page_size": (
+                            max(4, page_size - 1) if page_size > 4 else page_size
+                        ),
                         "failure_count": 0,
                     },
                 )
@@ -634,17 +840,35 @@ def run_incremental_gdelt_backfill(topics: list[str] | None = None) -> list[dict
         except Exception as exc:
             error_text = str(exc)
             is_rate_limit = "429" in error_text or "Too Many Requests" in error_text
-            is_timeout = "Read timed out" in error_text or "timed out" in error_text.lower()
-            retry_delay = GDELT_BACKFILL_RATE_LIMIT_RETRY_MINUTES if is_rate_limit else GDELT_BACKFILL_RETRY_MINUTES
+            is_timeout = (
+                "Read timed out" in error_text or "timed out" in error_text.lower()
+            )
+            retry_delay = (
+                GDELT_BACKFILL_RATE_LIMIT_RETRY_MINUTES
+                if is_rate_limit
+                else GDELT_BACKFILL_RETRY_MINUTES
+            )
             next_failure_count = failure_count + 1
             retry_delay += min(360, next_failure_count * (45 if is_rate_limit else 20))
-            retry_after = (datetime.now(timezone.utc) + timedelta(minutes=retry_delay)).isoformat()
+            retry_after = (
+                datetime.now(timezone.utc) + timedelta(minutes=retry_delay)
+            ).isoformat()
             next_window_hours = max(
                 GDELT_BACKFILL_MIN_WINDOW_HOURS,
-                max(1, window_hours // 2) if (is_rate_limit or is_timeout) else window_hours,
+                (
+                    max(1, window_hours // 2)
+                    if (is_rate_limit or is_timeout)
+                    else window_hours
+                ),
             )
-            next_page_size = max(4, page_size - (4 if is_rate_limit else 2)) if (is_rate_limit or is_timeout) else page_size
-            record_ingestion_run(topic, "gdelt-backfill", 0, started_at, "error", error=str(exc))
+            next_page_size = (
+                max(4, page_size - (4 if is_rate_limit else 2))
+                if (is_rate_limit or is_timeout)
+                else page_size
+            )
+            record_ingestion_run(
+                topic, "gdelt-backfill", 0, started_at, "error", error=str(exc)
+            )
             save_ingestion_state(
                 state_key,
                 topic=topic,
@@ -699,7 +923,11 @@ def run_historical_queue_fetch(
             max_attempts=max(1, max_attempts),
             dry_run=False,
         )
-        status = "ok" if result.get("inserted_or_updated", 0) > 0 else ("empty" if result.get("processed", 0) == 0 else "ok")
+        status = (
+            "ok"
+            if result.get("inserted_or_updated", 0) > 0
+            else ("empty" if result.get("processed", 0) == 0 else "ok")
+        )
         save_ingestion_state(
             state_key,
             "historical",
@@ -728,13 +956,17 @@ def run_historical_queue_fetch(
             error=str(exc),
             payload={},
         )
-        record_ingestion_run("historical", "historical-fetch", 0, started_at, "error", error=str(exc))
+        record_ingestion_run(
+            "historical", "historical-fetch", 0, started_at, "error", error=str(exc)
+        )
         print(f"[historical-fetch] Historical queue fetch failed: {exc}")
         return {"status": "error", "error": str(exc)}
 
 
 def run_scheduled_historical_queue_fetch():
-    return run_exclusive_or_skip(HISTORICAL_FETCH_JOB_LOCK, "historical queue fetch", run_historical_queue_fetch)
+    return run_exclusive_or_skip(
+        HISTORICAL_FETCH_JOB_LOCK, "historical queue fetch", run_historical_queue_fetch
+    )
 
 
 def run_scheduled_story_materialization():
@@ -745,7 +977,9 @@ def run_scheduled_story_materialization():
             articles_limit=120,
         )
 
-    return run_exclusive_or_skip(STORY_MATERIALIZATION_JOB_LOCK, "story materialization", _job)
+    return run_exclusive_or_skip(
+        STORY_MATERIALIZATION_JOB_LOCK, "story materialization", _job
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -776,7 +1010,9 @@ def _article_corpus_stale(max_age_hours: int = 8) -> bool:
         return True
     sparse_topics = 0
     for topic in TOPICS:
-        latest_topic = parse_timestamp(get_topic_time_bounds(topic).get("latest_published_at"))
+        latest_topic = parse_timestamp(
+            get_topic_time_bounds(topic).get("latest_published_at")
+        )
         if latest_topic is None or latest_topic < cutoff:
             sparse_topics += 1
     return sparse_topics >= 1
@@ -785,26 +1021,74 @@ def _article_corpus_stale(max_age_hours: int = 8) -> bool:
 def ingest_article_fallback(page_size: int = 40) -> dict:
     started_at = time.time()
     state_key = "analytic-ingest-fallback"
-    fallback_provider = "directfeeds" if source_status()["directfeeds"]["enabled"] else None
-    fallback_state_provider = f"{fallback_provider}-fallback" if fallback_provider else "directfeeds-fallback"
+    fallback_provider = (
+        "directfeeds" if source_status()["directfeeds"]["enabled"] else None
+    )
+    fallback_state_provider = (
+        f"{fallback_provider}-fallback" if fallback_provider else "directfeeds-fallback"
+    )
     if fallback_provider is None:
-        save_ingestion_state(state_key, "global-fallback", fallback_state_provider, None, None, "disabled", error="No direct-feed fallback is configured.", payload={})
-        return {"status": "disabled", "reason": "No direct-feed fallback is configured."}
+        save_ingestion_state(
+            state_key,
+            "global-fallback",
+            fallback_state_provider,
+            None,
+            None,
+            "disabled",
+            error="No direct-feed fallback is configured.",
+            payload={},
+        )
+        return {
+            "status": "disabled",
+            "reason": "No direct-feed fallback is configured.",
+        }
     gdelt_unhealthy = _gdelt_unhealthy()
     corpus_stale = _article_corpus_stale()
     if not gdelt_unhealthy and not corpus_stale:
         reason = "GDELT is not marked unhealthy and the article corpus is still fresh."
-        save_ingestion_state(state_key, "global-fallback", fallback_state_provider, None, None, "skipped", error=reason, payload={"gdelt_unhealthy": gdelt_unhealthy, "corpus_stale": corpus_stale})
+        save_ingestion_state(
+            state_key,
+            "global-fallback",
+            fallback_state_provider,
+            None,
+            None,
+            "skipped",
+            error=reason,
+            payload={"gdelt_unhealthy": gdelt_unhealthy, "corpus_stale": corpus_stale},
+        )
         return {"status": "skipped", "reason": reason}
 
     try:
-        articles = fetch_global_articles_from_provider(fallback_provider, page_size=page_size)
-        archive_summary = archive_provider_articles(articles, provider=fallback_state_provider, topic_hint="global-fallback")
+        articles = fetch_global_articles_from_provider(
+            fallback_provider, page_size=page_size
+        )
+        archive_summary = archive_provider_articles(
+            articles, provider=fallback_state_provider, topic_hint="global-fallback"
+        )
         if not articles:
             message = f"{fallback_provider} fallback did not return any fresh articles."
             for topic in TOPICS:
-                record_ingestion_run(topic, fallback_state_provider, 0, started_at, "empty", error=message)
-            save_ingestion_state(state_key, "global-fallback", fallback_state_provider, None, None, "empty", error=message, payload={"fetched": 0, "archived_documents": archive_summary["documents_written"]})
+                record_ingestion_run(
+                    topic,
+                    fallback_state_provider,
+                    0,
+                    started_at,
+                    "empty",
+                    error=message,
+                )
+            save_ingestion_state(
+                state_key,
+                "global-fallback",
+                fallback_state_provider,
+                None,
+                None,
+                "empty",
+                error=message,
+                payload={
+                    "fetched": 0,
+                    "archived_documents": archive_summary["documents_written"],
+                },
+            )
             return {"status": "empty", "fetched": 0, "error": message}
 
         topic_buckets = {topic: [] for topic in TOPICS}
@@ -822,19 +1106,50 @@ def ingest_article_fallback(page_size: int = 40) -> dict:
         entity_stats_by_topic = {}
         for topic, topic_articles in topic_buckets.items():
             if not topic_articles:
-                record_ingestion_run(topic, fallback_state_provider, 0, started_at, "empty", error=f"No classified fallback articles for '{topic}'.")
+                record_ingestion_run(
+                    topic,
+                    fallback_state_provider,
+                    0,
+                    started_at,
+                    "empty",
+                    error=f"No classified fallback articles for '{topic}'.",
+                )
                 continue
-            total_written += upsert_articles(topic_articles, topic=topic, provider=fallback_provider)
+            total_written += upsert_articles(
+                topic_articles, topic=topic, provider=fallback_provider
+            )
             _store_articles_safe(topic_articles, topic)
-            entity_stats_by_topic[topic] = _store_entity_mentions_with_translation(topic_articles, topic)
-            record_ingestion_run(topic, fallback_state_provider, len(topic_articles), started_at, "ok")
+            entity_stats_by_topic[topic] = _store_entity_mentions_with_translation(
+                topic_articles, topic
+            )
+            record_ingestion_run(
+                topic, fallback_state_provider, len(topic_articles), started_at, "ok"
+            )
         classified_total = sum(len(rows) for rows in topic_buckets.values())
         existing_or_unchanged = max(classified_total - total_written, 0)
 
         if total_written:
             _clear_headlines_resilient()
 
-        save_ingestion_state(state_key, "global-fallback", fallback_state_provider, None, None, "ok" if total_written else "empty", payload={"fetched": len(articles), "classified": {topic: len(rows) for topic, rows in topic_buckets.items()}, "rejected": rejected, "archived_documents": archive_summary["documents_written"], "inserted_or_updated": total_written, "existing_or_unchanged": existing_or_unchanged, "entity_extraction": entity_stats_by_topic})
+        save_ingestion_state(
+            state_key,
+            "global-fallback",
+            fallback_state_provider,
+            None,
+            None,
+            "ok" if total_written else "empty",
+            payload={
+                "fetched": len(articles),
+                "classified": {
+                    topic: len(rows) for topic, rows in topic_buckets.items()
+                },
+                "rejected": rejected,
+                "archived_documents": archive_summary["documents_written"],
+                "inserted_or_updated": total_written,
+                "existing_or_unchanged": existing_or_unchanged,
+                "entity_extraction": entity_stats_by_topic,
+            },
+        )
         return {
             "provider": fallback_state_provider,
             "status": "ok" if total_written else "empty",
@@ -847,8 +1162,19 @@ def ingest_article_fallback(page_size: int = 40) -> dict:
         }
     except Exception as exc:
         for topic in TOPICS:
-            record_ingestion_run(topic, fallback_state_provider, 0, started_at, "error", error=str(exc))
-        save_ingestion_state(state_key, "global-fallback", fallback_state_provider, None, None, "error", error=str(exc), payload={})
+            record_ingestion_run(
+                topic, fallback_state_provider, 0, started_at, "error", error=str(exc)
+            )
+        save_ingestion_state(
+            state_key,
+            "global-fallback",
+            fallback_state_provider,
+            None,
+            None,
+            "error",
+            error=str(exc),
+            payload={},
+        )
         return {"status": "error", "error": str(exc)}
 
 
@@ -870,9 +1196,7 @@ def bootstrap_from_legacy_cache() -> dict:
             continue
         try:
             conn = sqlite3.connect(db_path)
-            rows = conn.execute(
-                "SELECT topic, sources FROM briefing_cache"
-            ).fetchall()
+            rows = conn.execute("SELECT topic, sources FROM briefing_cache").fetchall()
             conn.close()
         except Exception as exc:
             print(f"[bootstrap] Failed reading legacy cache {db_path}: {exc}")
@@ -916,8 +1240,12 @@ def seed_local_corpus() -> dict:
         totals["paths_scanned"].append(str(db_path))
         try:
             conn = sqlite3.connect(db_path)
-            briefing_rows = conn.execute("SELECT topic, sources FROM briefing_cache").fetchall()
-            headline_rows = conn.execute("SELECT stories FROM headlines_cache").fetchall()
+            briefing_rows = conn.execute(
+                "SELECT topic, sources FROM briefing_cache"
+            ).fetchall()
+            headline_rows = conn.execute(
+                "SELECT stories FROM headlines_cache"
+            ).fetchall()
             conn.close()
         except Exception as exc:
             print(f"[seed] Failed reading cache {db_path}: {exc}")
@@ -950,7 +1278,11 @@ def seed_local_corpus() -> dict:
                 story_topic = story.get("topic")
                 for article in story.get("sources", []):
                     url = article.get("url")
-                    inferred_topics = [story_topic] if story_topic in TOPICS else infer_article_topics(article)
+                    inferred_topics = (
+                        [story_topic]
+                        if story_topic in TOPICS
+                        else infer_article_topics(article)
+                    )
                     for topic in inferred_topics:
                         if topic not in TOPICS:
                             continue
@@ -978,6 +1310,7 @@ def seed_local_corpus() -> dict:
     # main.py).
     from services.headlines_service import rebuild_headlines_cache
     from services.briefing_service import build_topic_briefing
+
     rebuild_headlines_cache(use_llm=False)
     for topic in TOPICS:
         build_topic_briefing(topic, force_refresh=True)
@@ -985,7 +1318,9 @@ def seed_local_corpus() -> dict:
     return totals
 
 
-def _ensure_topic_corpus(topic: str, minimum_articles: int = MIN_TOPIC_ARTICLES) -> None:
+def _ensure_topic_corpus(
+    topic: str, minimum_articles: int = MIN_TOPIC_ARTICLES
+) -> None:
     if get_article_count(topic=topic, hours=72) >= minimum_articles:
         return
     ingest_topic(topic)
@@ -1031,7 +1366,13 @@ def refresh_direct_feed_layer():
         totals = result.get("totals", {})
         promoted = int(totals.get("promoted_articles", 0) or 0)
         state_status = result.get("status", "ok")
-        record_ingestion_run("directfeeds", "directfeeds", promoted, started_at, "ok" if state_status == "ok" else state_status)
+        record_ingestion_run(
+            "directfeeds",
+            "directfeeds",
+            promoted,
+            started_at,
+            "ok" if state_status == "ok" else state_status,
+        )
         save_ingestion_state(
             "direct-feed-layer-refresh",
             "directfeeds",
@@ -1043,7 +1384,9 @@ def refresh_direct_feed_layer():
         )
         return result
     except Exception as exc:
-        record_ingestion_run("directfeeds", "directfeeds", 0, started_at, "error", error=str(exc))
+        record_ingestion_run(
+            "directfeeds", "directfeeds", 0, started_at, "error", error=str(exc)
+        )
         save_ingestion_state(
             "direct-feed-layer-refresh",
             "directfeeds",
@@ -1060,7 +1403,9 @@ def refresh_direct_feed_layer():
 
 def sync_registry_mirror():
     try:
-        result = mirror_corpus_articles_into_registry(hours=SOURCE_REGISTRY_MIRROR_HOURS)
+        result = mirror_corpus_articles_into_registry(
+            hours=SOURCE_REGISTRY_MIRROR_HOURS
+        )
         save_ingestion_state(
             "source-registry-mirror",
             "source-registry-mirror",
@@ -1090,7 +1435,13 @@ def refresh_official_updates():
     started_at = time.time()
     try:
         result = ingest_official_updates()
-        record_ingestion_run("official-updates", "official", result["totals"]["official_updates"], started_at, "ok")
+        record_ingestion_run(
+            "official-updates",
+            "official",
+            result["totals"]["official_updates"],
+            started_at,
+            "ok",
+        )
         save_ingestion_state(
             "official-updates-refresh",
             "official-updates",
@@ -1102,7 +1453,9 @@ def refresh_official_updates():
         )
         return result
     except Exception as exc:
-        record_ingestion_run("official-updates", "official", 0, started_at, "error", error=str(exc))
+        record_ingestion_run(
+            "official-updates", "official", 0, started_at, "error", error=str(exc)
+        )
         save_ingestion_state(
             "official-updates-refresh",
             "official-updates",
@@ -1121,7 +1474,9 @@ def refresh_acled_events():
     started_at = time.time()
     try:
         result = ingest_acled_recent()
-        record_ingestion_run("acled", "acled", result["inserted_or_updated"], started_at, "ok")
+        record_ingestion_run(
+            "acled", "acled", result["inserted_or_updated"], started_at, "ok"
+        )
         save_ingestion_state(
             "structured-events-refresh",
             "acled",
@@ -1152,7 +1507,9 @@ def refresh_gdelt_gkg_events():
     started_at = time.time()
     try:
         result = ingest_gdelt_gkg_recent(hours=GDELT_GKG_REFRESH_HOURS)
-        record_ingestion_run("gdelt_gkg", "gdelt_gkg", result["inserted_or_updated"], started_at, "ok")
+        record_ingestion_run(
+            "gdelt_gkg", "gdelt_gkg", result["inserted_or_updated"], started_at, "ok"
+        )
         save_ingestion_state(
             "gdelt-gkg-events-refresh",
             "gdelt_gkg",
@@ -1162,12 +1519,18 @@ def refresh_gdelt_gkg_events():
             "ok",
             payload=result,
         )
-        from services.map_service import _MAP_ATTENTION_CACHE, _STORY_LOCATION_INDEX_CACHE
+        from services.map_service import (
+            _MAP_ATTENTION_CACHE,
+            _STORY_LOCATION_INDEX_CACHE,
+        )
+
         _MAP_ATTENTION_CACHE.clear()
         _STORY_LOCATION_INDEX_CACHE.clear()
         return result
     except Exception as exc:
-        record_ingestion_run("gdelt_gkg", "gdelt_gkg", 0, started_at, "error", error=str(exc))
+        record_ingestion_run(
+            "gdelt_gkg", "gdelt_gkg", 0, started_at, "error", error=str(exc)
+        )
         save_ingestion_state(
             "gdelt-gkg-events-refresh",
             "gdelt_gkg",
@@ -1222,18 +1585,39 @@ def refresh_recent_translations(limit: int = 18):
             print(f"[translation] Refresh failed for {article.get('url')}: {exc}")
 
     status = "ok" if failures == 0 else "partial"
-    provider_label = "+".join(sorted(provider_counts)) if provider_counts else "selective-translation"
-    record_ingestion_run("translations", provider_label, translated, started_at, status, error=None if failures == 0 else f"{failures} translations failed")
-    return {"status": status, "translated": translated, "failed": failures, "providers": provider_counts}
+    provider_label = (
+        "+".join(sorted(provider_counts))
+        if provider_counts
+        else "selective-translation"
+    )
+    record_ingestion_run(
+        "translations",
+        provider_label,
+        translated,
+        started_at,
+        status,
+        error=None if failures == 0 else f"{failures} translations failed",
+    )
+    return {
+        "status": status,
+        "translated": translated,
+        "failed": failures,
+        "providers": provider_counts,
+    }
 
 
 def refresh_source_reliability():
     started_at = time.time()
     try:
         global_snapshot = build_claim_resolution_snapshot(topic=None, days=180)
-        topic_snapshots = {topic: build_claim_resolution_snapshot(topic=topic, days=180) for topic in TOPICS}
+        topic_snapshots = {
+            topic: build_claim_resolution_snapshot(topic=topic, days=180)
+            for topic in TOPICS
+        }
         total_claims = int(global_snapshot.get("claim_records", 0) or 0)
-        record_ingestion_run("source-reliability", "claim-resolution", total_claims, started_at, "ok")
+        record_ingestion_run(
+            "source-reliability", "claim-resolution", total_claims, started_at, "ok"
+        )
         result = {
             "status": "ok",
             "global_claim_records": total_claims,
@@ -1257,7 +1641,14 @@ def refresh_source_reliability():
         )
         return result
     except Exception as exc:
-        record_ingestion_run("source-reliability", "claim-resolution", 0, started_at, "error", error=str(exc))
+        record_ingestion_run(
+            "source-reliability",
+            "claim-resolution",
+            0,
+            started_at,
+            "error",
+            error=str(exc),
+        )
         save_ingestion_state(
             "source-reliability-refresh",
             "source-reliability",
@@ -1279,7 +1670,8 @@ def refresh_foresight_layer():
         record_ingestion_run(
             "foresight",
             "foresight",
-            len(prediction_snapshot.get("predictions", [])) + archive_snapshot.get("count", 0),
+            len(prediction_snapshot.get("predictions", []))
+            + archive_snapshot.get("count", 0),
             started_at,
             "ok",
         )
@@ -1299,7 +1691,9 @@ def refresh_foresight_layer():
         )
         return result
     except Exception as exc:
-        record_ingestion_run("foresight", "foresight", 0, started_at, "error", error=str(exc))
+        record_ingestion_run(
+            "foresight", "foresight", 0, started_at, "error", error=str(exc)
+        )
         save_ingestion_state(
             "foresight-layer-refresh",
             "foresight",
@@ -1319,7 +1713,9 @@ def refresh_narrative_drift_layer():
     seen_targets: set[tuple[str, str]] = set()
 
     for topic in TOPICS:
-        for entity in get_top_entities(topic=topic, days=21, limit=max(1, NARRATIVE_DRIFT_TOP_SUBJECTS)):
+        for entity in get_top_entities(
+            topic=topic, days=21, limit=max(1, NARRATIVE_DRIFT_TOP_SUBJECTS)
+        ):
             subject = (entity.get("entity") or "").strip()
             if len(subject) < 3:
                 continue
@@ -1331,7 +1727,14 @@ def refresh_narrative_drift_layer():
 
     if not targets:
         result = {"status": "empty", "subjects": 0, "snapshots": []}
-        record_ingestion_run("narrative-drift", "framing", 0, started_at, "empty", error="No top entities available for drift analysis.")
+        record_ingestion_run(
+            "narrative-drift",
+            "framing",
+            0,
+            started_at,
+            "empty",
+            error="No top entities available for drift analysis.",
+        )
         save_ingestion_state(
             "narrative-drift-refresh",
             "narrative-drift",
@@ -1347,7 +1750,9 @@ def refresh_narrative_drift_layer():
     try:
         snapshots = []
         for topic, subject in targets:
-            payload = analyze_narrative_drift(subject, topic=topic, days=180, refresh=True)
+            payload = analyze_narrative_drift(
+                subject, topic=topic, days=180, refresh=True
+            )
             snapshots.append(
                 {
                     "topic": topic,
@@ -1365,7 +1770,9 @@ def refresh_narrative_drift_layer():
             "populated_subjects": populated,
             "snapshots": snapshots,
         }
-        record_ingestion_run("narrative-drift", "framing", populated, started_at, status)
+        record_ingestion_run(
+            "narrative-drift", "framing", populated, started_at, status
+        )
         save_ingestion_state(
             "narrative-drift-refresh",
             "narrative-drift",
@@ -1377,7 +1784,9 @@ def refresh_narrative_drift_layer():
         )
         return result
     except Exception as exc:
-        record_ingestion_run("narrative-drift", "framing", 0, started_at, "error", error=str(exc))
+        record_ingestion_run(
+            "narrative-drift", "framing", 0, started_at, "error", error=str(exc)
+        )
         save_ingestion_state(
             "narrative-drift-refresh",
             "narrative-drift",
@@ -1400,9 +1809,12 @@ def trigger_ingest_payload(topic: str | None = None):
     def run():
         if topic:
             if topic not in TOPICS:
-                raise HTTPException(status_code=400, detail=f"Topic must be one of {TOPICS}")
+                raise HTTPException(
+                    status_code=400, detail=f"Topic must be one of {TOPICS}"
+                )
             return {"results": [ingest_topic(topic)]}
         return {"results": ingest_all_topics()}
+
     return run_exclusive(INGEST_JOB_LOCK, "Ingest", run)
 
 
@@ -1410,9 +1822,12 @@ def trigger_backfill_payload(topic: str | None = None):
     def run():
         if topic:
             if topic not in TOPICS:
-                raise HTTPException(status_code=400, detail=f"Topic must be one of {TOPICS}")
+                raise HTTPException(
+                    status_code=400, detail=f"Topic must be one of {TOPICS}"
+                )
             return {"results": run_incremental_gdelt_backfill([topic])}
         return {"results": run_incremental_gdelt_backfill()}
+
     return run_exclusive(BACKFILL_JOB_LOCK, "GDELT backfill", run)
 
 

@@ -6,7 +6,12 @@ from datetime import datetime, timedelta, timezone
 
 from analyst import translate_article
 from chroma import store_articles
-from corpus import init_db, record_ingestion_run, save_article_translation, upsert_articles
+from corpus import (
+    init_db,
+    record_ingestion_run,
+    save_article_translation,
+    upsert_articles,
+)
 from entities import init_db as init_entities_db, store_entity_mentions
 from news import fetch_gdelt_historic_articles, is_english_article, probe_gdelt_window
 
@@ -31,7 +36,9 @@ def _ensure_translations(articles: list[dict]) -> list[dict]:
                 target_language=translation.get("target_language", "en"),
             )
             article["translated_title"] = translation["translated_title"]
-            article["translated_description"] = translation.get("translated_description")
+            article["translated_description"] = translation.get(
+                "translated_description"
+            )
         except Exception:
             continue
     return articles
@@ -121,13 +128,41 @@ def build_parser() -> argparse.ArgumentParser:
         description="Backfill the Othello V2 Postgres corpus from GDELT by topic and date window."
     )
     parser.add_argument("--topic", choices=[*TOPICS, "all"], default="all")
-    parser.add_argument("--start-date", required=True, help="UTC start date or datetime (YYYY-MM-DD or ISO8601).")
-    parser.add_argument("--end-date", required=True, help="UTC end date or datetime (YYYY-MM-DD or ISO8601).")
-    parser.add_argument("--page-size", type=int, default=250, help="Max GDELT records per request before window splitting.")
-    parser.add_argument("--min-window-hours", type=int, default=6, help="Smallest window size used when splitting dense GDELT ranges.")
-    parser.add_argument("--skip-entities", action="store_true", help="Skip entity extraction during backfill.")
-    parser.add_argument("--skip-chroma", action="store_true", help="Skip Chroma writes during backfill.")
-    parser.add_argument("--probe-only", action="store_true", help="Check whether GDELT can serve the window without writing to Postgres.")
+    parser.add_argument(
+        "--start-date",
+        required=True,
+        help="UTC start date or datetime (YYYY-MM-DD or ISO8601).",
+    )
+    parser.add_argument(
+        "--end-date",
+        required=True,
+        help="UTC end date or datetime (YYYY-MM-DD or ISO8601).",
+    )
+    parser.add_argument(
+        "--page-size",
+        type=int,
+        default=250,
+        help="Max GDELT records per request before window splitting.",
+    )
+    parser.add_argument(
+        "--min-window-hours",
+        type=int,
+        default=6,
+        help="Smallest window size used when splitting dense GDELT ranges.",
+    )
+    parser.add_argument(
+        "--skip-entities",
+        action="store_true",
+        help="Skip entity extraction during backfill.",
+    )
+    parser.add_argument(
+        "--skip-chroma", action="store_true", help="Skip Chroma writes during backfill."
+    )
+    parser.add_argument(
+        "--probe-only",
+        action="store_true",
+        help="Check whether GDELT can serve the window without writing to Postgres.",
+    )
     return parser
 
 
@@ -154,16 +189,18 @@ def main():
             )
             for topic in topics
         ]
-        print(json.dumps(
-            {
-                "topics": list(topics),
-                "start": start.isoformat(),
-                "end": end.isoformat(),
-                "probe_only": True,
-                "results": results,
-            },
-            indent=2,
-        ))
+        print(
+            json.dumps(
+                {
+                    "topics": list(topics),
+                    "start": start.isoformat(),
+                    "end": end.isoformat(),
+                    "probe_only": True,
+                    "results": results,
+                },
+                indent=2,
+            )
+        )
         return
 
     results = []

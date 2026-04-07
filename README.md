@@ -8,8 +8,8 @@ The system is split into four layers:
 
 1. `news.py`
    GDELT-first source adapter with NewsAPI fallback.
-2. `corpus.py`
-   Durable article store and ingestion history.
+2. `backend/db` package (formerly `corpus.py`)
+   Durable article store and ingestion history. A small compatibility shim remains at `backend/corpus.py` that re-exports the new `db.*` modules; callers should migrate to importing from `db.*` directly.
 3. `app_factory.py` + `bootstrap.py` + `core/` + `services/`
    API wiring, runtime initialization, scheduling, and derived intelligence services.
 4. `frontend/`

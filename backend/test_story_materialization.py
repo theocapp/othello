@@ -11,7 +11,7 @@ _BACKEND = Path(__file__).resolve().parent
 if str(_BACKEND) not in sys.path:
     sys.path.insert(0, str(_BACKEND))
 
-import story_materialization as story_materialization_module
+import story_materialization as story_materialization_module  # noqa: E402
 
 
 class TestStoryMaterialization(unittest.TestCase):

@@ -23,7 +23,6 @@ from core.config import (
     REQUEST_ENABLE_VECTOR_SEARCH,
     TOPICS,
 )
-from core.runtime import parse_timestamp
 
 
 class QueryRequest(BaseModel):
@@ -42,7 +41,9 @@ class QueryRequest(BaseModel):
 
 
 def _extract_search_focus(question: str) -> str:
-    quoted = [match.group(1).strip() for match in re.finditer(r'"([^"]{4,})"', question or "")]
+    quoted = [
+        match.group(1).strip() for match in re.finditer(r'"([^"]{4,})"', question or "")
+    ]
     if quoted:
         return quoted[0]
     cleaned = re.sub(r"[^A-Za-z0-9\s-]", " ", question or "")
@@ -89,22 +90,30 @@ def _resolve_story_source_urls(story_event_id: str | None) -> list[str]:
     if not event_id:
         return []
     from services.headlines_service import rebuild_headlines_cache
+
     cached = load_headlines(ttl=HEADLINES_TTL) or rebuild_headlines_cache(use_llm=False)
     for story in cached:
         if str(story.get("event_id") or "").strip() != event_id:
             continue
         return _clean_source_urls(
-            [source.get("url") for source in (story.get("sources") or []) if isinstance(source, dict)],
+            [
+                source.get("url")
+                for source in (story.get("sources") or [])
+                if isinstance(source, dict)
+            ],
             limit=12,
         )
     return []
 
 
-def _resolve_hotspot_source_urls(hotspot_id: str | None, attention_window: str | None = None) -> list[str]:
+def _resolve_hotspot_source_urls(
+    hotspot_id: str | None, attention_window: str | None = None
+) -> list[str]:
     target_id = str(hotspot_id or "").strip()
     if not target_id:
         return []
     from services.map_service import _build_hotspot_attention_map
+
     payload = _build_hotspot_attention_map(window=attention_window or "24h")
     for hotspot in payload.get("hotspots", []):
         if str(hotspot.get("hotspot_id") or "").strip() != target_id:
@@ -138,12 +147,38 @@ def _infer_query_topic(query: str) -> str | None:
     best_score = 0
     for topic, keywords in {
         "geopolitics": {
-            "iran", "israel", "ukraine", "russia", "china", "taiwan", "war", "military",
-            "sanctions", "diplomacy", "missile", "nato", "conflict", "ceasefire", "strike",
+            "iran",
+            "israel",
+            "ukraine",
+            "russia",
+            "china",
+            "taiwan",
+            "war",
+            "military",
+            "sanctions",
+            "diplomacy",
+            "missile",
+            "nato",
+            "conflict",
+            "ceasefire",
+            "strike",
         },
         "economics": {
-            "inflation", "tariffs", "rates", "markets", "economy", "economic", "fed",
-            "reserve", "jobs", "gdp", "oil", "trade", "currency", "bonds", "yields",
+            "inflation",
+            "tariffs",
+            "rates",
+            "markets",
+            "economy",
+            "economic",
+            "fed",
+            "reserve",
+            "jobs",
+            "gdp",
+            "oil",
+            "trade",
+            "currency",
+            "bonds",
+            "yields",
         },
     }.items():
         score = sum(1 for keyword in keywords if keyword in lowered)
@@ -153,7 +188,9 @@ def _infer_query_topic(query: str) -> str | None:
     return best_topic if best_score else None
 
 
-def _append_unique_articles(target: list[dict], seen_urls: set[str], articles: list[dict], limit: int) -> None:
+def _append_unique_articles(
+    target: list[dict], seen_urls: set[str], articles: list[dict], limit: int
+) -> None:
     for article in articles:
         url = article.get("url")
         if not url or url in seen_urls:
@@ -182,7 +219,9 @@ def _gather_query_articles(
     if not grounding_urls and story_event_id:
         grounding_urls = _resolve_story_source_urls(story_event_id)
     if not grounding_urls and hotspot_id:
-        grounding_urls = _resolve_hotspot_source_urls(hotspot_id, attention_window=attention_window)
+        grounding_urls = _resolve_hotspot_source_urls(
+            hotspot_id, attention_window=attention_window
+        )
 
     search_seed = _compose_query_search_seed(question, region_context, source_urls)
     focus = _extract_search_focus(search_seed)
@@ -194,8 +233,12 @@ def _gather_query_articles(
     grounding_used = False
 
     if grounding_urls:
-        grounded_map = get_articles_by_urls(grounding_urls, limit=max(limit, len(grounding_urls)))
-        grounded_articles = [grounded_map[url] for url in grounding_urls if url in grounded_map]
+        grounded_map = get_articles_by_urls(
+            grounding_urls, limit=max(limit, len(grounding_urls))
+        )
+        grounded_articles = [
+            grounded_map[url] for url in grounding_urls if url in grounded_map
+        ]
         if grounded_articles:
             _append_unique_articles(combined, seen_urls, grounded_articles, limit)
             historical_sources = len(combined)
@@ -203,11 +246,15 @@ def _gather_query_articles(
 
     if REQUEST_ENABLE_VECTOR_SEARCH and len(combined) < limit:
         try:
-            vector_hits = search_articles(focus or search_seed, n_results=min(limit, 8), topic=resolved_topic)
+            vector_hits = search_articles(
+                focus or search_seed, n_results=min(limit, 8), topic=resolved_topic
+            )
             _append_unique_articles(combined, seen_urls, vector_hits, limit)
             historical_sources = len(combined)
         except Exception as exc:
-            print(f"[query] Chroma search failed, falling back to keyword search: {exc}")
+            print(
+                f"[query] Chroma search failed, falling back to keyword search: {exc}"
+            )
 
     keyword_queries = []
     if focus:
@@ -216,14 +263,21 @@ def _gather_query_articles(
         keyword_queries.append(search_seed)
 
     for candidate in keyword_queries:
-        keyword_hits = search_recent_articles_by_keywords(candidate, topic=resolved_topic, limit=max(limit * 2, 18), hours=keyword_hours)
+        keyword_hits = search_recent_articles_by_keywords(
+            candidate,
+            topic=resolved_topic,
+            limit=max(limit * 2, 18),
+            hours=keyword_hours,
+        )
         _append_unique_articles(combined, seen_urls, keyword_hits, limit)
         historical_sources = len(combined)
         if len(combined) >= limit:
             break
 
     if len(combined) < max(6, limit // 2) and resolved_topic:
-        recent_topic_articles = get_recent_articles(topic=resolved_topic, limit=limit, hours=keyword_hours)
+        recent_topic_articles = get_recent_articles(
+            topic=resolved_topic, limit=limit, hours=keyword_hours
+        )
         _append_unique_articles(combined, seen_urls, recent_topic_articles, limit)
         historical_sources = len(combined)
 
@@ -234,12 +288,16 @@ def _gather_query_articles(
 
     if REQUEST_ENABLE_LIVE_FETCH and len(combined) < max(6, limit // 2):
         try:
-            live_hits = fetch_articles_for_query(focus or search_seed, page_size=min(limit, 8))
+            live_hits = fetch_articles_for_query(
+                focus or search_seed, page_size=min(limit, 8)
+            )
             before = len(combined)
             _append_unique_articles(combined, seen_urls, live_hits, limit)
             live_sources = len(combined) - before
         except Exception as exc:
-            print(f"[query] Live fetch failed, continuing with stored corpus only: {exc}")
+            print(
+                f"[query] Live fetch failed, continuing with stored corpus only: {exc}"
+            )
 
     combined = ensure_article_translations(combined[:limit], max_articles=8)
     return combined, {
@@ -260,12 +318,17 @@ def _gather_query_articles(
 # ---------------------------------------------------------------------------
 
 
-def _query_fallback(question: str, articles: list[dict], topic: str | None = None) -> str:
+def _query_fallback(
+    question: str, articles: list[dict], topic: str | None = None
+) -> str:
     lead = articles[:3]
-    lead_lines = "\n".join(
-        f"- {article.get('source', 'Unknown source')} ({article.get('published_at', 'Unknown time')}): {article.get('title', 'Untitled')}"
-        for article in lead
-    ) or "- No strong lead reporting was available."
+    lead_lines = (
+        "\n".join(
+            f"- {article.get('source', 'Unknown source')} ({article.get('published_at', 'Unknown time')}): {article.get('title', 'Untitled')}"
+            for article in lead
+        )
+        or "- No strong lead reporting was available."
+    )
 
     themes = []
     seen_titles = set()
@@ -294,7 +357,9 @@ ANALYTIC TAKE:
 
 
 def _timeline_fallback(query: str, articles: list[dict]) -> dict:
-    sorted_articles = sorted(articles, key=lambda article: article.get("published_at", ""))
+    sorted_articles = sorted(
+        articles, key=lambda article: article.get("published_at", "")
+    )
     return {
         "title": f"Timeline: {query}",
         "summary": "Chronology generated directly from the stored article corpus.",
@@ -331,7 +396,9 @@ def query_payload(request: QueryRequest):
         attention_window=request.attention_window,
     )
     if not combined:
-        raise HTTPException(status_code=404, detail="No relevant reporting found in the corpus")
+        raise HTTPException(
+            status_code=404, detail="No relevant reporting found in the corpus"
+        )
     if REQUEST_ENABLE_LLM_RESPONSES and os.getenv("GROQ_API_KEY"):
         try:
             answer = answer_query(request.question, combined, topic=meta["topic"])

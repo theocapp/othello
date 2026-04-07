@@ -1,6 +1,9 @@
 import os
 import time
-from datetime import datetime, timedelta, timezone
+import logging
+import sys
+import json
+from datetime import datetime, timezone
 
 from cache import load_briefing
 from corpus import (
@@ -14,6 +17,84 @@ from news import source_status
 
 from core.config import BRIEFING_TTL, CORPUS_WINDOW_HOURS, TOPICS
 
+logger = logging.getLogger(__name__)
+
+
+class JsonLogFormatter(logging.Formatter):
+    def format(self, record: logging.LogRecord) -> str:
+        # Base payload
+        payload = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+        }
+
+        # Include extras (any non-standard LogRecord attributes)
+        standard = {
+            "name",
+            "msg",
+            "args",
+            "levelname",
+            "levelno",
+            "pathname",
+            "filename",
+            "module",
+            "exc_info",
+            "exc_text",
+            "stack_info",
+            "lineno",
+            "funcName",
+            "created",
+            "msecs",
+            "relativeCreated",
+            "thread",
+            "threadName",
+            "processName",
+            "process",
+            "message",
+        }
+        for k, v in record.__dict__.items():
+            if k in standard:
+                continue
+            try:
+                json.dumps(v)
+                payload[k] = v
+            except Exception:
+                payload[k] = str(v)
+
+        if record.exc_info:
+            payload["exc_info"] = self.formatException(record.exc_info)
+
+        return json.dumps(payload, ensure_ascii=False)
+
+
+def init_logging(level: str | int | None = None) -> None:
+    """Initialize structured JSON logging for the process.
+
+    Safe to call multiple times; avoids adding duplicate handlers.
+    """
+    lvl = level or os.getenv("LOG_LEVEL", "INFO")
+    if isinstance(lvl, str):
+        lvl = getattr(logging, lvl.upper(), logging.INFO)
+
+    root = logging.getLogger()
+    # Only add a StreamHandler if none exists to avoid duplicates
+    if not any(isinstance(h, logging.StreamHandler) for h in root.handlers):
+        handler = logging.StreamHandler(stream=sys.stdout)
+        handler.setFormatter(JsonLogFormatter())
+        root.addHandler(handler)
+
+    root.setLevel(lvl)
+
+    # Ensure common uvicorn loggers use the same handlers
+    for name in ("uvicorn", "uvicorn.error", "uvicorn.access"):
+        lg = logging.getLogger(name)
+        lg.handlers = root.handlers
+        lg.setLevel(lvl)
+
+    logger.debug("initialized structured logging", extra={"level": lvl})
+
 
 def runtime_status() -> dict:
     llm_ready = bool(os.getenv("GROQ_API_KEY"))
@@ -26,7 +107,9 @@ def runtime_status() -> dict:
         "sources": sources,
         "corpus": corpus,
         "entity_models": get_entity_model_capabilities(),
-        "ready": corpus["total_articles"] > 0 or sources["gdelt"]["enabled"] or sources["directfeeds"]["enabled"],
+        "ready": corpus["total_articles"] > 0
+        or sources["gdelt"]["enabled"]
+        or sources["directfeeds"]["enabled"],
     }
 
 
@@ -36,16 +119,22 @@ def topic_counts(hours: int = 72) -> dict[str, int]:
 
 def topic_summary(topic: str) -> dict:
     cached = load_briefing(topic, ttl=BRIEFING_TTL)
-    recent_articles = get_recent_articles(topic=topic, limit=1, hours=CORPUS_WINDOW_HOURS)
+    recent_articles = get_recent_articles(
+        topic=topic, limit=1, hours=CORPUS_WINDOW_HOURS
+    )
     latest_article = recent_articles[0] if recent_articles else None
     return {
         "topic": topic,
         "corpus_articles_72h": get_article_count(topic=topic, hours=72),
         "briefing_ready": cached is not None,
-        "briefing_age_minutes": int((time.time() - cached["generated_at"]) / 60) if cached else None,
+        "briefing_age_minutes": (
+            int((time.time() - cached["generated_at"]) / 60) if cached else None
+        ),
         "briefing_event_count": len(cached.get("events", [])) if cached else 0,
         "latest_article_title": latest_article.get("title") if latest_article else None,
-        "latest_published_at": latest_article.get("published_at") if latest_article else None,
+        "latest_published_at": (
+            latest_article.get("published_at") if latest_article else None
+        ),
     }
 
 

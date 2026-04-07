@@ -10,13 +10,10 @@ from fastapi import HTTPException
 from cache import load_headlines, save_headlines
 from contradictions import cluster_articles, enrich_events
 from corpus import get_article_count, get_recent_articles
-from entities import format_signals_for_briefing
 from news import (
-    article_quality_score,
     infer_article_topics,
     normalize_article_description,
     normalize_article_title,
-    should_promote_article,
 )
 
 from core.config import (
@@ -26,7 +23,6 @@ from core.config import (
     TOPICS,
 )
 from core.runtime import parse_timestamp
-
 
 # ---------------------------------------------------------------------------
 # Internal helpers (moved from main.py)
@@ -39,7 +35,9 @@ def _event_rank_score(event: dict) -> float:
     article_count = int(event.get("article_count", 0) or 0)
     tier_1_source_count = int(event.get("tier_1_source_count", 0) or 0)
     latest = parse_timestamp(event.get("latest_update"))
-    coverage_score = (source_count * 16.0) + (article_count * 4.5) + (tier_1_source_count * 3.0)
+    coverage_score = (
+        (source_count * 16.0) + (article_count * 4.5) + (tier_1_source_count * 3.0)
+    )
     if not latest:
         return round(coverage_score + (base * 0.35), 2)
     age_hours = max(0.0, (datetime.now(timezone.utc) - latest).total_seconds() / 3600)
@@ -61,7 +59,9 @@ def _event_rank_score(event: dict) -> float:
     else:
         freshness_multiplier = 1.0
         freshness_bonus = max(0.0, 72.0 - age_hours) / 18.0
-    return round((coverage_score * freshness_multiplier) + freshness_bonus + (base * 0.35), 2)
+    return round(
+        (coverage_score * freshness_multiplier) + freshness_bonus + (base * 0.35), 2
+    )
 
 
 def _story_summary_candidate_score(summary: str, headline: str) -> int:
@@ -80,17 +80,21 @@ def _story_summary_candidate_score(summary: str, headline: str) -> int:
 
 
 def _standardize_story_summary(story: dict, event: dict | None = None) -> str:
-    headline = normalize_article_title((event or {}).get("label") or story.get("headline") or "")
+    headline = normalize_article_title(
+        (event or {}).get("label") or story.get("headline") or ""
+    )
     candidates = [(event or {}).get("summary")]
     articles = list(story.get("sources") or [])
     if event:
         articles.extend(event.get("articles", []) or [])
     for article in articles:
-        candidates.extend([
-            article.get("translated_description"),
-            article.get("description"),
-            article.get("original_description"),
-        ])
+        candidates.extend(
+            [
+                article.get("translated_description"),
+                article.get("description"),
+                article.get("original_description"),
+            ]
+        )
     candidates.append(story.get("summary"))
 
     best_summary = ""
@@ -105,21 +109,31 @@ def _standardize_story_summary(story: dict, event: dict | None = None) -> str:
     if best_score > -50 and best_summary:
         return best_summary
 
-    source_count = int(story.get("source_count") or (event or {}).get("source_count") or 0)
+    source_count = int(
+        story.get("source_count") or (event or {}).get("source_count") or 0
+    )
     if source_count > 1:
         return f"{source_count} sources are tracking the latest turn in this story."
-    topic = (story.get("topic") or (event or {}).get("topic") or "").replace("_", " ").strip()
+    topic = (
+        (story.get("topic") or (event or {}).get("topic") or "")
+        .replace("_", " ")
+        .strip()
+    )
     if topic:
         return f"Fresh {topic} reporting is still developing."
     return "Fresh reporting is still developing."
 
 
 def _standardize_headline_story(story: dict, event: dict | None = None) -> dict:
-    headline = normalize_article_title((event or {}).get("label") or story.get("headline") or "Untitled")
+    headline = normalize_article_title(
+        (event or {}).get("label") or story.get("headline") or "Untitled"
+    )
     return {
         **story,
         "headline": headline or "Untitled",
-        "summary": _standardize_story_summary({**story, "headline": headline}, event=event),
+        "summary": _standardize_story_summary(
+            {**story, "headline": headline}, event=event
+        ),
     }
 
 
@@ -144,7 +158,11 @@ def _story_dominant_region(story: dict) -> str:
     counts = _story_region_counts(story)
     if not counts:
         return "global"
-    non_global = {region: count for region, count in counts.items() if region and region != "global"}
+    non_global = {
+        region: count
+        for region, count in counts.items()
+        if region and region != "global"
+    }
     pool = non_global or counts
     return sorted(pool.items(), key=lambda item: (-item[1], item[0]))[0][0]
 
@@ -155,10 +173,14 @@ def _story_rank_score(story: dict) -> float:
     article_count = int(story.get("article_count", source_count) or 0)
     contradiction_count = int(story.get("contradiction_count", 0) or 0)
     ranking_score = float(story.get("ranking_score", 0) or 0)
-    age_hours = max(
-        0.0,
-        (datetime.now(timezone.utc) - latest).total_seconds() / 3600,
-    ) if latest else 240.0
+    age_hours = (
+        max(
+            0.0,
+            (datetime.now(timezone.utc) - latest).total_seconds() / 3600,
+        )
+        if latest
+        else 240.0
+    )
 
     if age_hours <= 6:
         freshness = 36.0
@@ -181,18 +203,28 @@ def _story_rank_score(story: dict) -> float:
     )
 
 
-def _sort_headline_stories(stories: list[dict], sort_by: str = "relevance", region: str | None = None) -> list[dict]:
+def _sort_headline_stories(
+    stories: list[dict], sort_by: str = "relevance", region: str | None = None
+) -> list[dict]:
     normalized_region = (region or "").strip().lower()
     selected = [
         {
             **story,
             "region_counts": _story_region_counts(story),
-            "dominant_region": (story.get("dominant_region") or _story_dominant_region(story)).strip().lower(),
+            "dominant_region": (
+                story.get("dominant_region") or _story_dominant_region(story)
+            )
+            .strip()
+            .lower(),
         }
         for story in stories
     ]
     if normalized_region and normalized_region not in {"all", "global-overview"}:
-        selected = [story for story in selected if story.get("dominant_region") == normalized_region]
+        selected = [
+            story
+            for story in selected
+            if story.get("dominant_region") == normalized_region
+        ]
 
     if sort_by == "region":
         selected.sort(
@@ -230,19 +262,27 @@ def _available_story_regions(stories: list[dict]) -> list[str]:
 # ---------------------------------------------------------------------------
 
 
-def _ensure_topic_corpus(topic: str, minimum_articles: int = MIN_TOPIC_ARTICLES) -> None:
+def _ensure_topic_corpus(
+    topic: str, minimum_articles: int = MIN_TOPIC_ARTICLES
+) -> None:
     if get_article_count(topic=topic, hours=72) >= minimum_articles:
         return
     from services.ingest_service import ingest_topic
+
     ingest_topic(topic)
 
 
-def _build_topic_events(topic: str, limit: int = 8, attempt_ingest: bool = False) -> list[dict]:
+def _build_topic_events(
+    topic: str, limit: int = 8, attempt_ingest: bool = False
+) -> list[dict]:
     if attempt_ingest:
         _ensure_topic_corpus(topic)
     from services.ingest_service import ensure_article_translations
+
     articles = ensure_article_translations(
-        get_recent_articles(topic=topic, limit=120, hours=CORPUS_WINDOW_HOURS, headline_corpus_only=True),
+        get_recent_articles(
+            topic=topic, limit=120, hours=CORPUS_WINDOW_HOURS, headline_corpus_only=True
+        ),
         max_articles=10,
     )
     if not articles:
@@ -287,7 +327,8 @@ def _events_materially_overlap(left: dict, right: dict) -> bool:
 def _dedupe_global_events(events: list[dict]) -> list[dict]:
     if len(events) <= 1:
         return events
-    sort_key = lambda event: (_event_rank_score(event), event.get("latest_update", ""))
+    def sort_key(event):
+        return (_event_rank_score(event), event.get("latest_update", ""))
     ranked = sorted(events, key=sort_key, reverse=True)
     selected: list[dict] = []
     for event in ranked:
@@ -300,9 +341,11 @@ def _dedupe_global_events(events: list[dict]) -> list[dict]:
 def _build_global_events(limit: int = 12) -> list[dict]:
     from core.runtime import topic_counts
     from foresight import observe_events
+
     counts = topic_counts()
     if sum(counts.values()) == 0:
         from services.ingest_service import ingest_all_topics
+
         ingest_all_topics()
     events = []
     for topic in TOPICS:
@@ -320,7 +363,8 @@ def _build_global_events(limit: int = 12) -> list[dict]:
         else:
             older_events.append(event)
 
-    sort_key = lambda event: (_event_rank_score(event), event.get("latest_update", ""))
+    def sort_key(event):
+        return (_event_rank_score(event), event.get("latest_update", ""))
     recent_events.sort(key=sort_key, reverse=True)
     older_events.sort(key=sort_key, reverse=True)
 
@@ -364,12 +408,16 @@ def rebuild_headlines_cache(use_llm: bool = False) -> list[dict]:
     from analyst import build_headlines_from_events
     from cache import acquire_lock, release_lock
     import time as time_module
-    
+
     # Acquire distributed lock to prevent thundering herd on cache rebuild
-    lock_acquired = acquire_lock("headlines_cache_rebuild", lock_holder_id=f"rebuild_{int(time_module.time())}")
+    lock_acquired = acquire_lock(
+        "headlines_cache_rebuild", lock_holder_id=f"rebuild_{int(time_module.time())}"
+    )
     if not lock_acquired:
         # Another process is rebuilding, wait and return stale cache if available
-        print("[headlines] Another process is rebuilding cache, returning cached data if available")
+        print(
+            "[headlines] Another process is rebuilding cache, returning cached data if available"
+        )
         return load_headlines(ttl=0) or []  # Return any cached data, even if stale
 
     try:
@@ -388,7 +436,11 @@ def rebuild_headlines_cache(use_llm: bool = False) -> list[dict]:
             stories = fallback_stories
 
         event_map = {event["event_id"]: event for event in events}
-        fallback_map = {story["event_id"]: story for story in fallback_stories if story.get("event_id")}
+        fallback_map = {
+            story["event_id"]: story
+            for story in fallback_stories
+            if story.get("event_id")
+        }
         enriched = []
         seen_event_ids = set()
         for story in stories:
@@ -417,7 +469,9 @@ def rebuild_headlines_cache(use_llm: bool = False) -> list[dict]:
                 continue
             fallback_story = fallback_map.get(event["event_id"])
             if fallback_story:
-                enriched.append(_standardize_headline_story(fallback_story, event=event))
+                enriched.append(
+                    _standardize_headline_story(fallback_story, event=event)
+                )
 
         sorted_stories = _sort_headline_stories(enriched, sort_by="relevance")
         save_headlines(sorted_stories)
@@ -436,7 +490,9 @@ def get_headlines_payload(sort_by: str = "relevance", region: str | None = None)
     if cached:
         normalized = [_standardize_headline_story(story) for story in cached]
         return {
-            "stories": _sort_headline_stories(normalized, sort_by=sort_by, region=region),
+            "stories": _sort_headline_stories(
+                normalized, sort_by=sort_by, region=region
+            ),
             "available_regions": _available_story_regions(normalized),
             "sort_by": sort_by,
             "region": region or "all",

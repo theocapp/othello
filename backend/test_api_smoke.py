@@ -27,19 +27,23 @@ if str(_BACKEND) not in sys.path:
 
 os.environ["OTHELLO_INTERNAL_SCHEDULER"] = "false"
 # Point corpus at the test database
-os.environ["OTHELLO_PGDATABASE"] = os.environ.get("OTHELLO_TEST_PGDATABASE", "othello_test")
+os.environ["OTHELLO_PGDATABASE"] = os.environ.get(
+    "OTHELLO_TEST_PGDATABASE", "othello_test"
+)
 
 # Isolate the briefing/headline cache (cache.py still uses SQLite)
 _TEST_HOME = tempfile.mkdtemp(prefix="othello_api_smoke_", dir=str(_BACKEND))
-import cache as _cache_module
+import cache as _cache_module  # noqa: E402
+
 _cache_module.DB_PATH = Path(_TEST_HOME) / "othello_cache.db"
 
-import corpus
+import corpus  # noqa: E402
+
 corpus.init_db()
 
-import main as main_module
-from corpus import upsert_structured_events
-from starlette.testclient import TestClient
+import main as main_module  # noqa: E402
+from corpus import upsert_structured_events  # noqa: E402
+from starlette.testclient import TestClient  # noqa: E402
 
 
 def tearDownModule():
@@ -140,9 +144,15 @@ class TestAPISmoke(unittest.TestCase):
         data = response.json()
         self.assertIn("hotspots", data)
         self.assertIsInstance(data["hotspots"], list)
-        self.assertGreater(len(data["hotspots"]), 0, "seeded structured events should yield at least one hotspot")
+        self.assertGreater(
+            len(data["hotspots"]),
+            0,
+            "seeded structured events should yield at least one hotspot",
+        )
         for h in data["hotspots"]:
-            self.assertTrue(str(h.get("label") or "").strip(), "hotspot.label must be non-empty")
+            self.assertTrue(
+                str(h.get("label") or "").strip(), "hotspot.label must be non-empty"
+            )
             self.assertIsInstance(h.get("sample_events"), list)
             self.assertGreaterEqual(len(h["sample_events"]), 1)
             self.assertIn(h.get("aspect"), allowed_aspects)

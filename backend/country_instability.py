@@ -14,8 +14,9 @@ A 24h trend (rising / stable / falling) is computed from cached snapshots.
 
 import math
 import time
+import re
 from collections import defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from corpus import (
     get_recent_structured_events,
@@ -64,7 +65,14 @@ _SNAPSHOT_TREND_WINDOW = 24 * 3600  # compare against 24h ago
 # ── Country name normalization ───────────────────────────────────────────────
 
 _COUNTRY_MAPPINGS = {
-    "united states": ["united states of america", "usa", "us", "u.s.", "u.s.a.", "washington"],
+    "united states": [
+        "united states of america",
+        "usa",
+        "us",
+        "u.s.",
+        "u.s.a.",
+        "washington",
+    ],
     "united kingdom": ["uk", "u.k.", "great britain", "britain", "england", "london"],
     "russia": ["russian federation", "moscow", "ru"],
     "ukraine": ["kyiv", "kiev", "ua"],
@@ -72,12 +80,24 @@ _COUNTRY_MAPPINGS = {
     "taiwan": ["republic of china", "roc", "taipei"],
     "south korea": ["republic of korea", "rok", "seoul"],
     "north korea": ["democratic people's republic of korea", "dprk", "pyongyang"],
-    "dr congo": ["democratic republic of the congo", "democratic republic of congo", "drc", "zaire", "kinshasa"],
+    "dr congo": [
+        "democratic republic of the congo",
+        "democratic republic of congo",
+        "drc",
+        "zaire",
+        "kinshasa",
+    ],
     "congo": ["republic of the congo", "brazzaville"],
     "turkey": ["turkiye", "türkiye", "ankara"],
     "cote d'ivoire": ["ivory coast", "côte d'ivoire", "yamoussoukro", "abidjan"],
     "myanmar": ["burma", "naypyidaw", "yangon"],
-    "palestine": ["occupied palestinian territory", "state of palestine", "gaza", "west bank", "ramallah"],
+    "palestine": [
+        "occupied palestinian territory",
+        "state of palestine",
+        "gaza",
+        "west bank",
+        "ramallah",
+    ],
     "israel": ["tel aviv", "jerusalem"],
     "iran": ["islamic republic of iran", "tehran"],
     "syria": ["syrian arab republic", "damascus"],
@@ -93,10 +113,11 @@ for target_country, aliases in _COUNTRY_MAPPINGS.items():
     for alias in aliases:
         _COUNTRY_ALIASES[alias] = target_country
 
+
 def _normalize_country(name: str | None) -> str | None:
     if not name:
         return None
-    cleaned = re.split(r'[\(\-\:]', name)[0].strip().lower()
+    cleaned = re.split(r"[\(\-\:]", name)[0].strip().lower()
     if cleaned.startswith("the "):
         cleaned = cleaned[4:]
     if cleaned in _COUNTRY_ALIASES:
@@ -105,6 +126,7 @@ def _normalize_country(name: str | None) -> str | None:
 
 
 # ── Sigmoid-style normalization ──────────────────────────────────────────────
+
 
 def _sigmoid_score(value: float, midpoint: float, steepness: float = 4.0) -> float:
     """Map a raw value to 0-100 using a sigmoid centered at midpoint."""
@@ -115,6 +137,7 @@ def _sigmoid_score(value: float, midpoint: float, steepness: float = 4.0) -> flo
 
 
 # ── Component scorers ────────────────────────────────────────────────────────
+
 
 def _score_conflict(events_by_country: dict[str, list[dict]]) -> dict[str, dict]:
     """Score conflict intensity from structured events."""
@@ -250,6 +273,7 @@ def _score_entity_activity() -> dict[str, dict]:
     """Score entity mention spikes per country using the entities DB."""
     try:
         from entities import get_entity_frequencies
+
         spikes = get_entity_frequencies(days_recent=2, days_baseline=7)
     except Exception:
         return {}
@@ -333,6 +357,7 @@ def _score_narrative_volatility() -> dict[str, dict]:
 
 # ── Trend detection ──────────────────────────────────────────────────────────
 
+
 def _compute_trend(country: str, current_score: float) -> str:
     """Compare current score against the closest snapshot from ~24h ago."""
     now = time.time()
@@ -367,6 +392,7 @@ def _prune_snapshots():
 
 # ── Main scoring function ────────────────────────────────────────────────────
 
+
 def compute_country_instability(days: int = 3) -> dict:
     """Compute CII scores for all countries with available data.
 
@@ -396,8 +422,12 @@ def compute_country_instability(days: int = 3) -> dict:
     # Collect all countries mentioned in any component
     all_countries: set[str] = set()
     for component in [
-        conflict_scores, media_scores, contradiction_scores,
-        severity_scores, entity_scores, narrative_scores,
+        conflict_scores,
+        media_scores,
+        contradiction_scores,
+        severity_scores,
+        entity_scores,
+        narrative_scores,
     ]:
         all_countries.update(component.keys())
 
@@ -415,9 +445,7 @@ def compute_country_instability(days: int = 3) -> dict:
             "narrative_volatility": narrative_scores.get(country, {}).get("score", 0.0),
         }
 
-        composite = sum(
-            components[k] * COMPONENT_WEIGHTS[k] for k in COMPONENT_WEIGHTS
-        )
+        composite = sum(components[k] * COMPONENT_WEIGHTS[k] for k in COMPONENT_WEIGHTS)
         composite = round(min(100.0, composite), 1)
 
         # Determine risk level
@@ -448,17 +476,19 @@ def compute_country_instability(days: int = 3) -> dict:
             "narrative_volatility": narrative_scores.get(country, {}),
         }
 
-        country_results.append({
-            "country": country,
-            "label": label,
-            "score": composite,
-            "level": level,
-            "trend": trend,
-            "components": components,
-            "component_details": component_details,
-            "latitude": lat,
-            "longitude": lon,
-        })
+        country_results.append(
+            {
+                "country": country,
+                "label": label,
+                "score": composite,
+                "level": level,
+                "trend": trend,
+                "components": components,
+                "component_details": component_details,
+                "latitude": lat,
+                "longitude": lon,
+            }
+        )
 
     # Sort by score descending
     country_results.sort(key=lambda c: -c["score"])

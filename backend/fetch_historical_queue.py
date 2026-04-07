@@ -24,19 +24,39 @@ USER_AGENT = (
 REQUEST_TIMEOUT_SECONDS = 15
 DOMAIN_RULES = {
     "reuters.com": {
-        "body_markers": ["article-body__", "article-body", "paywall-article", "StandardArticleBody_body"],
+        "body_markers": [
+            "article-body__",
+            "article-body",
+            "paywall-article",
+            "StandardArticleBody_body",
+        ],
     },
     "apnews.com": {
         "body_markers": ["RichTextStoryBody", "RichTextBody", "Page-content"],
     },
     "bbc.com": {
-        "body_markers": ["story-body", "article__body-content", "ssrcss-", "main-content"],
+        "body_markers": [
+            "story-body",
+            "article__body-content",
+            "ssrcss-",
+            "main-content",
+        ],
     },
     "bbc.co.uk": {
-        "body_markers": ["story-body", "article__body-content", "ssrcss-", "main-content"],
+        "body_markers": [
+            "story-body",
+            "article__body-content",
+            "ssrcss-",
+            "main-content",
+        ],
     },
     "aljazeera.com": {
-        "body_markers": ["wysiwyg", "article-p-wrapper", "main-article-body", "article-body"],
+        "body_markers": [
+            "wysiwyg",
+            "article-p-wrapper",
+            "main-article-body",
+            "article-body",
+        ],
     },
     "ft.com": {
         "body_markers": ["article__content-body", "n-content-body", "article-body"],
@@ -73,11 +93,18 @@ class _ArticleTextParser(HTMLParser):
             if key and content:
                 self.meta[key] = content.strip()
         if tag in {"p", "article", "div", "section"}:
-            css = " ".join(filter(None, [attr_map.get("class"), attr_map.get("id")])).lower()
-            body_markers = [marker.lower() for marker in self._domain_rules.get("body_markers", [])]
+            css = " ".join(
+                filter(None, [attr_map.get("class"), attr_map.get("id")])
+            ).lower()
+            body_markers = [
+                marker.lower() for marker in self._domain_rules.get("body_markers", [])
+            ]
             if (
                 tag == "p"
-                or any(marker in css for marker in ("article", "story", "content", "body", "main"))
+                or any(
+                    marker in css
+                    for marker in ("article", "story", "content", "body", "main")
+                )
                 or any(marker and marker in css for marker in body_markers)
             ):
                 self._capture_depth += 1
@@ -133,7 +160,9 @@ def _extract_json_ld(html: str) -> dict | None:
     return None
 
 
-def _extract_article_from_html(html: str, fallback_url: str, fallback_title: str | None = None) -> dict:
+def _extract_article_from_html(
+    html: str, fallback_url: str, fallback_title: str | None = None
+) -> dict:
     parser = _ArticleTextParser(urlparse(fallback_url).netloc.lower())
     parser.feed(html)
     json_ld = _extract_json_ld(html) or {}
@@ -173,7 +202,8 @@ def _extract_article_from_html(html: str, fallback_url: str, fallback_title: str
         "title": _collapse_whitespace(title),
         "description": _collapse_whitespace(description),
         "published_at": _collapse_whitespace(published_at),
-        "source": _collapse_whitespace(source_name) or urlparse(fallback_url).netloc.lower(),
+        "source": _collapse_whitespace(source_name)
+        or urlparse(fallback_url).netloc.lower(),
         "source_domain": urlparse(fallback_url).netloc.lower(),
         "language": parser.meta.get("og:locale", "").split("_")[0].strip() or None,
         "body_text": body_text,
@@ -186,13 +216,17 @@ def _fetch_url(session: requests.Session, url: str) -> tuple[dict | None, str | 
     content_type = (response.headers.get("content-type") or "").lower()
     if "html" not in content_type:
         return None, f"Unsupported content type: {content_type or 'unknown'}"
-    article = _extract_article_from_html(response.text, fallback_url=response.url or url)
+    article = _extract_article_from_html(
+        response.text, fallback_url=response.url or url
+    )
     if not article.get("title"):
         return None, "Could not extract a title from the article"
     return article, None
 
 
-def _sleep_for_domain(last_request_at: dict[str, float], domain: str, min_interval_seconds: float) -> None:
+def _sleep_for_domain(
+    last_request_at: dict[str, float], domain: str, min_interval_seconds: float
+) -> None:
     previous = last_request_at.get(domain)
     if previous is None:
         return
@@ -213,7 +247,9 @@ def fetch_historical_queue(
     init_corpus_db()
     seed_sources()
 
-    queue_rows = get_historical_url_queue_batch(limit=limit, statuses=["pending", "retry"])
+    queue_rows = get_historical_url_queue_batch(
+        limit=limit, statuses=["pending", "retry"]
+    )
     if not queue_rows:
         return {
             "requested": limit,
@@ -242,7 +278,9 @@ def fetch_historical_queue(
 
     for row in queue_rows:
         url = row["url"]
-        domain = (row.get("source_domain") or urlparse(url).netloc.lower() or "unknown").lower()
+        domain = (
+            row.get("source_domain") or urlparse(url).netloc.lower() or "unknown"
+        ).lower()
         attempts = int(row.get("attempt_count") or 0) + 1
         summary["processed"] += 1
         _sleep_for_domain(last_request_at, domain, min_domain_interval_seconds)
@@ -253,7 +291,9 @@ def fetch_historical_queue(
         except requests.HTTPError as exc:
             status_code = exc.response.status_code if exc.response is not None else None
             retryable = status_code in {408, 425, 429, 500, 502, 503, 504}
-            fetch_status = "retry" if retryable and attempts < max_attempts else "failed"
+            fetch_status = (
+                "retry" if retryable and attempts < max_attempts else "failed"
+            )
             update_historical_url_queue_status(
                 url,
                 fetch_status,
@@ -282,14 +322,20 @@ def fetch_historical_queue(
                 url,
                 fetch_status,
                 attempt_count=attempts,
-                payload_patch={"last_error": extraction_error or "Unknown extraction failure"},
+                payload_patch={
+                    "last_error": extraction_error or "Unknown extraction failure"
+                },
             )
             summary["retry" if fetch_status == "retry" else "failed"] += 1
             continue
 
         article["source"] = row.get("source_name") or article.get("source") or domain
-        article["source_domain"] = row.get("source_domain") or article.get("source_domain") or domain
-        article["published_at"] = row.get("published_at") or article.get("published_at") or ""
+        article["source_domain"] = (
+            row.get("source_domain") or article.get("source_domain") or domain
+        )
+        article["published_at"] = (
+            row.get("published_at") or article.get("published_at") or ""
+        )
         article["language"] = row.get("language") or article.get("language") or "en"
         article["body_text"] = article.get("body_text") or ""
         article["payload"] = {
@@ -299,15 +345,25 @@ def fetch_historical_queue(
             "body_text": article["body_text"],
         }
 
-        topics = [row["topic_guess"]] if row.get("topic_guess") else infer_article_topics(article)
+        topics = (
+            [row["topic_guess"]]
+            if row.get("topic_guess")
+            else infer_article_topics(article)
+        )
         if not topics:
-            topics = ["geopolitics"] if "conflict" in (article.get("title") or "").lower() else []
+            topics = (
+                ["geopolitics"]
+                if "conflict" in (article.get("title") or "").lower()
+                else []
+            )
         if not topics:
             update_historical_url_queue_status(
                 url,
                 "failed",
                 attempt_count=attempts,
-                payload_patch={"last_error": "Could not infer a topic for fetched article"},
+                payload_patch={
+                    "last_error": "Could not infer a topic for fetched article"
+                },
             )
             summary["failed"] += 1
             continue
@@ -334,7 +390,7 @@ def fetch_historical_queue(
     if not dry_run:
         for topic, topic_articles in articles_by_topic.items():
             for index in range(0, len(topic_articles), max(1, batch_size)):
-                batch = topic_articles[index:index + max(1, batch_size)]
+                batch = topic_articles[index : index + max(1, batch_size)]
                 summary["inserted_or_updated"] += upsert_articles(
                     batch,
                     topic=topic,
@@ -361,12 +417,35 @@ def fetch_historical_queue(
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Fetch article bodies from the historical URL queue into the article corpus.")
-    parser.add_argument("--limit", type=int, default=25, help="Maximum queue rows to process.")
-    parser.add_argument("--batch-size", type=int, default=10, help="Batch size for article corpus writes.")
-    parser.add_argument("--min-domain-interval", type=float, default=2.5, help="Minimum seconds between requests to the same domain.")
-    parser.add_argument("--max-attempts", type=int, default=3, help="Attempts before a queue item is marked failed.")
-    parser.add_argument("--dry-run", action="store_true", help="Fetch and classify articles without writing them into the article corpus.")
+    parser = argparse.ArgumentParser(
+        description="Fetch article bodies from the historical URL queue into the article corpus."
+    )
+    parser.add_argument(
+        "--limit", type=int, default=25, help="Maximum queue rows to process."
+    )
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=10,
+        help="Batch size for article corpus writes.",
+    )
+    parser.add_argument(
+        "--min-domain-interval",
+        type=float,
+        default=2.5,
+        help="Minimum seconds between requests to the same domain.",
+    )
+    parser.add_argument(
+        "--max-attempts",
+        type=int,
+        default=3,
+        help="Attempts before a queue item is marked failed.",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Fetch and classify articles without writing them into the article corpus.",
+    )
     return parser.parse_args()
 
 

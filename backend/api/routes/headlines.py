@@ -18,5 +18,7 @@ def cache_status():
 
 
 @router.post("/cache/refresh")
-def force_refresh(topic: str | None = None, _: None = Depends(require_write_access_dep)):
+def force_refresh(
+    topic: str | None = None, _: None = Depends(require_write_access_dep)
+):
     return force_refresh_payload(topic)

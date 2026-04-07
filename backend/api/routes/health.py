@@ -1,6 +1,10 @@
 from fastapi import APIRouter
 
-from services.analytics_service import get_health_payload, get_root_payload, get_system_overview_payload
+from services.analytics_service import (
+    get_health_payload,
+    get_root_payload,
+    get_system_overview_payload,
+)
 
 router = APIRouter()
 

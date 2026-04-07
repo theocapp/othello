@@ -1,7 +1,10 @@
 from fastapi import APIRouter, Depends
 
 from api.deps import require_write_access_dep
-from services.analytics_service import narrative_drift_payload, source_reliability_payload
+from services.analytics_service import (
+    narrative_drift_payload,
+    source_reliability_payload,
+)
 from services.ingest_service import (
     acled_refresh_payload,
     gdelt_gkg_refresh_payload,
@@ -18,12 +21,16 @@ router = APIRouter()
 
 
 @router.post("/ingest")
-def trigger_ingest(topic: str | None = None, _: None = Depends(require_write_access_dep)):
+def trigger_ingest(
+    topic: str | None = None, _: None = Depends(require_write_access_dep)
+):
     return trigger_ingest_payload(topic)
 
 
 @router.post("/ingest/backfill")
-def trigger_gdelt_backfill(topic: str | None = None, _: None = Depends(require_write_access_dep)):
+def trigger_gdelt_backfill(
+    topic: str | None = None, _: None = Depends(require_write_access_dep)
+):
     return trigger_backfill_payload(topic)
 
 
@@ -63,10 +70,14 @@ def sources_probe(query: str = "Iran OR Israel OR war", page_size: int = 10):
 
 
 @router.get("/sources/reliability")
-def source_reliability(topic: str | None = None, days: int = 180, refresh: bool = False):
+def source_reliability(
+    topic: str | None = None, days: int = 180, refresh: bool = False
+):
     return source_reliability_payload(topic, days, refresh)
 
 
 @router.get("/narratives/drift/{subject}")
-def narrative_drift(subject: str, topic: str | None = None, days: int = 180, refresh: bool = False):
+def narrative_drift(
+    subject: str, topic: str | None = None, days: int = 180, refresh: bool = False
+):
     return narrative_drift_payload(subject, topic, days, refresh)

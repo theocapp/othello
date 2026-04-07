@@ -3,7 +3,6 @@ from urllib.parse import quote
 
 import requests
 
-
 WIKIPEDIA_API = "https://en.wikipedia.org/w/api.php"
 WIKIPEDIA_PAGE_BASE = "https://en.wikipedia.org/wiki/"
 
@@ -144,7 +143,9 @@ def fetch_wikipedia_reference(entity: str) -> dict:
 
     title = page.get("title") or selected.get("title") or entity
     summary = _normalize_text(page.get("extract"))
-    fullurl = page.get("fullurl") or f"{WIKIPEDIA_PAGE_BASE}{quote(title.replace(' ', '_'))}"
+    fullurl = (
+        page.get("fullurl") or f"{WIKIPEDIA_PAGE_BASE}{quote(title.replace(' ', '_'))}"
+    )
     thumbnail = (page.get("thumbnail") or {}).get("source")
     return {
         "entity": entity,

@@ -42,8 +42,7 @@ def _column_exists(conn: sqlite3.Connection, table: str, column: str) -> bool:
 
 def init_db():
     conn = _connect()
-    conn.execute(
-        """
+    conn.execute("""
         CREATE TABLE IF NOT EXISTS briefing_cache (
             topic TEXT PRIMARY KEY,
             briefing TEXT,
@@ -51,26 +50,21 @@ def init_db():
             article_count INTEGER,
             generated_at REAL
         )
-        """
-    )
-    conn.execute(
-        """
+        """)
+    conn.execute("""
         CREATE TABLE IF NOT EXISTS headlines_cache (
             id INTEGER PRIMARY KEY CHECK (id = 1),
             stories TEXT,
             generated_at REAL
         )
-        """
-    )
-    conn.execute(
-        """
+        """)
+    conn.execute("""
         CREATE TABLE IF NOT EXISTS cache_locks (
             lock_key TEXT PRIMARY KEY,
             locked_at REAL,
             locked_by TEXT
         )
-        """
-    )
+        """)
 
     if not _column_exists(conn, "briefing_cache", "events"):
         conn.execute("ALTER TABLE briefing_cache ADD COLUMN events TEXT DEFAULT '[]'")
@@ -89,13 +83,13 @@ def acquire_lock(lock_key: str, lock_holder_id: str = "default") -> bool:
     conn = _connect()
     try:
         now = time.time()
-        
+
         # Check if lock exists and is still valid
         existing = conn.execute(
             "SELECT locked_at FROM cache_locks WHERE lock_key = ?",
             (lock_key,),
         ).fetchone()
-        
+
         if existing:
             locked_at = existing[0]
             if now - locked_at < LOCK_TIMEOUT_SECONDS:
@@ -105,7 +99,7 @@ def acquire_lock(lock_key: str, lock_holder_id: str = "default") -> bool:
             else:
                 # Lock expired, remove it
                 conn.execute("DELETE FROM cache_locks WHERE lock_key = ?", (lock_key,))
-        
+
         # Try to insert our lock
         try:
             conn.execute(
@@ -165,7 +159,13 @@ def load_briefing(topic: str, ttl: int = 3600) -> dict | None:
     }
 
 
-def save_briefing(topic: str, briefing: str, sources: list, article_count: int, events: list | None = None):
+def save_briefing(
+    topic: str,
+    briefing: str,
+    sources: list,
+    article_count: int,
+    events: list | None = None,
+):
     _ensure_initialized()
     conn = _connect()
     conn.execute(
@@ -173,7 +173,14 @@ def save_briefing(topic: str, briefing: str, sources: list, article_count: int, 
         INSERT OR REPLACE INTO briefing_cache (topic, briefing, sources, article_count, generated_at, events)
         VALUES (?, ?, ?, ?, ?, ?)
         """,
-        (topic, briefing, json.dumps(sources), article_count, time.time(), json.dumps(events or [])),
+        (
+            topic,
+            briefing,
+            json.dumps(sources),
+            article_count,
+            time.time(),
+            json.dumps(events or []),
+        ),
     )
     conn.commit()
     conn.close()
@@ -208,7 +215,9 @@ def load_all_briefings(ttl: int = 3600) -> list[dict]:
 def load_headlines(ttl: int = 3600) -> list | None:
     _ensure_initialized()
     conn = _connect()
-    row = conn.execute("SELECT stories, generated_at FROM headlines_cache WHERE id = 1").fetchone()
+    row = conn.execute(
+        "SELECT stories, generated_at FROM headlines_cache WHERE id = 1"
+    ).fetchone()
     conn.close()
     if not row:
         return None

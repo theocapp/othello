@@ -3,6 +3,8 @@ import os
 import time
 import logging
 import functools
+from collections import OrderedDict
+import re
 from datetime import date
 
 from groq import Groq
@@ -11,8 +13,12 @@ logger = logging.getLogger(__name__)
 
 MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 TRANSLATION_PROVIDER = os.getenv("OTHELLO_TRANSLATION_PROVIDER", "local").lower()
-ALLOW_GROQ_TRANSLATION_FALLBACK = os.getenv("OTHELLO_ALLOW_GROQ_TRANSLATION_FALLBACK", "true").lower() == "true"
-LOCAL_TRANSLATION_FILES_ONLY = os.getenv("OTHELLO_TRANSLATION_LOCAL_FILES_ONLY", "true").lower() == "true"
+ALLOW_GROQ_TRANSLATION_FALLBACK = (
+    os.getenv("OTHELLO_ALLOW_GROQ_TRANSLATION_FALLBACK", "true").lower() == "true"
+)
+LOCAL_TRANSLATION_FILES_ONLY = (
+    os.getenv("OTHELLO_TRANSLATION_LOCAL_FILES_ONLY", "true").lower() == "true"
+)
 
 LOCAL_TRANSLATION_MODEL_MAP = {
     "fr": "Helsinki-NLP/opus-mt-ROMANCE-en",
@@ -35,45 +41,82 @@ LOCAL_TRANSLATION_MODEL_MAP = {
     "ko": "Helsinki-NLP/opus-mt-ko-en",
 }
 
-# Cache translation pipelines with automatic LRU eviction
-# maxsize=2 means keep 2 language models in RAM (~300MB each), evict oldest when adding 3rd
-@functools.lru_cache(maxsize=2)
+
+# Consolidated LRU cache for translation pipelines (authoritative)
+# Use OrderedDict so we can insert pre-populated bundles and evict deterministically.
+_translation_pipelines = OrderedDict()  # language_key -> bundle (tokenizer+model)
+_translation_pipeline_order = []  # deprecated: keep list view for tests (oldest first)
+_TRANSLATION_PIPELINE_MAX = 2  # max language models kept in RAM at once (~300MB each)
+
+
 def _get_translation_pipeline_cached(language_key: str) -> dict:
-    """Load and cache a translation model with automatic LRU eviction."""
+    """Load and return a translation model bundle using a single authoritative LRU.
+
+    This function both loads on demand (respecting LOCAL_TRANSLATION_FILES_ONLY)
+    and updates the shared `_translation_pipelines` OrderedDict. Tests and legacy
+    code may still inspect `_translation_pipelines` and `_translation_pipeline_order`.
+    """
     if language_key == "en":
         return None
-    
+
     model_name = LOCAL_TRANSLATION_MODEL_MAP.get(language_key)
     if not model_name:
-        raise RuntimeError(f"No local translation model configured for language '{language_key}'.")
+        raise RuntimeError(
+            f"No local translation model configured for language '{language_key}'."
+        )
 
     try:
         from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
     except Exception as exc:
-        raise RuntimeError("transformers is not available for local translation.") from exc
+        raise RuntimeError(
+            "transformers is not available for local translation."
+        ) from exc
 
     local_files_only = LOCAL_TRANSLATION_FILES_ONLY
     try:
-        tokenizer = AutoTokenizer.from_pretrained(model_name, local_files_only=local_files_only)
-        model = AutoModelForSeq2SeqLM.from_pretrained(model_name, local_files_only=local_files_only)
+        tokenizer = AutoTokenizer.from_pretrained(
+            model_name, local_files_only=local_files_only
+        )
+        model = AutoModelForSeq2SeqLM.from_pretrained(
+            model_name, local_files_only=local_files_only
+        )
     except Exception as exc:
-        raise RuntimeError(f"Local translation model '{model_name}' is unavailable: {exc}") from exc
+        raise RuntimeError(
+            f"Local translation model '{model_name}' is unavailable: {exc}"
+        ) from exc
+
+    bundle = {"tokenizer": tokenizer, "model": model}
+
+    # Insert / move to most-recent position in OrderedDict
+    if language_key in _translation_pipelines:
+        # remove then re-insert to move to end
+        _translation_pipelines.pop(language_key, None)
+    _translation_pipelines[language_key] = bundle
+
+    # Keep deprecated order list in sync (oldest first)
+    if language_key in _translation_pipeline_order:
+        _translation_pipeline_order.remove(language_key)
+    _translation_pipeline_order.append(language_key)
+
+    # Enforce size limit with eviction
+    while len(_translation_pipeline_order) > _TRANSLATION_PIPELINE_MAX:
+        oldest = _translation_pipeline_order.pop(0)
+        _evict_translation_pipeline(oldest)
 
     logger.info(f"[translation] Loaded model for '{language_key}' ({model_name})")
-    return {"tokenizer": tokenizer, "model": model}
+    return bundle
 
 
 _client = None
-_translation_pipelines = {}  # local cache for non-LRU-controlled pipelines (deprecated)
-_translation_pipeline_order = []  # LRU order — oldest first (deprecated)
-_TRANSLATION_PIPELINE_MAX = 2  # max language models kept in RAM at once (~300MB each)
 
 
 def get_client():
     global _client
     api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
-        raise RuntimeError("GROQ_API_KEY is missing. Add it to the backend environment before starting Othello V2.")
+        raise RuntimeError(
+            "GROQ_API_KEY is missing. Add it to the backend environment before starting Othello V2."
+        )
     if _client is None:
         _client = Groq(api_key=api_key)
     return _client
@@ -118,36 +161,70 @@ def _evict_translation_pipeline(language_key: str) -> None:
     logger.debug(f"[translation] Evicted model for '{language_key}' to free RAM")
 
 
-def _load_local_translation_pipeline(source_language: str, allow_download: bool = False):
+def _load_local_translation_pipeline(
+    source_language: str, allow_download: bool = False
+):
     """Load a translation pipeline with automatic LRU eviction."""
     language_key = _normalize_language_code(source_language)
     if language_key == "en":
         return None
-    
-    # Use the LRU-cached loader for normal operation (local_files_only mode)
+
+    # Prefer any explicitly populated (deprecated) caches so unit tests that
+    # inject fake bundles into `_translation_pipelines` behave as expected.
     if not allow_download:
+        if language_key in _translation_pipelines:
+            # Accessing the existing bundle moves it to most-recent position
+            bundle = _translation_pipelines.pop(language_key)
+            _translation_pipelines[language_key] = bundle
+            if language_key in _translation_pipeline_order:
+                _translation_pipeline_order.remove(language_key)
+            _translation_pipeline_order.append(language_key)
+            # Enforce max cache size
+            while len(_translation_pipeline_order) > _TRANSLATION_PIPELINE_MAX:
+                _evict_translation_pipeline(_translation_pipeline_order.pop(0))
+            return bundle
+
+        # Use consolidated loader which will insert into `_translation_pipelines`
         return _get_translation_pipeline_cached(language_key)
-    
-    # For allow_download=True (used in warm_local_translation_models), 
+
+    # For allow_download=True (used in warm_local_translation_models),
     # we need to load without the local_files_only restriction
     model_name = LOCAL_TRANSLATION_MODEL_MAP.get(language_key)
     if not model_name:
-        raise RuntimeError(f"No local translation model configured for language '{source_language}'.")
+        raise RuntimeError(
+            f"No local translation model configured for language '{source_language}'."
+        )
 
     try:
         from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
     except Exception as exc:
-        raise RuntimeError("transformers is not available for local translation.") from exc
+        raise RuntimeError(
+            "transformers is not available for local translation."
+        ) from exc
 
     try:
         tokenizer = AutoTokenizer.from_pretrained(model_name, local_files_only=False)
-        model = AutoModelForSeq2SeqLM.from_pretrained(model_name, local_files_only=False)
-        logger.info(f"[translation] Downloaded and loaded model for '{language_key}' ({model_name})")
-        # Also cache this for future use
-        _get_translation_pipeline_cached.cache_clear()  # Clear to allow re-caching
-        return {"tokenizer": tokenizer, "model": model}
+        model = AutoModelForSeq2SeqLM.from_pretrained(
+            model_name, local_files_only=False
+        )
+        bundle = {"tokenizer": tokenizer, "model": model}
+        # Insert into consolidated cache and enforce limits
+        if language_key in _translation_pipelines:
+            _translation_pipelines.pop(language_key, None)
+        _translation_pipelines[language_key] = bundle
+        if language_key in _translation_pipeline_order:
+            _translation_pipeline_order.remove(language_key)
+        _translation_pipeline_order.append(language_key)
+        while len(_translation_pipeline_order) > _TRANSLATION_PIPELINE_MAX:
+            _evict_translation_pipeline(_translation_pipeline_order.pop(0))
+        logger.info(
+            f"[translation] Downloaded and loaded model for '{language_key}' ({model_name})"
+        )
+        return bundle
     except Exception as exc:
-        raise RuntimeError(f"Local translation model '{model_name}' download failed: {exc}") from exc
+        raise RuntimeError(
+            f"Local translation model '{model_name}' download failed: {exc}"
+        ) from exc
 
 
 def _translate_locally(text: str, source_language: str) -> str:
@@ -226,7 +303,7 @@ Rules:
 def _chat(messages: list[dict], max_tokens: int = 1200, max_retries: int = 3) -> str:
     """Call Groq API with retry logic and graceful fallback."""
     last_error = None
-    
+
     for attempt in range(max_retries):
         try:
             response = get_client().chat.completions.create(
@@ -235,64 +312,95 @@ def _chat(messages: list[dict], max_tokens: int = 1200, max_retries: int = 3) ->
                 messages=messages,
                 timeout=30,
             )
-            
+
             if not response.choices or not response.choices[0].message:
                 raise RuntimeError("API returned empty response")
-                
-            return response.choices[0].message.content
-            
+
+            # Extract content and detect common refusal/assistant-safety responses
+            content = response.choices[0].message.content
+            try:
+                # Log a truncated preview of the raw response for debugging
+                logger.debug(f"[groq] Raw response preview: {str(content)[:1000]}")
+            except Exception:
+                pass
+
+            if isinstance(content, str):
+                # Common refusal / assistant-safety patterns to treat as non-answer
+                if re.search(
+                    r"(?i)i\s*(?:'|’)?m sorry|i cannot assist|i can(?:'|’)?t assist|cannot help with that|unable to assist|i can'?t help with that",
+                    content,
+                ):
+                    logger.warning(
+                        "[groq] Detected refusal text in model response; treating as failure to trigger fallback"
+                    )
+                    raise RuntimeError("API returned refusal")
+
+            return content
+
         except Exception as exc:
             last_error = exc
             error_name = type(exc).__name__
-            
+
             # Rate limit: exponential backoff
             if "429" in str(exc) or "rate_limit" in str(exc).lower():
-                wait_time = min(2 ** attempt, 8)  # max 8 seconds
-                logger.warning(f"[groq] Rate limited (attempt {attempt+1}/{max_retries}), waiting {wait_time}s: {error_name}")
+                wait_time = min(2**attempt, 8)  # max 8 seconds
+                logger.warning(
+                    f"[groq] Rate limited (attempt {attempt+1}/{max_retries}), waiting {wait_time}s: {error_name}"
+                )
                 time.sleep(wait_time)
                 continue
-            
+
             # Timeout: retry immediately
             elif "timeout" in str(exc).lower() or "timed out" in str(exc).lower():
-                logger.warning(f"[groq] Timeout (attempt {attempt+1}/{max_retries}): {error_name}")
+                logger.warning(
+                    f"[groq] Timeout (attempt {attempt+1}/{max_retries}): {error_name}"
+                )
                 if attempt < max_retries - 1:
                     time.sleep(0.5)  # brief pause before retry
                 continue
-                
+
             # Auth errors: don't retry
             elif "401" in str(exc) or "unauthorized" in str(exc).lower():
                 logger.error(f"[groq] Auth failed: {error_name} — {exc}")
                 raise
-                
+
             # All other errors: log and retry
             else:
-                logger.warning(f"[groq] Error (attempt {attempt+1}/{max_retries}): {error_name} — {exc}")
+                logger.warning(
+                    f"[groq] Error (attempt {attempt+1}/{max_retries}): {error_name} — {exc}"
+                )
                 if attempt < max_retries - 1:
                     time.sleep(0.5)
                 continue
-    
+
     # All retries exhausted: return graceful fallback
-    logger.error(f"[groq] All {max_retries} attempts failed. Last error: {last_error}. Returning fallback response.")
-    
+    logger.error(
+        f"[groq] All {max_retries} attempts failed. Last error: {last_error}. Returning fallback response."
+    )
+
     # Attempt to provide a sensible fallback based on the user's request
     user_msgs = [m for m in messages if m.get("role") == "user"]
     if user_msgs:
         content = user_msgs[-1].get("content", "")
         if "briefing" in content.lower():
-            return ("SITUATION REPORT:\n[Unable to generate briefing — Groq API unavailable. "
-                    "Please review source articles directly.]\n\n"
-                    "KEY DEVELOPMENTS:\n[Data unavailable]\n\n"
-                    "SIGNAL vs NOISE:\n[Cannot assess]\n\n"
-                    "WHAT TO WATCH:\n[Service temporarily offline]")
+            return (
+                "SITUATION REPORT:\n[Unable to generate briefing — Groq API unavailable. "
+                "Please review source articles directly.]\n\n"
+                "KEY DEVELOPMENTS:\n[Data unavailable]\n\n"
+                "SIGNAL vs NOISE:\n[Cannot assess]\n\n"
+                "WHAT TO WATCH:\n[Service temporarily offline]"
+            )
         elif "timeline" in content.lower():
-            return json.dumps({
-                "title": "Timeline: Unavailable",
-                "summary": "Timeline generation unavailable (API offline)",
-                "events": []
-            })
+            return json.dumps(
+                {
+                    "title": "Timeline: Unavailable",
+                    "summary": "Timeline generation unavailable (API offline)",
+                    "events": [],
+                }
+            )
         elif "question" in content.lower().split()[0:3]:
             return "[Unable to answer question — Groq API is temporarily unavailable. Please try again in a moment.]"
-    
+
     return "[Query processing temporarily unavailable due to API issues. Please try again shortly.]"
 
 
@@ -321,13 +429,21 @@ Original summary: {article.get('original_description') or article.get('descripti
         cleaned = text.strip().replace("```json", "").replace("```", "").strip()
         payload = json.loads(cleaned)
         return {
-            "translated_title": (payload.get("translated_title") or article.get("title") or "").strip(),
-            "translated_description": (payload.get("translated_description") or article.get("description") or "").strip(),
+            "translated_title": (
+                payload.get("translated_title") or article.get("title") or ""
+            ).strip(),
+            "translated_description": (
+                payload.get("translated_description")
+                or article.get("description")
+                or ""
+            ).strip(),
             "target_language": target_language.lower()[:8],
             "provider": "groq",
         }
     except json.JSONDecodeError as exc:
-        logger.warning(f"[translation] JSON parse failed for article {article.get('title', 'unknown')}: {exc}. Using fallback.")
+        logger.warning(
+            f"[translation] JSON parse failed for article {article.get('title', 'unknown')}: {exc}. Using fallback."
+        )
         return {
             "translated_title": article.get("title", ""),
             "translated_description": article.get("description", ""),
@@ -335,7 +451,9 @@ Original summary: {article.get('original_description') or article.get('descripti
             "provider": "fallback",
         }
     except Exception as exc:
-        logger.error(f"[translation] Unexpected error translating article: {exc}. Using fallback.")
+        logger.error(
+            f"[translation] Unexpected error translating article: {exc}. Using fallback."
+        )
         return {
             "translated_title": article.get("title", ""),
             "translated_description": article.get("description", ""),
@@ -387,10 +505,14 @@ Today's date is {date.today().strftime('%B %d, %Y')}."""
     )
 
 
-def answer_query(question: str, context_articles: list[dict] | None = None, topic: str | None = None) -> str:
+def answer_query(
+    question: str, context_articles: list[dict] | None = None, topic: str | None = None
+) -> str:
     context = ""
     if context_articles:
-        context = "\n\nRelevant archived and live reporting:\n" + _article_dump(context_articles)
+        context = "\n\nRelevant archived and live reporting:\n" + _article_dump(
+            context_articles
+        )
 
     scope_line = f"Topic constraint: {topic}.\n" if topic else ""
     prompt = f"""Question: {question}
@@ -466,19 +588,23 @@ Return ONLY valid JSON:
         payload = json.loads(cleaned)
         return payload.get("stories", [])
     except json.JSONDecodeError as exc:
-        logger.warning(f"[headlines] JSON parse failed: {exc}. Returning fallback headlines.")
+        logger.warning(
+            f"[headlines] JSON parse failed: {exc}. Returning fallback headlines."
+        )
         return [
             {
                 "event_id": event.get("event_id", ""),
                 "headline": event.get("label", "Event")[:50],
                 "summary": event.get("summary", "")[:100],
                 "topic": event.get("topic", ""),
-                "why_signal": "Signal processing unavailable"
+                "why_signal": "Signal processing unavailable",
             }
             for event in events[:3]
         ]
     except Exception as exc:
-        logger.error(f"[headlines] Unexpected error building headlines: {exc}. Returning fallback.")
+        logger.error(
+            f"[headlines] Unexpected error building headlines: {exc}. Returning fallback."
+        )
         return []
 
 
@@ -509,7 +635,9 @@ Chronological, oldest first. 6-10 events max."""
         cleaned = text.strip().replace("```json", "").replace("```", "").strip()
         return json.loads(cleaned)
     except json.JSONDecodeError as exc:
-        logger.warning(f"[timeline] JSON parse failed: {exc}. Returning fallback timeline.")
+        logger.warning(
+            f"[timeline] JSON parse failed: {exc}. Returning fallback timeline."
+        )
         return {
             "title": f"Timeline: {query}",
             "summary": "Timeline generation unavailable",
@@ -519,24 +647,30 @@ Chronological, oldest first. 6-10 events max."""
                     "headline": article.get("title", "Event")[:50],
                     "description": article.get("description", "")[:200],
                     "significance": "MEDIUM",
-                    "source": article.get("source", "Unknown")
+                    "source": article.get("source", "Unknown"),
                 }
                 for article in articles[:6]
-            ]
+            ],
         }
     except Exception as exc:
-        logger.error(f"[timeline] Unexpected error building timeline: {exc}. Returning empty timeline.")
+        logger.error(
+            f"[timeline] Unexpected error building timeline: {exc}. Returning empty timeline."
+        )
         return {
             "title": f"Timeline: {query}",
             "summary": "Timeline generation temporarily unavailable",
-            "events": []
+            "events": [],
         }
 
 
-def translate_article(article: dict, target_language: str = "English", allow_remote_fallback: bool = True) -> dict:
+def translate_article(
+    article: dict, target_language: str = "English", allow_remote_fallback: bool = True
+) -> dict:
     source_language = _normalize_language_code(article.get("language"))
     original_title = article.get("original_title") or article.get("title") or ""
-    original_description = article.get("original_description") or article.get("description") or ""
+    original_description = (
+        article.get("original_description") or article.get("description") or ""
+    )
 
     if source_language == "en":
         return {
@@ -551,19 +685,27 @@ def translate_article(article: dict, target_language: str = "English", allow_rem
         try:
             return {
                 "translated_title": _translate_locally(original_title, source_language),
-                "translated_description": _translate_locally(original_description, source_language),
+                "translated_description": _translate_locally(
+                    original_description, source_language
+                ),
                 "target_language": target_language.lower()[:8],
                 "provider": "local-helsinki",
             }
         except Exception as exc:
             local_error = exc
 
-    if allow_remote_fallback and ALLOW_GROQ_TRANSLATION_FALLBACK and os.getenv("GROQ_API_KEY"):
+    if (
+        allow_remote_fallback
+        and ALLOW_GROQ_TRANSLATION_FALLBACK
+        and os.getenv("GROQ_API_KEY")
+    ):
         try:
             return _translate_article_groq(article, target_language=target_language)
         except Exception as exc:
             if local_error:
-                raise RuntimeError(f"Local translation unavailable ({local_error}); Groq fallback failed ({exc}).") from exc
+                raise RuntimeError(
+                    f"Local translation unavailable ({local_error}); Groq fallback failed ({exc})."
+                ) from exc
             raise
 
     if local_error:

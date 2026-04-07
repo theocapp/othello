@@ -47,7 +47,9 @@ def main() -> int:
             ]
         )
         if WORKER_ENABLE_TRANSLATIONS:
-            bootstrap_jobs.append(("refresh_recent_translations", refresh_recent_translations))
+            bootstrap_jobs.append(
+                ("refresh_recent_translations", refresh_recent_translations)
+            )
 
     for label, job in bootstrap_jobs:
         try:

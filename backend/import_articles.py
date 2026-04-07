@@ -1,7 +1,6 @@
 import argparse
 import csv
 import json
-import os
 import sqlite3
 from pathlib import Path
 
@@ -16,14 +15,20 @@ from services.briefing_service import build_topic_briefing
 from services.headlines_service import rebuild_headlines_cache
 from news import infer_article_topics
 
-
 ARTICLE_KEY_ALIASES = {
     "title": ["title", "headline", "name"],
     "description": ["description", "summary", "snippet", "excerpt", "content"],
     "source": ["source", "source_name", "publisher", "outlet"],
     "source_domain": ["source_domain", "domain", "publisher_domain"],
     "url": ["url", "link", "article_url"],
-    "published_at": ["published_at", "published", "publishedAt", "date", "datetime", "timestamp"],
+    "published_at": [
+        "published_at",
+        "published",
+        "publishedAt",
+        "date",
+        "datetime",
+        "timestamp",
+    ],
     "language": ["language", "lang"],
 }
 
@@ -47,16 +52,22 @@ def _normalize_article_record(record: dict) -> dict | None:
         return None
     return {
         "title": title,
-        "description": _extract_value(record, ARTICLE_KEY_ALIASES["description"]) or title,
-        "source": _extract_value(record, ARTICLE_KEY_ALIASES["source"]) or "Imported archive",
-        "source_domain": _extract_value(record, ARTICLE_KEY_ALIASES["source_domain"]) or "",
+        "description": _extract_value(record, ARTICLE_KEY_ALIASES["description"])
+        or title,
+        "source": _extract_value(record, ARTICLE_KEY_ALIASES["source"])
+        or "Imported archive",
+        "source_domain": _extract_value(record, ARTICLE_KEY_ALIASES["source_domain"])
+        or "",
         "url": url,
-        "published_at": _extract_value(record, ARTICLE_KEY_ALIASES["published_at"]) or "",
+        "published_at": _extract_value(record, ARTICLE_KEY_ALIASES["published_at"])
+        or "",
         "language": _extract_value(record, ARTICLE_KEY_ALIASES["language"]) or "en",
     }
 
 
-def _topics_for_record(article: dict, record: dict, forced_topics: list[str], infer_topics: bool) -> list[str]:
+def _topics_for_record(
+    article: dict, record: dict, forced_topics: list[str], infer_topics: bool
+) -> list[str]:
     if forced_topics:
         return forced_topics
 
@@ -114,7 +125,9 @@ def _load_sqlite_records(path: Path) -> list[tuple[dict, list[str], str]]:
 
     if {"articles", "article_topics"} <= tables:
         article_rows = conn.execute("SELECT payload, provider FROM articles").fetchall()
-        topic_rows = conn.execute("SELECT article_url, topic FROM article_topics").fetchall()
+        topic_rows = conn.execute(
+            "SELECT article_url, topic FROM article_topics"
+        ).fetchall()
         topic_map: dict[str, list[str]] = {}
         for row in topic_rows:
             topic_map.setdefault(row["article_url"], []).append(row["topic"])
@@ -126,7 +139,9 @@ def _load_sqlite_records(path: Path) -> list[tuple[dict, list[str], str]]:
             rows.append((payload, topic_map.get(url, []), row["provider"]))
 
     if "briefing_cache" in tables:
-        briefing_rows = conn.execute("SELECT topic, sources FROM briefing_cache").fetchall()
+        briefing_rows = conn.execute(
+            "SELECT topic, sources FROM briefing_cache"
+        ).fetchall()
         for row in briefing_rows:
             topic = row["topic"]
             if topic not in TOPICS:
@@ -173,7 +188,7 @@ def _detect_format(path: Path, explicit: str) -> str:
 
 
 def _batch(iterable: list[dict], size: int) -> list[list[dict]]:
-    return [iterable[index:index + size] for index in range(0, len(iterable), size)]
+    return [iterable[index : index + size] for index in range(0, len(iterable), size)]
 
 
 def import_archive(
@@ -212,7 +227,9 @@ def import_archive(
     if format_name == "json":
         loaded_records = [(record, [], provider) for record in _load_json_records(path)]
     elif format_name == "jsonl":
-        loaded_records = [(record, [], provider) for record in _load_jsonl_records(path)]
+        loaded_records = [
+            (record, [], provider) for record in _load_jsonl_records(path)
+        ]
     elif format_name == "csv":
         loaded_records = [(record, [], provider) for record in _load_csv_records(path)]
     elif format_name == "sqlite":
@@ -229,7 +246,9 @@ def import_archive(
         if not article:
             skipped += 1
             continue
-        topics = [topic for topic in sqlite_topics if topic in TOPICS] or _topics_for_record(article, record, forced_topics, infer_topics)
+        topics = [
+            topic for topic in sqlite_topics if topic in TOPICS
+        ] or _topics_for_record(article, record, forced_topics, infer_topics)
         if not topics:
             skipped += 1
             continue
@@ -246,7 +265,9 @@ def import_archive(
         if not articles:
             continue
         for batch in _batch(articles, batch_size):
-            inserted_or_updated += upsert_articles(batch, topic=topic, provider=provider)
+            inserted_or_updated += upsert_articles(
+                batch, topic=topic, provider=provider
+            )
             topic_counts[topic] += len(batch)
             if not skip_chroma:
                 store_articles(batch, topic)
@@ -276,16 +297,50 @@ def import_archive(
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Import historical article archives into the Othello V2 Postgres corpus.")
+    parser = argparse.ArgumentParser(
+        description="Import historical article archives into the Othello V2 Postgres corpus."
+    )
     parser.add_argument("path", help="Path to a JSON, JSONL, CSV, or SQLite archive.")
-    parser.add_argument("--format", default="auto", choices=["auto", "json", "jsonl", "csv", "sqlite"])
-    parser.add_argument("--provider", default="archive-import", help="Provider label recorded for imported articles.")
-    parser.add_argument("--topic", action="append", choices=TOPICS, help="Force imported records into one or more topics.")
-    parser.add_argument("--no-infer-topics", action="store_true", help="Do not infer topics from article text when topics are missing.")
-    parser.add_argument("--skip-chroma", action="store_true", help="Skip vector-store writes during import.")
-    parser.add_argument("--skip-entities", action="store_true", help="Skip entity extraction during import.")
-    parser.add_argument("--refresh-snapshots", action="store_true", help="Rebuild headlines and briefings after import.")
-    parser.add_argument("--batch-size", type=int, default=50, help="Batch size for corpus/chroma/entity writes.")
+    parser.add_argument(
+        "--format", default="auto", choices=["auto", "json", "jsonl", "csv", "sqlite"]
+    )
+    parser.add_argument(
+        "--provider",
+        default="archive-import",
+        help="Provider label recorded for imported articles.",
+    )
+    parser.add_argument(
+        "--topic",
+        action="append",
+        choices=TOPICS,
+        help="Force imported records into one or more topics.",
+    )
+    parser.add_argument(
+        "--no-infer-topics",
+        action="store_true",
+        help="Do not infer topics from article text when topics are missing.",
+    )
+    parser.add_argument(
+        "--skip-chroma",
+        action="store_true",
+        help="Skip vector-store writes during import.",
+    )
+    parser.add_argument(
+        "--skip-entities",
+        action="store_true",
+        help="Skip entity extraction during import.",
+    )
+    parser.add_argument(
+        "--refresh-snapshots",
+        action="store_true",
+        help="Rebuild headlines and briefings after import.",
+    )
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=50,
+        help="Batch size for corpus/chroma/entity writes.",
+    )
     return parser.parse_args()
 
 

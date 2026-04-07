@@ -1,5 +1,4 @@
 import hashlib
-import json
 import os
 import re
 import time
@@ -12,9 +11,13 @@ from urllib.parse import urljoin, urlparse
 
 import requests
 
-from corpus import get_source_registry, record_raw_source_documents, upsert_articles, upsert_official_updates
+from corpus import (
+    get_source_registry,
+    record_raw_source_documents,
+    upsert_articles,
+    upsert_official_updates,
+)
 from news import infer_article_topics, should_promote_article
-
 
 RELIEFWEB_ENDPOINT = "https://api.reliefweb.int/v2/reports"
 RELIEFWEB_APPNAME = os.getenv("OTHELLO_RELIEFWEB_APPNAME", "othello_v2")
@@ -75,7 +78,11 @@ def _normalize_time(raw: str | None) -> str:
     try:
         if raw.endswith("Z"):
             return raw
-        return datetime.fromisoformat(raw.replace("Z", "+00:00")).astimezone(timezone.utc).isoformat()
+        return (
+            datetime.fromisoformat(raw.replace("Z", "+00:00"))
+            .astimezone(timezone.utc)
+            .isoformat()
+        )
     except Exception:
         return raw
 
@@ -97,7 +104,11 @@ def _extract_xml_items(xml_text: str) -> list[dict]:
                 "title": title.strip(),
                 "url": link.strip(),
                 "description": (item.findtext("description") or title).strip(),
-                "published_at": _normalize_time(item.findtext("pubDate") or item.findtext("published") or item.findtext("updated")),
+                "published_at": _normalize_time(
+                    item.findtext("pubDate")
+                    or item.findtext("published")
+                    or item.findtext("updated")
+                ),
                 "external_id": (item.findtext("guid") or link).strip(),
             }
         )
@@ -113,7 +124,10 @@ def _extract_xml_items(xml_text: str) -> list[dict]:
                 "title": title.strip(),
                 "url": link.strip(),
                 "description": (entry.findtext(f"{atom_ns}summary") or title).strip(),
-                "published_at": _normalize_time(entry.findtext(f"{atom_ns}updated") or entry.findtext(f"{atom_ns}published")),
+                "published_at": _normalize_time(
+                    entry.findtext(f"{atom_ns}updated")
+                    or entry.findtext(f"{atom_ns}published")
+                ),
                 "external_id": (entry.findtext(f"{atom_ns}id") or link).strip(),
             }
         )
@@ -122,7 +136,10 @@ def _extract_xml_items(xml_text: str) -> list[dict]:
 
 def _raw_document(source: dict, item: dict, adapter: str, payload: dict) -> dict:
     return {
-        "document_id": _hash_id(source["source_id"], item.get("external_id") or item.get("url") or item["title"]),
+        "document_id": _hash_id(
+            source["source_id"],
+            item.get("external_id") or item.get("url") or item["title"],
+        ),
         "source_id": source["source_id"],
         "external_id": item.get("external_id"),
         "url": item.get("url"),
@@ -132,15 +149,27 @@ def _raw_document(source: dict, item: dict, adapter: str, payload: dict) -> dict
         "language": source.get("language") or "en",
         "source_type": source["source_type"],
         "trust_tier": source["trust_tier"],
-        "content_hash": _hash_id(item["title"], item.get("url") or "", item.get("published_at") or "", length=64),
-        "payload": {"adapter": adapter, "source_name": source["source_name"], "item": payload},
+        "content_hash": _hash_id(
+            item["title"],
+            item.get("url") or "",
+            item.get("published_at") or "",
+            length=64,
+        ),
+        "payload": {
+            "adapter": adapter,
+            "source_name": source["source_name"],
+            "item": payload,
+        },
         "normalized_ref": item.get("url"),
     }
 
 
 def _official_update(source: dict, item: dict, update_type: str, payload: dict) -> dict:
     return {
-        "update_id": _hash_id(source["source_id"], item.get("external_id") or item.get("url") or item["title"]),
+        "update_id": _hash_id(
+            source["source_id"],
+            item.get("external_id") or item.get("url") or item["title"],
+        ),
         "issuing_body": source["source_name"],
         "update_type": update_type,
         "title": item["title"],
@@ -150,7 +179,13 @@ def _official_update(source: dict, item: dict, update_type: str, payload: dict) 
         "region": source.get("region"),
         "language": source.get("language") or "en",
         "trust_tier": source["trust_tier"],
-        "content_hash": _hash_id(source["source_name"], item["title"], item.get("url") or "", item.get("published_at") or "", length=64),
+        "content_hash": _hash_id(
+            source["source_name"],
+            item["title"],
+            item.get("url") or "",
+            item.get("published_at") or "",
+            length=64,
+        ),
         "payload": payload,
         "summary": item.get("description") or item["title"],
     }
@@ -179,15 +214,21 @@ def _page_listing_items(
             continue
         absolute = urljoin(page_url, href)
         parsed = urlparse(absolute)
-        if allowed_domains and parsed.netloc.lower() not in {domain.lower() for domain in allowed_domains}:
+        if allowed_domains and parsed.netloc.lower() not in {
+            domain.lower() for domain in allowed_domains
+        }:
             continue
         lower_href = absolute.lower()
-        if allowed_href_parts and not any(part in lower_href for part in allowed_href_parts):
+        if allowed_href_parts and not any(
+            part in lower_href for part in allowed_href_parts
+        ):
             continue
         if any(part in lower_href for part in blocked_href_parts):
             continue
         lower_text = text.lower()
-        if title_keywords and not any(keyword in lower_text for keyword in title_keywords):
+        if title_keywords and not any(
+            keyword in lower_text for keyword in title_keywords
+        ):
             continue
         if absolute in seen:
             continue
@@ -211,9 +252,12 @@ def _article_from_update(source: dict, update: dict) -> dict:
         "title": update["title"],
         "description": update.get("summary") or update["title"],
         "source": source["source_name"],
-        "source_domain": source.get("source_domain") or urlparse(update.get("url") or "").netloc.lower(),
-        "url": update.get("url") or f"https://{source.get('source_domain') or 'local'}/updates/{update['update_id']}",
-        "published_at": update.get("published_at") or datetime.now(timezone.utc).isoformat(),
+        "source_domain": source.get("source_domain")
+        or urlparse(update.get("url") or "").netloc.lower(),
+        "url": update.get("url")
+        or f"https://{source.get('source_domain') or 'local'}/updates/{update['update_id']}",
+        "published_at": update.get("published_at")
+        or datetime.now(timezone.utc).isoformat(),
         "language": source.get("language") or "en",
     }
 
@@ -241,7 +285,9 @@ def _discover_imf_rss_urls(session: requests.Session, directory_url: str) -> lis
 def fetch_imf_updates(source: dict, limit: int = 30) -> list[dict]:
     session = _session()
     metadata = source.get("metadata") or {}
-    feed_urls = metadata.get("feed_urls") or _discover_imf_rss_urls(session, metadata.get("rss_directory_url", "https://www.imf.org/en/news/rss"))
+    feed_urls = metadata.get("feed_urls") or _discover_imf_rss_urls(
+        session, metadata.get("rss_directory_url", "https://www.imf.org/en/news/rss")
+    )
     updates = []
     for feed_url in feed_urls:
         try:
@@ -251,8 +297,18 @@ def fetch_imf_updates(source: dict, limit: int = 30) -> list[dict]:
                 updates.append(
                     {
                         "item": item,
-                        "raw": _raw_document(source, item, "imf_rss", {"feed_url": feed_url, "entry": item}),
-                        "update": _official_update(source, item, "rss_release", {"feed_url": feed_url, "entry": item}),
+                        "raw": _raw_document(
+                            source,
+                            item,
+                            "imf_rss",
+                            {"feed_url": feed_url, "entry": item},
+                        ),
+                        "update": _official_update(
+                            source,
+                            item,
+                            "rss_release",
+                            {"feed_url": feed_url, "entry": item},
+                        ),
                     }
                 )
         except Exception:
@@ -292,8 +348,15 @@ def fetch_ofac_updates(source: dict, limit: int = 30) -> list[dict]:
         items.append(
             {
                 "item": item,
-                "raw": _raw_document(source, item, "ofac_recent_actions", {"page_url": url, "entry": item}),
-                "update": _official_update(source, item, "sanctions_action", {"page_url": url, "entry": item}),
+                "raw": _raw_document(
+                    source,
+                    item,
+                    "ofac_recent_actions",
+                    {"page_url": url, "entry": item},
+                ),
+                "update": _official_update(
+                    source, item, "sanctions_action", {"page_url": url, "entry": item}
+                ),
             }
         )
     deduped = {}
@@ -327,7 +390,12 @@ def fetch_world_bank_updates(source: dict, limit: int = 30) -> list[dict]:
     parser = AnchorParser()
     parser.feed(response.text)
     items = []
-    allowed_parts = ("/en/news/press-release/", "/en/news/statement/", "/en/news/feature/", "/en/news/speech/")
+    allowed_parts = (
+        "/en/news/press-release/",
+        "/en/news/statement/",
+        "/en/news/feature/",
+        "/en/news/speech/",
+    )
     for link in parser.links:
         href = link.get("href") or ""
         text = (link.get("text") or "").strip()
@@ -346,8 +414,12 @@ def fetch_world_bank_updates(source: dict, limit: int = 30) -> list[dict]:
         items.append(
             {
                 "item": item,
-                "raw": _raw_document(source, item, "world_bank_news", {"page_url": url, "entry": item}),
-                "update": _official_update(source, item, "world_bank_release", {"page_url": url, "entry": item}),
+                "raw": _raw_document(
+                    source, item, "world_bank_news", {"page_url": url, "entry": item}
+                ),
+                "update": _official_update(
+                    source, item, "world_bank_release", {"page_url": url, "entry": item}
+                ),
             }
         )
     deduped = {}
@@ -394,11 +466,17 @@ def fetch_reliefweb_updates(source: dict, limit: int = 30) -> list[dict]:
     for record in data:
         fields = record.get("fields", {})
         url_alias = fields.get("url_alias") or record.get("href")
-        url = url_alias if isinstance(url_alias, str) and url_alias.startswith("http") else None
+        url = (
+            url_alias
+            if isinstance(url_alias, str) and url_alias.startswith("http")
+            else None
+        )
         item = {
             "title": fields.get("title") or "ReliefWeb update",
             "url": url or f"https://reliefweb.int/node/{record.get('id')}",
-            "description": re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", fields.get("body") or "")).strip()[:400],
+            "description": re.sub(
+                r"\s+", " ", re.sub(r"<[^>]+>", " ", fields.get("body") or "")
+            ).strip()[:400],
             "published_at": _normalize_time((fields.get("date") or {}).get("created")),
             "external_id": str(record.get("id")),
         }
@@ -416,7 +494,9 @@ def fetch_official_page_updates(source: dict, limit: int = 30) -> list[dict]:
     session = _session()
     metadata = source.get("metadata") or {}
     pages = metadata.get("pages") or []
-    allowed_domains = metadata.get("allowed_domains") or ([source.get("source_domain")] if source.get("source_domain") else None)
+    allowed_domains = metadata.get("allowed_domains") or (
+        [source.get("source_domain")] if source.get("source_domain") else None
+    )
     allowed_href_parts = tuple(metadata.get("allowed_href_parts") or ())
     title_keywords = metadata.get("title_keywords") or []
     update_type = f"{(metadata.get('collection') or 'official')}_update"
@@ -436,8 +516,15 @@ def fetch_official_page_updates(source: dict, limit: int = 30) -> list[dict]:
             rows.append(
                 {
                     "item": item,
-                    "raw": _raw_document(source, item, "official_page_listing", {"page_url": page_url, "entry": item}),
-                    "update": _official_update(source, item, update_type, {"page_url": page_url, "entry": item}),
+                    "raw": _raw_document(
+                        source,
+                        item,
+                        "official_page_listing",
+                        {"page_url": page_url, "entry": item},
+                    ),
+                    "update": _official_update(
+                        source, item, update_type, {"page_url": page_url, "entry": item}
+                    ),
                 }
             )
             if len(rows) >= limit:
@@ -470,7 +557,11 @@ def fetch_unsc_updates(source: dict, limit: int = 30) -> list[dict]:
         )
         for item in items:
             title_lower = item["title"].lower()
-            if "programme of work" in title_lower or "members to hold" in title_lower or "meeting" in title_lower:
+            if (
+                "programme of work" in title_lower
+                or "members to hold" in title_lower
+                or "meeting" in title_lower
+            ):
                 update_type = "security_council_meeting_signal"
             elif "statement" in title_lower:
                 update_type = "security_council_statement"
@@ -479,8 +570,15 @@ def fetch_unsc_updates(source: dict, limit: int = 30) -> list[dict]:
             rows.append(
                 {
                     "item": item,
-                    "raw": _raw_document(source, item, "unsc_press_pages", {"page_url": page_url, "entry": item}),
-                    "update": _official_update(source, item, update_type, {"page_url": page_url, "entry": item}),
+                    "raw": _raw_document(
+                        source,
+                        item,
+                        "unsc_press_pages",
+                        {"page_url": page_url, "entry": item},
+                    ),
+                    "update": _official_update(
+                        source, item, update_type, {"page_url": page_url, "entry": item}
+                    ),
                 }
             )
             if len(rows) >= limit:
@@ -500,15 +598,33 @@ def fetch_icc_press_updates(source: dict, limit: int = 30) -> list[dict]:
             allowed_domains=["www.icc-cpi.int", "asp.icc-cpi.int", "icc-cpi.int"],
             allowed_href_parts=("/news/", "/press-releases", "/cases/"),
             blocked_href_parts=("/node/", "/search"),
-            title_keywords=["icc", "court", "prosecutor", "chamber", "warrant", "press release", "statement"],
+            title_keywords=[
+                "icc",
+                "court",
+                "prosecutor",
+                "chamber",
+                "warrant",
+                "press release",
+                "statement",
+            ],
             limit=limit,
         )
         for item in items:
             rows.append(
                 {
                     "item": item,
-                    "raw": _raw_document(source, item, "icc_press_pages", {"page_url": page_url, "entry": item}),
-                    "update": _official_update(source, item, "icc_press_release", {"page_url": page_url, "entry": item}),
+                    "raw": _raw_document(
+                        source,
+                        item,
+                        "icc_press_pages",
+                        {"page_url": page_url, "entry": item},
+                    ),
+                    "update": _official_update(
+                        source,
+                        item,
+                        "icc_press_release",
+                        {"page_url": page_url, "entry": item},
+                    ),
                 }
             )
             if len(rows) >= limit:
@@ -528,15 +644,34 @@ def fetch_icc_filing_updates(source: dict, limit: int = 30) -> list[dict]:
             allowed_domains=["www.icc-cpi.int", "asp.icc-cpi.int", "icc-cpi.int"],
             allowed_href_parts=("/case-records", "/cases/", "/documents/", "/record"),
             blocked_href_parts=("/search", "/news"),
-            title_keywords=["decision", "filing", "application", "submission", "order", "request", "warrant", "record"],
+            title_keywords=[
+                "decision",
+                "filing",
+                "application",
+                "submission",
+                "order",
+                "request",
+                "warrant",
+                "record",
+            ],
             limit=limit,
         )
         for item in items:
             rows.append(
                 {
                     "item": item,
-                    "raw": _raw_document(source, item, "icc_filing_pages", {"page_url": page_url, "entry": item}),
-                    "update": _official_update(source, item, "icc_filing", {"page_url": page_url, "entry": item}),
+                    "raw": _raw_document(
+                        source,
+                        item,
+                        "icc_filing_pages",
+                        {"page_url": page_url, "entry": item},
+                    ),
+                    "update": _official_update(
+                        source,
+                        item,
+                        "icc_filing",
+                        {"page_url": page_url, "entry": item},
+                    ),
                 }
             )
             if len(rows) >= limit:
@@ -556,15 +691,35 @@ def fetch_gazette_updates(source: dict, limit: int = 30) -> list[dict]:
             allowed_domains=["www.thegazette.co.uk", "thegazette.co.uk"],
             allowed_href_parts=("/notice/", "/all-notices"),
             blocked_href_parts=("/edition/", "/search"),
-            title_keywords=["notice", "order", "sanction", "treasury", "foreign", "company", "insolvency", "government", "appointment"],
+            title_keywords=[
+                "notice",
+                "order",
+                "sanction",
+                "treasury",
+                "foreign",
+                "company",
+                "insolvency",
+                "government",
+                "appointment",
+            ],
             limit=limit,
         )
         for item in items:
             rows.append(
                 {
                     "item": item,
-                    "raw": _raw_document(source, item, "gazette_notices", {"page_url": page_url, "entry": item}),
-                    "update": _official_update(source, item, "gazette_notice", {"page_url": page_url, "entry": item}),
+                    "raw": _raw_document(
+                        source,
+                        item,
+                        "gazette_notices",
+                        {"page_url": page_url, "entry": item},
+                    ),
+                    "update": _official_update(
+                        source,
+                        item,
+                        "gazette_notice",
+                        {"page_url": page_url, "entry": item},
+                    ),
                 }
             )
             if len(rows) >= limit:
@@ -574,7 +729,15 @@ def fetch_gazette_updates(source: dict, limit: int = 30) -> list[dict]:
 
 def ingest_official_updates(limit_per_source: int = 30) -> dict:
     registry = get_source_registry(source_type="official_update", active_only=True)
-    totals = {"sources": 0, "official_updates": 0, "raw_documents": 0, "mirrored_articles": 0, "promoted_mirrored_articles": 0, "rejected_mirrored_articles": 0, "errors": 0}
+    totals = {
+        "sources": 0,
+        "official_updates": 0,
+        "raw_documents": 0,
+        "mirrored_articles": 0,
+        "promoted_mirrored_articles": 0,
+        "rejected_mirrored_articles": 0,
+        "errors": 0,
+    }
     results = []
 
     adapter_map = {
@@ -611,7 +774,9 @@ def ingest_official_updates(limit_per_source: int = 30) -> dict:
                     if not should_promote_article(article, topics):
                         rejected_mirrored += 1
                         continue
-                    mirrored += upsert_articles([article], topic=topics or ["geopolitics"], provider="official")
+                    mirrored += upsert_articles(
+                        [article], topic=topics or ["geopolitics"], provider="official"
+                    )
                     promoted_mirrored += 1
             totals["raw_documents"] += raw_written
             totals["official_updates"] += updates_written
