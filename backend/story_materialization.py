@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import re
 import time
 from datetime import datetime, timedelta
 
@@ -10,6 +11,7 @@ from contradictions import cluster_articles, enrich_events, event_cluster_key
 from corpus import (
     get_recent_articles,
     get_source_registry,
+    get_structured_event_coordinates_by_ids,
     list_structured_event_ids_in_date_range,
     load_claim_resolution_for_event_key,
     load_framing_signals_for_article_urls,
@@ -20,6 +22,73 @@ from corpus import (
 )
 
 DEFAULT_TOPICS = ("geopolitics", "economics")
+
+
+_COUNTRY_ALIASES = {
+    "usa": "united states",
+    "us": "united states",
+    "u.s.": "united states",
+    "u.s.a.": "united states",
+    "united states of america": "united states",
+    "uk": "united kingdom",
+    "u.k.": "united kingdom",
+    "great britain": "united kingdom",
+    "britain": "united kingdom",
+    "england": "united kingdom",
+    "london": "united kingdom",
+    "russian federation": "russia",
+    "moscow": "russia",
+    "iran": "iran",
+    "tehran": "iran",
+    "china": "china",
+    "people's republic of china": "china",
+    "prc": "china",
+    "beijing": "china",
+    "syrian arab republic": "syria",
+    "damascus": "syria",
+    "kyiv": "ukraine",
+    "kiev": "ukraine",
+    "ankara": "turkey",
+    "uae": "united arab emirates",
+    "ivory coast": "cote d'ivoire",
+    "côte d'ivoire": "cote d'ivoire",
+    "drc": "dr congo",
+    "zaire": "dr congo",
+    "kinshasa": "dr congo",
+    "republic of the congo": "congo",
+    "brazzaville": "congo",
+    "south korea": "south korea",
+    "republic of korea": "south korea",
+    "rok": "south korea",
+    "north korea": "north korea",
+    "pyongyang": "north korea",
+}
+
+_COUNTRY_CANONICAL_NAMES = frozenset(_COUNTRY_ALIASES.values())
+_COUNTRY_NAME_PATTERN = re.compile(
+    r"\b(" + "|".join(sorted({re.escape(name) for name in set(_COUNTRY_ALIASES) | _COUNTRY_CANONICAL_NAMES}, key=len, reverse=True)) + r")\b",
+    flags=re.I,
+)
+
+
+def _normalize_country(name: str | None) -> str | None:
+    if not name:
+        return None
+    cleaned = str(name).strip().lower()
+    if cleaned.startswith("the "):
+        cleaned = cleaned[4:]
+    return _COUNTRY_ALIASES.get(cleaned, cleaned)
+
+
+def _countries_from_text(text: str | None) -> list[str]:
+    if not text:
+        return []
+    countries: list[str] = []
+    for raw in _COUNTRY_NAME_PATTERN.findall(text):
+        normalized = _normalize_country(raw)
+        if normalized and normalized not in countries:
+            countries.append(normalized)
+    return countries
 
 
 def _date_range_for_cluster(event: dict, padding_days: int = 2) -> tuple[str | None, str | None]:
@@ -44,11 +113,45 @@ def _date_range_for_cluster(event: dict, padding_days: int = 2) -> tuple[str | N
     return start.isoformat(), end.isoformat()
 
 
+def _story_country_preferences(event: dict) -> list[str]:
+    preferences: list[str] = []
+    for raw_focus in event.get("entity_focus") or []:
+        if not raw_focus or not str(raw_focus).strip():
+            continue
+        normalized = _normalize_country(str(raw_focus))
+        canonical = _COUNTRY_ALIASES.get(normalized, normalized)
+        if canonical in _COUNTRY_CANONICAL_NAMES and canonical not in preferences:
+            preferences.append(canonical)
+
+    for country in _countries_from_text(event.get("label")) + _countries_from_text(event.get("summary")):
+        if country not in preferences:
+            preferences.append(country)
+
+    if "united states" in preferences and len(preferences) > 1:
+        preferences = [country for country in preferences if country != "united states"]
+    return preferences
+
+
 def _link_structured_ids(event: dict) -> list[str]:
     start, end = _date_range_for_cluster(event)
     if not start or not end:
         return []
-    return list_structured_event_ids_in_date_range(start, end, limit=80)
+
+    candidate_ids = list_structured_event_ids_in_date_range(start, end, limit=80)
+    if not candidate_ids:
+        return []
+
+    preferred_countries = _story_country_preferences(event)
+    if not preferred_countries:
+        return candidate_ids
+
+    coord_by_id = get_structured_event_coordinates_by_ids(candidate_ids)
+    filtered_ids = []
+    for event_id, meta in coord_by_id.items():
+        country = _normalize_country(meta.get("country"))
+        if country and country in preferred_countries:
+            filtered_ids.append(event_id)
+    return filtered_ids or candidate_ids
 
 
 def _perspective_id(event_id: str, article_url: str) -> str:

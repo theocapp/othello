@@ -822,6 +822,8 @@ def _build_story_hotspots(window: str, now: datetime) -> tuple[list[dict], int]:
     for index, row in enumerate(picked, 1):
         urls = [str(u).strip() for u in (row.get("article_urls") or []) if u and str(u).strip()]
         linked = [str(x).strip() for x in (row.get("linked_structured_event_ids") or []) if x and str(x).strip()]
+        if not linked:
+            continue
         story_candidates += max(len(urls), len(linked), 1)
 
         articles_map = get_articles_by_urls(urls, limit=48)
@@ -874,6 +876,9 @@ def _build_story_hotspots(window: str, now: datetime) -> tuple[list[dict], int]:
             primary_admin1 = max(admin1_counts.items(), key=lambda item: (item[1], item[0]))[0] if admin1_counts else None
         else:
             place_payload = None
+            # Extract all entities and resolve them immediately for better selection
+            resolved_places: list[tuple[str, dict]] = []
+            
             for url in urls[:12]:
                 article = articles_map.get(url)
                 if not article:
@@ -885,15 +890,80 @@ def _build_story_hotspots(window: str, now: datetime) -> tuple[list[dict], int]:
                     entities = extract_entities(text, language=_story_article_language(article))
                 except Exception:
                     continue
+                
+                # Extract headline for reference
+                headline = text.split(".")[0] if "." in text else (text[:100] if len(text) > 100 else text)
+                headline_lower = headline.lower()
+                
                 for entity in entities:
                     if entity.get("type") != "GPE":
                         continue
-                    place = _resolve_story_place(entity.get("entity") or "", text, location_index)
-                    if place:
-                        place_payload = place
+                    entity_name = str(entity.get("entity") or "")
+                    entity_lower = entity_name.lower()
+                    
+                    # Skip if we've already found a good location
+                    if place_payload:
                         break
-                if place_payload:
+                    
+                    # Resolve the place
+                    place = _resolve_story_place(entity_name, text, location_index)
+                    if not place:
+                        continue
+                    
+                    resolved_country = str(place.get("country", "")).lower()
+                    resolved_label = str(place.get("label", "")).lower()
+                    in_headline = entity_lower in headline_lower
+                    
+                    # Keywords indicating the entity is an actor/speaker rather than event location
+                    # Check both the entity name AND the resolved country
+                    actor_keywords = {"us", "united states", "usa", "america", "american", "nato", "europe", "european", "washington", "state department"}
+                    country_actors = {"united states", "usa", "america"}
+                    
+                    is_actor = entity_lower in actor_keywords or resolved_country in country_actors
+                    
+                    # Store resolved places with metadata
+                    resolved_places.append((entity_lower, {
+                        "place": place,
+                        "entity": entity_name,
+                        "is_actor": is_actor,
+                        "in_headline": in_headline,
+                        "resolution_rank": (not is_actor, in_headline, 1),  # Sort by: non-actor first, then headline, then order
+                    }))
+            
+            # Sort by preference: non-actors first, then headline, then others
+            resolved_places.sort(key=lambda x: x[1]["resolution_rank"], reverse=True)
+            
+            # Select the best location - prefer non-actor locations
+            for entity_lower, info in resolved_places:
+                if not info["is_actor"]:  # Prefer non-actor locations (Iran, Israel, China, Russia, etc.)
+                    place_payload = info["place"]
                     break
+            
+            # Fallback: any headline entity that's not US
+            if not place_payload:
+                for entity_lower, info in resolved_places:
+                    if info["in_headline"] and not info["is_actor"]:
+                        place_payload = info["place"]
+                        break
+            
+            # Last resort: use any non-actor place
+            if not place_payload:
+                for entity_lower, info in resolved_places:
+                    if not info["is_actor"]:
+                        place_payload = info["place"]
+                        break
+            
+            # Ultimate fallback: use headline entity even if actor
+            if not place_payload:
+                for entity_lower, info in resolved_places:
+                    if info["in_headline"]:
+                        place_payload = info["place"]
+                        break
+            
+            # Last resort: any resolved place
+            if not place_payload and resolved_places:
+                place_payload = resolved_places[0][1]["place"]
+            
             if not place_payload:
                 continue
             centroid_lat = float(place_payload["latitude"])
