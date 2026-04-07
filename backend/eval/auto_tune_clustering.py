@@ -72,9 +72,7 @@ def _evaluate_current() -> tuple[int, float]:
 
     importlib.reload(clustering)
     results = eval_clustering.run(verbose=False)
-    hard_failures = [
-        r for r in results if not r.get("passed") and r.get("expected_behavior") == "pass"
-    ]
+    hard_failures = [r for r in results if not r.get("passed")]
     f1_values = [r.get("metrics", {}).get("f1", 0.0) for r in results if "metrics" in r]
     mean_f1 = sum(f1_values) / len(f1_values) if f1_values else 0.0
     return len(hard_failures), mean_f1

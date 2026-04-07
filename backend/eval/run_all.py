@@ -6,9 +6,10 @@ Usage (from backend/ directory):
 Exit code 0 if all pass-expected cases pass, 1 otherwise.
 
 What "passing" means per module:
-  - clustering:  F1=1.0 on cases marked expected_behavior=pass
-                 Cases marked expected_behavior=fail document known bugs;
-                 they're reported but don't fail the suite.
+    - clustering:  F1=1.0 on all ground-truth cases.
+                                 Only cases explicitly marked with
+                                 expected_behavior=fail and fail_reason=known_architectural_limit
+                                 are excluded from hard-failure counts.
   - identity:    All score/match assertions pass.
   - importance:  Correct pairwise ranking on all cases.
                  Cases that reveal a known scoring limitation are still
@@ -27,18 +28,15 @@ def main():
     identity_results = run_identity(verbose=True)
     importance_results = run_importance(verbose=True)
 
-    # Only count pass-expected clustering cases as hard failures
-    clustering_failures = [
-        r for r in clustering_results
-        if not r.get("passed") and r.get("expected_behavior") == "pass"
-    ]
+    # Hard failures are any clustering cases that did not pass.
+    clustering_failures = [r for r in clustering_results if not r.get("passed")]
     identity_failures = [r for r in identity_results if not r.get("passed")]
     importance_failures = [r for r in importance_results if not r.get("passed")]
 
-    # Known-bug cases: expected to fail — surface them clearly
+    # Exempt known-limit cases that are unexpectedly fixed.
     known_bugs = [
         r for r in clustering_results
-        if r.get("expected_behavior") == "fail" and r.get("system_correct")
+        if r.get("exempt_known_limit") and r.get("system_correct")
     ]
 
     print("=== SUMMARY ===\n")
@@ -62,16 +60,16 @@ def main():
                 print(f"    - {r['id']}: expected {r['expected_higher'].upper()} higher, got {r['actual_higher'].upper()} (A={r['score_a']} B={r['score_b']})")
 
     if known_bugs:
-        print(f"\n  Known bugs now fixed ({len(known_bugs)}) — update fixtures to expected_behavior=pass:")
+        print(f"\n  Known limits now fixed ({len(known_bugs)}) — update fixtures to expected_behavior=pass:")
         for r in known_bugs:
             print(f"    - {r['id']}")
 
     known_bug_count = len([
         r for r in clustering_results
-        if r.get("expected_behavior") == "fail" and not r.get("system_correct")
+        if r.get("exempt_known_limit") and not r.get("system_correct")
     ])
     if known_bug_count:
-        print(f"\n  Known bugs still present: {known_bug_count} (see clustering eval above)")
+        print(f"\n  Known limits still present: {known_bug_count} (see clustering eval above)")
 
     print()
     return 1 if total_hard > 0 else 0

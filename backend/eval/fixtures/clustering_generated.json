@@ -438,7 +438,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Claude label: SAME. System relatedness_score=0.51. both articles are reporting on the same ongoing conflict between Iran and the United States, with Article 2 from March 29 representing an earlier update and Article 1 from March 31 representing a sequential development of the same event."
     },
     {
@@ -468,7 +468,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Claude label: SAME. System relatedness_score=0.44. both articles report on the same ongoing conflict between the Trump administration and Iran over the Strait of Hormuz, with Article 2 being an earlier update (April 1) and Article 1 being a later development (April 5) in the same incident."
     },
     {
@@ -1158,7 +1158,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.28. The articles appear to be reporting on the same ongoing conflict in the Middle East, with both mentioning Iran, the US, and Israel, and discussing warnings and potential actions related to the conflict."
     },
     {
@@ -1410,7 +1410,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.21. The articles are reporting on the same event, the Iran war, with Article 1 discussing a related diplomatic visit by Italy's Prime Minister Meloni to Qatar and Article 2 providing a live update on the conflict itself."
     },
     {
@@ -1472,7 +1472,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.27. The articles appear to be reporting on the same ongoing conflict between the US and Iran, with the first article providing an update on the situation and the second article discussing the broader implications and reactions to the conflict."
     },
     {
@@ -1534,7 +1534,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.14. The articles are reporting on the same conflict between the US and Iran, with one article discussing potential mediation efforts and the other discussing the market impact of the ongoing war."
     },
     {
@@ -1628,7 +1628,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.36. The articles are discussing the same Iran war and its implications, with Article 1 focusing on the economic impact on Pakistan and Article 2 discussing the US's approach to financing the war."
     },
     {
@@ -1658,7 +1658,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.44. The articles are reporting on the same event, a war between Iran and the US/Israel, with Article 1 focusing on the tactics used by Iran and Article 2 discussing diplomatic meetings related to the same conflict."
     },
     {
@@ -1750,7 +1750,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.21. The articles are reporting on the same conflict, with Article 1 discussing the US military deployment in response to the Iran war and Article 2 mentioning Iran's attacks on its neighbors, which is part of the same broader conflict."
     },
     {
@@ -1812,7 +1812,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.21. The articles are reporting on the same conflict between the US, Israel, and Iran, with the first article providing an update on diplomatic efforts and the second article describing the escalation of the conflict."
     },
     {
@@ -1874,7 +1874,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.51. The articles are reporting on the same event, which is related to the impact of the US oil blockade on Cuba, with one article discussing the effects on the tourism industry and the other article providing an update on a Russian oil shipment arriving in Cuba."
     },
     {
@@ -2000,7 +2000,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.12. The articles are related to the same conflict, with Article 1 reporting on a specific incident involving a downed US F-15E fighter jet over Iran, and Article 2 discussing the broader economic implications of the same war."
     },
     {
@@ -2092,7 +2092,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.23. The articles are reporting on the same event, a conflict between the US and Iran, with Article 1 providing an update on a US satellite firm's decision amid the war, and Article 2 explaining US military terms and deployments in the context of the same conflict."
     },
     {
@@ -2154,7 +2154,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.24. The two articles are reporting on the same event, the Iran war, and its effects on the US, with one article discussing the exemption of Gulf of Mexico oil drillers from endangered species protections and the other article discussing the rise in US gas prices, both of which are related to the ongoing conflict."
     },
     {
@@ -2438,7 +2438,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.25. The articles are reporting on the same event, a conflict involving the US and Iran, with Article 1 providing a specific update on the situation and Article 2 discussing a secondary effect of the conflict on Kenya's tea industry."
     },
     {
@@ -2656,7 +2656,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.22. The articles are reporting on the same conflict between Israel and Hezbollah, with Article 1 providing a specific update on the conflict and Article 2 appearing to be an opinion piece related to the same broader issue."
     },
     {
@@ -2718,7 +2718,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.41. The articles are reporting on the same US-Israel war on Iran, with Article 1 providing an update on day 31 of the attacks and Article 2 discussing developments on day 29, indicating a sequential update on the same conflict."
     },
     {
@@ -2812,7 +2812,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.4. The articles are reporting on the same conflict between the US, Israel, and Iran, with the first article discussing the potential withdrawal from the Nuclear Non-Proliferation Treaty as a result of the ongoing attacks."
     },
     {
@@ -2968,7 +2968,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.41. The articles are reporting on the same event, a conflict between the US (and possibly Israel) and Iran, with Article 1 discussing Iran's perspective and Article 2 focusing on the global economic impact of the ongoing war."
     },
     {
@@ -2998,7 +2998,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.47. The articles are discussing the same conflict between the US and Iran, with one article speculating on potential US actions and the other reporting on the economic consequences of the ongoing war."
     },
     {
@@ -3060,7 +3060,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.44. The articles are reporting on the same event, a conflict involving Iran that is affecting global oil and gas prices, with the first article providing an update on the expected duration of the price increases."
     },
     {
@@ -3184,7 +3184,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.14. The articles are reporting on the same US-Israeli war on Iran, with Article 1 discussing the impact of the war on Kenya's tea industry and Article 2 providing an analysis of the war itself."
     },
     {
@@ -3590,7 +3590,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.41. The two articles report on the same incident of air strikes targeting a petrochemical complex in Iran, with Article 1 providing specific details on the damage and casualties in the Mahshahr Special Petrochemical Economic Zone, and Article 2 mentioning the broader context and other related events."
     },
     {
@@ -3650,7 +3650,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.28. The two articles are reporting on the same conflict between the US and Iran, with one article describing a military attack and the other discussing diplomatic efforts to mediate peace."
     },
     {
@@ -3742,7 +3742,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.4. The articles are reporting on the same event, a war with Iran, as indicated by the mention of the conflict and its economic implications in both articles, with Article 1 focusing on the cost to Arab countries and Article 2 discussing the impact on global markets."
     },
     {
@@ -3866,7 +3866,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.32. The articles appear to be discussing the same conflict, with Article 1 analyzing the interests of the parties involved and Article 2 providing an update on the actions of Iranian politicians in response to the ongoing war."
     },
     {
@@ -3896,7 +3896,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.26. The articles are reporting on the same event, a conflict involving the US and Iran, with Article 1 discussing Iran's stance and Article 2 touching on the global energy crisis and market volatility amid the same war."
     },
     {
@@ -4052,7 +4052,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.14. The articles are reporting on the same conflict, with Article 1 discussing the economic impact of the war on Pakistan and Article 2 providing updates on the military actions and diplomatic developments in the conflict."
     },
     {
@@ -4146,7 +4146,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.14. The articles appear to be reporting on the same conflict between Iran and Israel, with Article 1 providing a specific update on Iran's military targets and Article 2 discussing the broader economic implications of the conflict."
     },
     {
@@ -4274,7 +4274,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: DIFFERENT. System relatedness_score=0.21. The articles appear to be discussing different aspects of international relations, with one focusing on the impact of a war on Kenya's tea industry and the other discussing Trump's criticism of NATO allies, without a clear connection between the two."
     },
     {
@@ -4304,7 +4304,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.52. The articles are reporting on the same conflict, with Article 1 providing a specific update on the aftermath of an air strike in southwestern Iran, which is part of the larger series of strikes mentioned in Article 2."
     },
     {
@@ -4460,7 +4460,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.26. The articles are reporting on the same event, the US-Israeli war on Iran, as they both mention its impact on different countries, indicating a shared context and incident."
     },
     {
@@ -4490,7 +4490,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.34. The two articles are reporting on the same event, which is the ongoing situation related to the Iran war and its impact on the global economy and oil prices."
     },
     {
@@ -4646,7 +4646,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: DIFFERENT. System relatedness_score=0.43. The two articles appear to be discussing different topics, with Article 1 focusing on a conflict between the US, Israel, and Iran, while Article 2 mentions Trump considering leaving Nato and a separate issue related to Iran, but not the same conflict."
     },
     {
@@ -4676,7 +4676,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.4. The articles are reporting on the same conflict between Iran and the US-Israeli alliance, with Article 1 focusing on Iran's response to attacks on its nuclear facilities and Article 2 discussing Iran's position on potential peace talks to end the conflict."
     },
     {
@@ -4738,7 +4738,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.29. The articles are reporting on the same conflict, with Article 1 discussing the impact of US and Israeli strikes on Iran's universities and Article 2 describing Iranian attacks on other countries in the region, indicating a sequential update on the same ongoing event."
     },
     {
@@ -4958,7 +4958,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.17. The articles are reporting on the same event, the Iran war, with Article 1 discussing its impact on Australia's fuel supply and Article 2 providing an update on the war itself."
     },
     {
@@ -5020,7 +5020,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.45. The articles are reporting on the same conflict between Israel, the US, and Iran, with the first article providing an update on the situation and the second article discussing the economic impact of the war on the UAE's financial markets."
     },
     {
@@ -5112,7 +5112,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.13. The articles are reporting on the same event, the US-Israel war on Iran, with Article 1 discussing its economic impact and Article 2 mentioning a related development in negotiations."
     },
     {
@@ -5484,7 +5484,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.52. The articles are reporting on the same event, a conflict between the US/Israel and Iran, as indicated by the mention of the Iran war and US/Iranian tensions in both articles, with the only difference being the date and the focus of the reporting."
     },
     {
@@ -5514,7 +5514,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.34. The articles are discussing the same event, the Iran war, and its effects on the region, with Article 1 focusing on Pakistan's economic crisis and Article 2 discussing Iran's parliamentary speaker's actions during the war."
     },
     {
@@ -5636,7 +5636,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.37. The articles are reporting on the same conflict between the US, Israel, and Iran, with Article 1 discussing a US satellite firm's decision to blackout images of the war and Article 2 describing Iran's response to the attacks on its nuclear facilities."
     },
     {
@@ -5698,7 +5698,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.6. The two articles appear to be reporting on the same event, a heightened state of tension between Iran, the US, and Israel, with both articles referencing recent warnings and threats exchanged between these parties."
     },
     {
@@ -5790,7 +5790,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.41. The two articles are reporting on the same conflict, with Article 1 discussing the UK Prime Minister's perspective on the war's impact on Britain and Article 2 providing an update on the ongoing US-Israel attacks on Iran."
     },
     {
@@ -5850,7 +5850,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.29. The articles are reporting on the same conflict between Arab countries and Iran, with the first article discussing the economic costs of the war and the second article discussing potential US involvement in the conflict."
     },
     {
@@ -5912,7 +5912,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.23. The articles are reporting on the same conflict in the Middle East involving the US, Iran, and other regional actors, with Article 1 discussing potential US actions against Iran and Article 2 describing the intensification of the war and diplomatic efforts to end it."
     },
     {
@@ -6002,7 +6002,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.36. The articles are reporting on the same conflict, with Article 1 focusing on specific incidents and consequences of the Iran war, and Article 2 providing a broader update on the status of the conflict."
     },
     {
@@ -6094,7 +6094,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.29. The articles are reporting on the same conflict between the US, Israel, and Iran, with the first article providing a specific update on the rescue of a missing US officer and the second article discussing the broader context and progression of the conflict."
     },
     {
@@ -6188,7 +6188,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.29. The articles are reporting on the same conflict between Israel and Iran, with Article 1 discussing the broader implications and Article 2 describing a specific incident within that conflict."
     },
     {
@@ -6340,7 +6340,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.22. The articles are reporting on the same event, the Iran war and its effects, with Article 1 discussing the impact on US gas prices and Article 2 providing information on the Trump administration's actions and plans related to the conflict."
     },
     {
@@ -6716,7 +6716,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.44. The articles are reporting on the same conflict between Iran and other entities, with both mentioning the Strait of Hormuz and tensions involving Iran, and the time difference between the two articles suggests a sequential update on the same event."
     },
     {
@@ -7028,7 +7028,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.45. The articles are reporting on the same conflict, the US-Israel attacks on Iran, with Article 1 providing a day-to-day update and Article 2 discussing the broader economic impact of the conflict on Arab countries."
     },
     {
@@ -7242,7 +7242,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.39. The articles are reporting on the same conflict between the US, Israel, and Iran, with the first article providing an update on the ongoing war and the second article discussing the impact of Iranian attacks on neighboring countries, including Qatar."
     },
     {
@@ -7334,7 +7334,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.18. The articles are reporting on the same conflict, the US-Israel war on Iran, with Article 1 discussing its broader humanitarian impact on Asia and Article 2 focusing on a specific development related to the war, namely a US satellite firm's decision to withhold images of the conflict."
     },
     {
@@ -7460,7 +7460,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.37. The two articles are reporting on the same event, specifically the economic crisis in Pakistan triggered by the US-Israeli war on Iran, with both articles discussing the fallout and its impact on the country."
     },
     {
@@ -7490,7 +7490,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.27. The articles are discussing the same conflict between the US and Iran, with one article speculating about potential US actions and the other discussing the economic impact of the ongoing war."
     },
     {
@@ -7584,7 +7584,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.25. The articles are reporting on the same conflict, with Article 1 providing a specific incident update on the strikes in southwestern Iran, and Article 2 discussing the broader conflict and its developments, indicating they are part of the same event."
     },
     {
@@ -7772,7 +7772,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.28. The two articles are reporting on the same conflict, with Article 1 describing specific incidents and attacks, and Article 2 discussing the potential end of the war and its impact on the stock market, indicating a sequential update on the same event."
     },
     {
@@ -7894,7 +7894,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.4. The two articles are reporting on the same conflict, with Article 1 discussing the economic impact of the war on Arab countries and Article 2 focusing on the rising oil prices and escalating tensions, both of which are related to the same ongoing event."
     },
     {
@@ -7954,7 +7954,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.31. The articles are reporting on the same conflict between the US and Iran, with the first article providing a specific update on the situation and the second article discussing the broader impact of the conflict on oil and gas prices."
     },
     {
@@ -7984,7 +7984,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.41. The articles are reporting on the same conflict between Israel and Hezbollah, with Article 1 describing Israeli attacks on Beirut and Article 2 describing a retaliatory missile strike on Tel Aviv, indicating a sequential update on the same event."
     },
     {
@@ -8044,7 +8044,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.32. The articles are reporting on the same conflict between Iran and its neighbors, with Article 1 focusing on the specific impact of Iranian attacks on Qatar and Article 2 providing analysis on Iran's interests in the broader conflict."
     },
     {
@@ -8136,7 +8136,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.33. The articles are reporting on the same conflict between Israel and Iran, with Article 1 discussing the global market implications and diplomatic efforts, and Article 2 exploring the potential energy supply strain caused by the war on a specific country, India."
     },
     {
@@ -8168,7 +8168,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: DIFFERENT. System relatedness_score=0.46. The two articles are reporting on different events, with Article 1 focusing on Israeli airstrikes on Iran and Lebanon, while Article 2 is about the ongoing conflict and death toll in the Gaza Strip."
     },
     {
@@ -8198,7 +8198,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.28. The articles are reporting on the same event, the Iran war, with one article discussing its impact on energy supplies in India and the other providing an update on the conflict itself."
     },
     {
@@ -8318,7 +8318,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.33. The articles are reporting on the same event, a US-Israeli strike on Iranian nuclear facilities, with the first article providing an update on Iran's response to the attack, specifically their accusation against the IAEA head and plans for legal action."
     },
     {
@@ -8570,7 +8570,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: DIFFERENT. System relatedness_score=0.5. The two articles are reporting on different events, one being a specific Israeli drone strike in Gaza and the other being pro-Palestine rallies in Syria in response to the Israeli occupation and genocide in Gaza."
     },
     {
@@ -8634,7 +8634,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: DIFFERENT. System relatedness_score=0.53. The two articles appear to be discussing different events, one about the Trump administration considering targeting Iranian energy sites and the other about a specific attack on the Mahshahr Petrochemical Zone and the rescue of a missing US officer."
     },
     {
@@ -8664,7 +8664,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.21. The articles are reporting on the same conflict, the US-Israel war on Iran, with Article 1 discussing a specific incident related to a US satellite firm's response to the war and Article 2 discussing the broader economic impact of the war."
     },
     {
@@ -8758,7 +8758,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.46. The articles are reporting on the same conflict between the US and Iran, with Article 1 providing analysis on Iran's stance and Article 2 providing an update on the ongoing situation, both within a short timeframe of each other."
     },
     {
@@ -9044,7 +9044,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: DIFFERENT. System relatedness_score=0.26. The two articles are discussing different topics, one focusing on the global economic impact of Trump's tariffs and the other on a potential US action against Iran's oil exports in the context of a war."
     },
     {
@@ -9140,7 +9140,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: DIFFERENT. System relatedness_score=0.44. The articles are reporting on different aspects of the conflict, with one focusing on the damage to cultural heritage sites and the other discussing the economic and investment implications of the war."
     },
     {
@@ -9264,7 +9264,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.44. The articles are reporting on the same US-Israel attacks on Iran, with Article 1 providing an update on the conflict and Article 2 offering analysis on the interests of the parties involved, both within the context of the same ongoing conflict."
     },
     {
@@ -9546,7 +9546,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.26. The articles are discussing the same conflict, the Iran war, and are providing analysis and updates on the US military's involvement and the interests of the parties involved in the war."
     },
     {
@@ -9860,7 +9860,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.21. The articles are reporting on the same conflict between Iran and the US-Israeli alliance, with Article 1 providing updates on the war and Article 2 discussing the economic impact of the war, indicating they are related to the same overall event."
     },
     {
@@ -10048,7 +10048,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Anthropic label: DIFFERENT. System relatedness_score=0.58. because these articles describe distinct military actions by different actors: Article 1 reports Houthi/Iran/Hezbollah claims of coordinated attacks on Israeli airports, while Article 2 reports Israeli retaliatory strikes against Iranian and Hezbollah targets\u2014these are separate incidents occurring on consecutive days with opposite actor roles."
     },
     {
@@ -10240,7 +10240,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Anthropic label: DIFFERENT. System relatedness_score=0.32. because Article 1 reports a specific incident (arrests of Soleimani's relatives in the US) while Article 2 reports a diplomatic statement/reaction (Iranian officials responding to Trump's ceasefire claim), which are different actors, actions, and types of events."
     },
     {
@@ -10528,7 +10528,7 @@
           1
         ]
       ],
-      "expected_behavior": "fail",
+      "expected_behavior": "pass",
       "notes": "Anthropic label: DIFFERENT. System relatedness_score=0.48. because Article 1 is macro-level analysis about strategic interests while Article 2 is a retrospective summary of specific military/political/economic incidents\u2014they are different article types covering the same conflict rather than the same specific incident."
     }
   ]

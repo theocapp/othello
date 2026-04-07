@@ -73,6 +73,29 @@ def run(verbose: bool = True) -> list[dict]:
             articles = case["articles"]
             expected_clusters = case["expected_clusters"]
             expected_behavior = case.get("expected_behavior", "pass")
+            fail_reason = case.get("fail_reason")
+            exempt_known_limit = (
+                expected_behavior == "fail"
+                and fail_reason == "known_architectural_limit"
+            )
+
+            # Guardrail: generated fixtures are ground-truth labels and must not
+            # be exempted as known architectural limits.
+            if case.get("id", "").startswith("generated_") and fail_reason:
+                results.append({
+                    "id": case["id"],
+                    "description": case.get("description", ""),
+                    "expected_behavior": expected_behavior,
+                    "fail_reason": fail_reason,
+                    "exempt_known_limit": False,
+                    "system_correct": False,
+                    "passed": False,
+                    "metrics": {"precision": 0.0, "recall": 0.0, "f1": 0.0},
+                    "predicted_cluster_sizes": [],
+                    "notes": "Invalid fixture: generated cases cannot define fail_reason.",
+                    "error": "generated fixtures cannot use fail_reason exemptions",
+                })
+                continue
 
             try:
                 events = clustering.cluster_articles(articles)
@@ -90,15 +113,13 @@ def run(verbose: bool = True) -> list[dict]:
 
             # A case "passes" if F1 == 1.0 (perfect pairwise match).
             system_correct = metrics["f1"] == 1.0
-            # expected_behavior tells us whether the system is expected to pass or fail.
-            # A case marked "fail" documents a known bug — we want to see it fail
-            # so we know when a fix lands.
-            if expected_behavior == "pass":
-                passed = system_correct
+            # Only explicitly exempt known architectural limits.
+            # Any other case is treated as hard ground-truth and must be correct.
+            if exempt_known_limit:
+                # Documented architectural limit: still failing counts as "as expected".
+                passed = not system_correct
             else:
-                # "fail" cases: the system is expected to get it wrong.
-                # We report "documented bug still present" (good) vs "unexpectedly fixed" (also good).
-                passed = not system_correct  # still failing as expected
+                passed = system_correct
 
             predicted_cluster_sizes = [len(e.get("articles", [])) for e in events]
 
@@ -106,6 +127,8 @@ def run(verbose: bool = True) -> list[dict]:
                 "id": case["id"],
                 "description": case["description"],
                 "expected_behavior": expected_behavior,
+                "fail_reason": fail_reason,
+                "exempt_known_limit": exempt_known_limit,
                 "system_correct": system_correct,
                 "passed": passed,
                 "metrics": metrics,
@@ -127,13 +150,13 @@ def _print_results(results: list[dict]) -> None:
             status = "ERROR"
             all_pass = False
         elif r["passed"]:
-            if r["expected_behavior"] == "fail":
-                status = "OK  (known bug still present)"
+            if r.get("exempt_known_limit"):
+                status = "OK  (known architectural limit still present)"
             else:
                 status = "PASS"
         else:
-            if r["expected_behavior"] == "fail":
-                status = "FIXED (known bug no longer triggers — update fixture!)"
+            if r.get("exempt_known_limit"):
+                status = "FIXED (known architectural limit no longer triggers — update fixture!)"
             else:
                 status = "FAIL"
                 all_pass = False
@@ -157,5 +180,5 @@ def _print_results(results: list[dict]) -> None:
 
 if __name__ == "__main__":
     results = run()
-    failures = [r for r in results if not r.get("passed") and r.get("expected_behavior") == "pass"]
+    failures = [r for r in results if not r.get("passed")]
     sys.exit(1 if failures else 0)
