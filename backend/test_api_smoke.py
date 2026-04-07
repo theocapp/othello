@@ -39,7 +39,11 @@ _cache_module.DB_PATH = Path(_TEST_HOME) / "othello_cache.db"
 
 import corpus  # noqa: E402
 
-corpus.init_db()
+_DB_UNAVAILABLE_REASON = None
+try:
+    corpus.init_db()
+except Exception as exc:
+    _DB_UNAVAILABLE_REASON = str(exc)
 
 import main as main_module  # noqa: E402
 from corpus import upsert_structured_events  # noqa: E402
@@ -50,6 +54,10 @@ def tearDownModule():
     shutil.rmtree(_TEST_HOME, ignore_errors=True)
 
 
+@unittest.skipIf(
+    _DB_UNAVAILABLE_REASON is not None,
+    f"Postgres test DB unavailable for API smoke tests: {_DB_UNAVAILABLE_REASON}",
+)
 class TestAPISmoke(unittest.TestCase):
     def test_health_returns_runtime_shape(self):
         with TestClient(main_module.app) as client:
