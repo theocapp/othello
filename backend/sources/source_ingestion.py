@@ -24,7 +24,7 @@ from news import (
     normalize_article_title,
     should_promote_article,
 )
-from source_catalog import SOURCE_PACKS, source_in_pack, source_pack_for
+from sources.source_catalog import SOURCE_PACKS, source_in_pack, source_pack_for
 
 DIRECT_FEED_DEFAULT_LIMIT_PER_SOURCE = int(
     os.getenv("OTHELLO_DIRECT_FEED_LIMIT_PER_SOURCE", "14")

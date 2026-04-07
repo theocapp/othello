@@ -3,12 +3,21 @@
 from __future__ import annotations
 
 import json
+import math
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 
-from core.config import EVALUATION_LABELS_DIR
+from core.config import (
+    EVALUATION_COHESION_HIGH_OUTLIER_THRESHOLD,
+    EVALUATION_LABELS_DIR,
+)
 from evaluation.labels import SUPPORTED_KINDS, validate_annotation_record
+
+try:
+    from corpus import get_canonical_events as _get_canonical_events
+except Exception:
+    _get_canonical_events = None
 
 
 def _safe_int(value: object, default: int = 0) -> int:
@@ -16,6 +25,43 @@ def _safe_int(value: object, default: int = 0) -> int:
         return int(value)
     except Exception:
         return default
+
+
+def _safe_float(value: object) -> float | None:
+    try:
+        parsed = float(value)
+    except Exception:
+        return None
+    if not math.isfinite(parsed):
+        return None
+    return parsed
+
+
+def _median(values: list[float]) -> float | None:
+    if not values:
+        return None
+    ordered = sorted(values)
+    mid = len(ordered) // 2
+    if len(ordered) % 2 == 1:
+        return ordered[mid]
+    return (ordered[mid - 1] + ordered[mid]) / 2.0
+
+
+def _percentile(values: list[float], p: float) -> float | None:
+    if not values:
+        return None
+    if p <= 0:
+        return min(values)
+    if p >= 1:
+        return max(values)
+    ordered = sorted(values)
+    index = p * (len(ordered) - 1)
+    lower = int(math.floor(index))
+    upper = int(math.ceil(index))
+    if lower == upper:
+        return ordered[lower]
+    weight = index - lower
+    return ordered[lower] * (1 - weight) + ordered[upper] * weight
 
 
 def _list_label_files(labels_dir: Path, limit_files: int) -> list[Path]:
@@ -69,6 +115,87 @@ def _agreement_metrics(records: list[dict]) -> dict:
         "comparable_event_count": len(per_event_scores),
         "agreement_rate": round(agreement_rate, 4),
     }
+
+
+def _cluster_cohesion_operational_metrics(topic: str | None) -> dict:
+    high_outlier_threshold = EVALUATION_COHESION_HIGH_OUTLIER_THRESHOLD
+    metrics = {
+        "event_count": 0,
+        "events_with_cohesion": 0,
+        "coverage_rate": None,
+        "avg_mean_relatedness": None,
+        "median_mean_relatedness": None,
+        "avg_outlier_ratio": None,
+        "outlier_ratio_p75": None,
+        "outlier_ratio_p90": None,
+        "high_outlier_threshold": round(high_outlier_threshold, 4),
+        "high_outlier_event_rate": None,
+    }
+    if _get_canonical_events is None:
+        return metrics
+
+    try:
+        events = _get_canonical_events(topic=topic, status=None, limit=300)
+    except Exception:
+        return metrics
+
+    metrics["event_count"] = len(events)
+    if not events:
+        return metrics
+
+    mean_scores: list[float] = []
+    outlier_ratios: list[float] = []
+    events_with_cohesion = 0
+    for event in events:
+        payload = event.get("payload") or {}
+        if isinstance(payload, str):
+            try:
+                payload = json.loads(payload)
+            except Exception:
+                payload = {}
+        if not isinstance(payload, dict):
+            continue
+
+        cohesion = payload.get("cluster_cohesion") or {}
+        if not isinstance(cohesion, dict) or not cohesion:
+            continue
+
+        events_with_cohesion += 1
+        mean_relatedness = _safe_float(cohesion.get("mean_relatedness"))
+        if mean_relatedness is not None:
+            mean_scores.append(mean_relatedness)
+
+        outlier_ratio = _safe_float(cohesion.get("outlier_ratio"))
+        if outlier_ratio is not None:
+            outlier_ratios.append(max(0.0, min(1.0, outlier_ratio)))
+
+    metrics["events_with_cohesion"] = events_with_cohesion
+    metrics["coverage_rate"] = round(events_with_cohesion / len(events), 4)
+    metrics["avg_mean_relatedness"] = (
+        round(sum(mean_scores) / len(mean_scores), 4) if mean_scores else None
+    )
+    metrics["median_mean_relatedness"] = (
+        round(_median(mean_scores) or 0.0, 4) if mean_scores else None
+    )
+    metrics["avg_outlier_ratio"] = (
+        round(sum(outlier_ratios) / len(outlier_ratios), 4) if outlier_ratios else None
+    )
+    metrics["outlier_ratio_p75"] = (
+        round(_percentile(outlier_ratios, 0.75) or 0.0, 4) if outlier_ratios else None
+    )
+    metrics["outlier_ratio_p90"] = (
+        round(_percentile(outlier_ratios, 0.90) or 0.0, 4) if outlier_ratios else None
+    )
+    metrics["high_outlier_event_rate"] = (
+        round(
+            sum(1 for ratio in outlier_ratios if ratio >= high_outlier_threshold)
+            / len(outlier_ratios),
+            4,
+        )
+        if outlier_ratios
+        else None
+    )
+    return metrics
 
 
 def build_scorecard_snapshot(
@@ -210,6 +337,7 @@ def build_scorecard_snapshot(
     topic_counts = Counter(
         str(row.get("topic") or "unknown").strip().lower() for row in considered
     )
+    cohesion_metrics = _cluster_cohesion_operational_metrics(requested_topic)
 
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -227,5 +355,8 @@ def build_scorecard_snapshot(
         "supported_kinds": sorted(SUPPORTED_KINDS),
         "kind_summaries": kind_summaries,
         "topic_counts": dict(sorted(topic_counts.items())),
+        "operational_metrics": {
+            "cluster_cohesion": cohesion_metrics,
+        },
         "error_samples": error_samples if include_error_samples else [],
     }

@@ -205,6 +205,16 @@ EVALUATION_LABELS_DIR = os.getenv(
     "OTHELLO_EVALUATION_LABELS_DIR",
     str(Path(__file__).resolve().parents[1] / "evaluation" / "batches"),
 )
+try:
+    _evaluation_cohesion_high_outlier_threshold = float(
+        os.getenv("OTHELLO_EVALUATION_COHESION_HIGH_OUTLIER_THRESHOLD", "0.34")
+    )
+except ValueError:
+    _evaluation_cohesion_high_outlier_threshold = 0.34
+EVALUATION_COHESION_HIGH_OUTLIER_THRESHOLD = max(
+    0.0,
+    min(_evaluation_cohesion_high_outlier_threshold, 1.0),
+)
 
 # ---------------------------------------------------------------------------
 # Feature flags

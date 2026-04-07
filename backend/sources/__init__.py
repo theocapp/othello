@@ -3,11 +3,17 @@
 Re-exports legacy source and catalog modules.
 """
 
-try:
-	from .. import source_catalog  # type: ignore
-	from .. import source_ingestion  # type: ignore
-	__all__ = ["source_catalog", "source_ingestion"]
-except Exception:
-	import source_catalog  # type: ignore
-	import source_ingestion  # type: ignore
-	__all__ = ["source_catalog", "source_ingestion"]
+from __future__ import annotations
+
+__all__ = ["source_catalog", "source_ingestion"]
+
+
+def __getattr__(name: str):
+    if name not in __all__:
+        raise AttributeError(name)
+
+    import importlib
+
+    module = importlib.import_module(f"{__name__}.{name}")
+    globals()[name] = module
+    return module

@@ -193,14 +193,17 @@ def get_canonical_event_debug_payload(event_id: str) -> dict:
             }
         )
 
+    event_payload = event.get("payload") or {}
+    cluster_cohesion = event_payload.get("cluster_cohesion") or {}
+
     return {
         "event": {
             **event,
+            "cluster_cohesion": cluster_cohesion,
             "importance": {
                 "score": event.get("importance_score") or 0,
                 "reasons": event.get("importance_reasons") or [],
-                "breakdown": ((event.get("payload") or {}).get("importance") or {}).get("breakdown")
-                or {},
+                "breakdown": (event_payload.get("importance") or {}).get("breakdown") or {},
             },
         },
         "observation_keys": observation_keys,

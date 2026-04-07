@@ -157,6 +157,8 @@ _source_registry_cache = None
 _source_reliability_cache = {}
 _source_reliability_cache_time = {}
 
+RELATEDNESS_THRESHOLD = 4.1
+
 
 def get_nlp():
     global _nlp
@@ -587,6 +589,81 @@ def relatedness_score(left: dict, right: dict) -> float:
     return round(score, 3)
 
 
+def _median(values: list[float]) -> float | None:
+    if not values:
+        return None
+    ordered = sorted(values)
+    middle = len(ordered) // 2
+    if len(ordered) % 2 == 1:
+        return ordered[middle]
+    return (ordered[middle - 1] + ordered[middle]) / 2.0
+
+
+def _cluster_cohesion_metrics(
+    group: list[int], signatures: list[dict], articles: list[dict]
+) -> dict:
+    if len(group) <= 1:
+        return {
+            "pair_count": 0,
+            "mean_relatedness": None,
+            "median_relatedness": None,
+            "min_relatedness": None,
+            "max_relatedness": None,
+            "outlier_article_count": 0,
+            "outlier_ratio": 0.0,
+            "outlier_article_urls": [],
+        }
+
+    pair_scores: list[float] = []
+    per_article_scores: dict[int, list[float]] = {idx: [] for idx in group}
+    for left_pos, left_idx in enumerate(group):
+        for right_idx in group[left_pos + 1 :]:
+            score = relatedness_score(signatures[left_idx], signatures[right_idx])
+            pair_scores.append(score)
+            per_article_scores[left_idx].append(score)
+            per_article_scores[right_idx].append(score)
+
+    if not pair_scores:
+        return {
+            "pair_count": 0,
+            "mean_relatedness": None,
+            "median_relatedness": None,
+            "min_relatedness": None,
+            "max_relatedness": None,
+            "outlier_article_count": 0,
+            "outlier_ratio": 0.0,
+            "outlier_article_urls": [],
+        }
+
+    article_avg_scores: dict[int, float] = {}
+    for idx, scores in per_article_scores.items():
+        if not scores:
+            continue
+        article_avg_scores[idx] = sum(scores) / len(scores)
+
+    outlier_indices = [
+        idx
+        for idx, avg_score in article_avg_scores.items()
+        if avg_score < RELATEDNESS_THRESHOLD
+    ]
+    outlier_urls = [
+        str((articles[idx] or {}).get("url") or "").strip()
+        for idx in outlier_indices
+        if str((articles[idx] or {}).get("url") or "").strip()
+    ]
+
+    return {
+        "pair_count": len(pair_scores),
+        "mean_relatedness": round(sum(pair_scores) / len(pair_scores), 4),
+        "median_relatedness": round(_median(pair_scores) or 0.0, 4),
+        "min_relatedness": round(min(pair_scores), 4),
+        "max_relatedness": round(max(pair_scores), 4),
+        "outlier_article_count": len(outlier_indices),
+        "outlier_ratio": round(len(outlier_indices) / len(group), 4),
+        "outlier_article_urls": outlier_urls,
+    }
+
+
 def is_related(left: dict, right: dict) -> bool:
     entity_overlap = len(left["entities"] & right["entities"])
     keyword_overlap = len(left["keywords"] & right["keywords"])
@@ -616,7 +693,7 @@ def is_related(left: dict, right: dict) -> bool:
         return True
     if _anchor_conflict(left["anchors"], right["anchors"]) and entity_overlap < 3:
         return False
-    return score >= 4.1
+    return score >= RELATEDNESS_THRESHOLD
 
 
 def build_observation_groups(signatures: list[dict]) -> list[list[int]]:
@@ -631,7 +708,8 @@ def build_observation_groups(signatures: list[dict]) -> list[list[int]]:
                 default=0.0,
             )
             if related_count >= 1 and (
-                best_score >= 4.1 or related_count >= math.ceil(len(group) / 2)
+                best_score >= RELATEDNESS_THRESHOLD
+                or related_count >= math.ceil(len(group) / 2)
             ):
                 group.append(index)
                 placed = True
@@ -651,6 +729,7 @@ def cluster_articles(articles: list[dict], topic: str | None = None) -> list[dic
     events = []
     for event_index, group in enumerate(groups, 1):
         cluster = [articles[i] for i in group]
+        cohesion = _cluster_cohesion_metrics(group, signatures, articles)
         source_profiles = {}
         region_counts: dict[str, int] = {}
         for article in cluster:
@@ -738,6 +817,7 @@ def cluster_articles(articles: list[dict], topic: str | None = None) -> list[dic
                 ),
                 "region_counts": region_counts,
                 "dominant_region": _dominant_region(region_counts),
+                "cluster_cohesion": cohesion,
                 "articles": cluster,
             }
         )

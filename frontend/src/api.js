@@ -47,6 +47,23 @@ export async function fetchCanonicalEvents({ topic = null, status = null, limit 
   return response.data
 }
 
+export async function fetchEvaluationScorecard({
+  kind = null,
+  topic = null,
+  limitFiles = 80,
+  includeErrorSamples = false,
+} = {}) {
+  const response = await api.get('/evaluation/scorecard', {
+    params: compactParams({
+      kind,
+      topic,
+      limit_files: limitFiles,
+      include_error_samples: includeErrorSamples,
+    }),
+  })
+  return response.data
+}
+
 export async function fetchRegionAttention(window = '24h') {
   const response = await api.get('/coverage/map', {
     params: compactParams({ window }),

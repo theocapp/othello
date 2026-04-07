@@ -35,7 +35,7 @@ from news import (
     should_promote_article,
     source_status,
 )
-from source_ingestion import (
+from sources.source_ingestion import (
     archive_provider_articles,
     ingest_direct_feed_layer,
     ingest_registry_sources,
@@ -43,8 +43,8 @@ from source_ingestion import (
     registry_sources_with_feed_status,
 )
 from official_ingestion import ingest_official_updates
-from acled_ingestion import ingest_acled_recent
-from gdelt_gkg_ingestion import ingest_gdelt_gkg_recent
+from ingestion.acled_ingestion import ingest_acled_recent
+from ingestion.gdelt_gkg_ingestion import ingest_gdelt_gkg_recent
 from claim_resolution import build_claim_resolution_snapshot
 from narrative_drift import analyze_narrative_drift
 from foresight import load_early_signal_archive, load_prediction_ledger

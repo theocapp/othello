@@ -36,6 +36,11 @@ class TestEventsServiceDebug(unittest.TestCase):
             "importance_score": 71.5,
             "importance_reasons": ["3 distinct sources (2 tier-1)"],
             "payload": {
+                "cluster_cohesion": {
+                    "pair_count": 3,
+                    "mean_relatedness": 5.28,
+                    "outlier_ratio": 0.0,
+                },
                 "importance": {
                     "breakdown": {
                         "source_credibility": 24.0,
@@ -132,6 +137,7 @@ class TestEventsServiceDebug(unittest.TestCase):
         self.assertEqual(payload["observation_keys"], ["obs_1"])
         self.assertEqual(payload["cluster_assignment_evidence"][0]["rule"], "anchor_entity_temporal")
         self.assertEqual(payload["event"]["importance"]["score"], 71.5)
+        self.assertEqual(payload["event"]["cluster_cohesion"]["pair_count"], 3)
 
 
 if __name__ == "__main__":

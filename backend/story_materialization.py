@@ -658,6 +658,7 @@ def _build_canonical_row(
             "summary": event.get("summary"),
             "entity_focus": event.get("entity_focus") or [],
             "anchors": sorted(_event_anchor_set(event)),
+            "cluster_cohesion": event.get("cluster_cohesion") or {},
             "importance": {
                 "score": importance_score,
                 "reasons": importance_reasons,
@@ -877,6 +878,7 @@ def rebuild_materialized_story_clusters(
                     "tier_1_source_count": int(event.get("tier_1_source_count") or 0),
                     "importance_score": importance_score,
                     "payload": {
+                        "cluster_cohesion": event.get("cluster_cohesion") or {},
                         "importance_breakdown": importance_breakdown,
                         "importance_reasons": importance_reasons,
                     },

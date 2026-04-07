@@ -1,5 +1,5 @@
 from corpus import set_source_registry_active, upsert_source_registry
-from source_catalog import SOURCE_SEEDS, source_id_for
+from sources.source_catalog import SOURCE_SEEDS, source_id_for
 
 
 def seed_sources():

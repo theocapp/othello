@@ -251,7 +251,7 @@ def _dedup_location_string(text: str) -> str:
          'California, United States, United States' -> 'California, United States'
          'IR, Iran' -> 'Iran'
     """
-    from gdelt_gkg_ingestion import COUNTRY_CODE_TO_NAME as _CC
+    from ingestion.gdelt_gkg_ingestion import COUNTRY_CODE_TO_NAME as _CC
 
     parts = [p.strip() for p in text.split(",") if p.strip()]
     # Resolve 2-letter country codes in individual segments
@@ -294,7 +294,7 @@ def _acled_hotspot_event_copy(event: dict) -> dict:
     country = (event.get("country") or "").strip()
     # Resolve 2-letter GDELT/FIPS country codes to full names
     if country and len(country) <= 2 and country.isupper():
-        from gdelt_gkg_ingestion import COUNTRY_CODE_TO_NAME
+        from ingestion.gdelt_gkg_ingestion import COUNTRY_CODE_TO_NAME
 
         country = COUNTRY_CODE_TO_NAME.get(country, country)
     a1 = (event.get("actor_primary") or "").strip()
@@ -582,7 +582,7 @@ def _incident_hotspots_from_semantic_clusters(
             # Resolve country codes and filter out raw admin codes for display
             ev_country = " ".join(str(ev.get("country") or "").split()).strip()
             if ev_country and len(ev_country) == 2 and ev_country.isupper():
-                from gdelt_gkg_ingestion import COUNTRY_CODE_TO_NAME
+                from ingestion.gdelt_gkg_ingestion import COUNTRY_CODE_TO_NAME
 
                 ev_country = COUNTRY_CODE_TO_NAME.get(ev_country, ev_country)
             ev_admin1 = " ".join(str(ev.get("admin1") or "").split()).strip()
@@ -621,7 +621,7 @@ def _incident_hotspots_from_semantic_clusters(
         )
         # Resolve any remaining 2-letter country codes
         if primary_country and len(primary_country) == 2 and primary_country.isupper():
-            from gdelt_gkg_ingestion import COUNTRY_CODE_TO_NAME
+            from ingestion.gdelt_gkg_ingestion import COUNTRY_CODE_TO_NAME
 
             primary_country = COUNTRY_CODE_TO_NAME.get(primary_country, primary_country)
         primary_location = (

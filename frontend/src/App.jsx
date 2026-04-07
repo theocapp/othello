@@ -1,12 +1,5 @@
 import { Suspense, lazy, useEffect, useRef, useState, useMemo } from 'react'
-import {
-  fetchBeforeNewsArchive,
-  fetchCorrelations,
-  fetchInstability,
-  fetchPredictionLedger,
-} from './api'
 import useHealth from './hooks/useHealth'
-import useHeadlines from './hooks/useHeadlines'
 import HomeDashboard from './components/HomeDashboard'
 import { buildAppStyles, C } from './constants/theme'
 import { friendlyErrorMessage, formatRegionLabel, parseDateValue } from './lib/formatters'
@@ -88,22 +81,13 @@ export default function App() {
       return healthSnapshot?.runtime?.corpus?.latest_published_at
         ? parseDateValue(healthSnapshot.runtime.corpus.latest_published_at)
         : null
-    } catch (e) {
+    } catch {
       return null
     }
   }, [healthSnapshot])
 
   const [headlineSort, setHeadlineSort] = useState('relevance')
   const [headlineRegion, setHeadlineRegion] = useState('all')
-  const {
-    data: headlinesData,
-    error: headlinesError,
-    isLoading: headlinesLoading,
-    refetch: refetchHeadlines,
-  } = useHeadlines(headlineSort, headlineRegion)
-  const headlines = headlinesData?.stories || []
-  const headlineRegions = headlinesData?.available_regions || []
-  const headlinesLoaded = headlines.length > 0
 
   const [mapAttentionWindow, setMapAttentionWindow] = useState('24h')
   const [selectedMapHotspot, setSelectedMapHotspot] = useState(null)
@@ -114,7 +98,6 @@ export default function App() {
     data: contradictionEvents = [],
     error: contradictionsError,
     isLoading: contradictionsLoading,
-    refetch: refetchContradictions,
   } = useContradictions(6)
 
   const {
@@ -128,14 +111,12 @@ export default function App() {
     data: instabilityData,
     error: instabilityError,
     isLoading: instabilityLoading,
-    refetch: refetchInstability,
   } = useInstability(3)
 
   const {
     data: correlationData,
     error: correlationError,
     isLoading: correlationLoading,
-    refetch: refetchCorrelations,
   } = useCorrelations(3)
 
   const { data: predictionLedgerResp, error: predictionLedgerError } = usePredictionLedger()
@@ -148,8 +129,87 @@ export default function App() {
     data: canonicalEventsData,
     error: canonicalEventsError,
     isLoading: canonicalEventsLoading,
-  } = useCanonicalEvents({ topic: 'geopolitics', limit: 120 })
-  const canonicalEvents = canonicalEventsData?.events || []
+    refetch: refetchCanonicalEvents,
+  } = useCanonicalEvents({ topic: null, limit: 160 })
+  const canonicalEvents = useMemo(() => canonicalEventsData?.events ?? [], [canonicalEventsData])
+
+  const canonicalStories = useMemo(() => {
+    const stories = canonicalEvents.map(event => {
+      const payload = event?.payload || {}
+      const region = (
+        event?.geo_region ||
+        event?.geo_country ||
+        payload?.dominant_region ||
+        'global'
+      )
+      const summary =
+        event?.neutral_summary ||
+        payload?.summary ||
+        (event?.importance_reasons || [])[0] ||
+        'Coverage is still developing.'
+
+      return {
+        event_id: event?.event_id,
+        headline: event?.label || event?.event_id,
+        summary,
+        topic: event?.topic || 'geopolitics',
+        dominant_region: String(region || 'global').toLowerCase(),
+        latest_update: event?.last_updated_at || event?.computed_at || event?.first_reported_at,
+        source_count: Number(event?.source_count || 0),
+        article_count: Number(event?.article_count || 0),
+        contradiction_count: Number(event?.contradiction_count || 0),
+        importance_score: Number(event?.importance_score || 0),
+        sources: [],
+      }
+    })
+
+    const filtered = headlineRegion === 'all'
+      ? stories
+      : stories.filter(story => story?.dominant_region === headlineRegion)
+
+    if (headlineSort === 'region') {
+      return [...filtered].sort((left, right) => {
+        const regionCompare = String(left?.dominant_region || '').localeCompare(String(right?.dominant_region || ''))
+        if (regionCompare !== 0) return regionCompare
+        const importanceDelta = Number(right?.importance_score || 0) - Number(left?.importance_score || 0)
+        if (importanceDelta !== 0) return importanceDelta
+        return String(right?.latest_update || '').localeCompare(String(left?.latest_update || ''))
+      })
+    }
+
+    return [...filtered].sort((left, right) => {
+      const importanceDelta = Number(right?.importance_score || 0) - Number(left?.importance_score || 0)
+      if (importanceDelta !== 0) return importanceDelta
+      const contradictionDelta = Number(right?.contradiction_count || 0) - Number(left?.contradiction_count || 0)
+      if (contradictionDelta !== 0) return contradictionDelta
+      return String(right?.latest_update || '').localeCompare(String(left?.latest_update || ''))
+    })
+  }, [canonicalEvents, headlineRegion, headlineSort])
+
+  const headlineRegions = useMemo(() => {
+    return Array.from(
+      new Set(
+        canonicalEvents
+          .map(event => {
+            const payload = event?.payload || {}
+            return String(
+              event?.geo_region ||
+              event?.geo_country ||
+              payload?.dominant_region ||
+              ''
+            ).trim().toLowerCase()
+          })
+          .filter(region => region && region !== 'global')
+      )
+    ).sort((left, right) => left.localeCompare(right))
+  }, [canonicalEvents])
+
+  const headlines = canonicalStories
+  const headlinesLoaded = headlines.length > 0
+  const headlinesLoading = canonicalEventsLoading
+  const headlinesError = canonicalEventsError
+    ? friendlyErrorMessage(canonicalEventsError, 'canonical event feed')
+    : null
 
   const [deepDive, setDeepDive] = useState(null)
   const [briefingPage, setBriefingPage] = useState(null)
@@ -182,36 +242,9 @@ export default function App() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  useEffect(() => {
-    // entity signals and contradictions are handled by react-query hooks
-
-    // prediction ledger and before-news archive are handled by react-query hooks
-
-    // Health and headlines are fetched via react-query hooks.
-    loadMapAttention('24h')
-    loadInstability()
-    loadCorrelations()
-  }, [])
-
-  async function loadInstability() {
-    try {
-      await refetchInstability()
-    } catch (err) {
-      // instabilityError is provided by the hook
-    }
-  }
-
-  async function loadCorrelations() {
-    try {
-      await refetchCorrelations()
-    } catch (err) {
-      // correlationError is provided by the hook
-    }
-  }
-
-  function loadHeadlines(next = {}) {
-    // Expose a compatible API for components: trigger a manual refetch.
-    refetchHeadlines()
+  function loadHeadlines() {
+    // Expose a compatible API for components: trigger canonical feed refresh.
+    refetchCanonicalEvents()
   }
 
   async function loadMapAttention(window = mapAttentionWindow) {
@@ -224,10 +257,16 @@ export default function App() {
           ? current
           : data?.hotspots?.[0]?.hotspot_id || null
       )
-    } catch (err) {
+    } catch {
       // mapAttentionError is provided by the hook; no local error state needed
     }
   }
+
+  useEffect(() => {
+    if (!selectedMapHotspot && (mapAttention?.hotspots || []).length) {
+      setSelectedMapHotspot(mapAttention.hotspots[0]?.hotspot_id || null)
+    }
+  }, [mapAttention, selectedMapHotspot])
 
   function openStoryDeepDive(story) {
     const sourceUrls = (story.sources || [])

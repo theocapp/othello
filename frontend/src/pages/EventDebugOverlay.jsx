@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { fetchCanonicalEventDebug } from '../api'
+import { fetchCanonicalEventDebug, fetchEvaluationScorecard } from '../api'
 import { C } from '../constants/theme'
 import { formatDateTime, friendlyErrorMessage } from '../lib/formatters'
 
@@ -28,6 +28,9 @@ export default function EventDebugOverlay({ eventId, onClose }) {
   const [payload, setPayload] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [scorecard, setScorecard] = useState(null)
+  const [scorecardLoading, setScorecardLoading] = useState(false)
+  const [scorecardError, setScorecardError] = useState(null)
 
   useEffect(() => {
     let cancelled = false
@@ -35,9 +38,14 @@ export default function EventDebugOverlay({ eventId, onClose }) {
       if (!eventId) {
         setPayload(null)
         setLoading(false)
+        setScorecard(null)
+        setScorecardLoading(false)
+        setScorecardError(null)
         return
       }
       setLoading(true)
+      setScorecard(null)
+      setScorecardError(null)
       try {
         const data = await fetchCanonicalEventDebug(eventId)
         if (!cancelled) {
@@ -59,6 +67,45 @@ export default function EventDebugOverlay({ eventId, onClose }) {
       cancelled = true
     }
   }, [eventId])
+
+  const scorecardTopic = (payload?.event?.topic || '').trim().toLowerCase() || null
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadScorecard() {
+      if (!eventId || !payload) {
+        setScorecard(null)
+        setScorecardLoading(false)
+        setScorecardError(null)
+        return
+      }
+
+      setScorecardLoading(true)
+      try {
+        const data = await fetchEvaluationScorecard({
+          topic: scorecardTopic,
+          limitFiles: 120,
+        })
+        if (!cancelled) {
+          setScorecard(data)
+          setScorecardError(null)
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setScorecard(null)
+          setScorecardError(friendlyErrorMessage(err, 'evaluation scorecard'))
+        }
+      } finally {
+        if (!cancelled) setScorecardLoading(false)
+      }
+    }
+
+    loadScorecard()
+    return () => {
+      cancelled = true
+    }
+  }, [eventId, payload, scorecardTopic])
 
   const frameDistribution = useMemo(() => {
     const out = {}
@@ -86,6 +133,12 @@ export default function EventDebugOverlay({ eventId, onClose }) {
   const event = payload?.event || {}
   const importance = event?.importance || {}
   const counts = payload?.counts || {}
+  const clusteringSummary = scorecard?.kind_summaries?.clustering || null
+  const cohesionMetrics = scorecard?.operational_metrics?.cluster_cohesion || {}
+
+  function formatRate(value) {
+    return typeof value === 'number' ? `${(value * 100).toFixed(1)}%` : 'n/a'
+  }
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: C.bg, zIndex: 220, overflowY: 'auto', animation: 'slideIn 0.3s ease' }}>
@@ -247,6 +300,53 @@ export default function EventDebugOverlay({ eventId, onClose }) {
               </div>
 
               <aside className="briefing-sidebar" style={{ display: 'grid', gap: '1rem', position: 'sticky', top: '88px' }}>
+                <Section title="System health" note="Latest evaluation scorecard snapshot">
+                  {scorecardLoading && (
+                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.54rem', color: C.textMuted }}>
+                      Loading scorecard snapshot...
+                    </div>
+                  )}
+                  {!scorecardLoading && scorecardError && (
+                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.52rem', color: C.red }}>
+                      {scorecardError}
+                    </div>
+                  )}
+                  {!scorecardLoading && !scorecardError && scorecard && (
+                    <div style={{ display: 'grid', gap: '0.45rem' }}>
+                      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.46rem', color: C.textMuted }}>
+                        generated {formatDateTime(scorecard.generated_at)}
+                      </div>
+                      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.47rem', color: C.textSecondary }}>
+                        labels_considered={scorecard.records_considered || 0} · invalid={scorecard.invalid_records || 0}
+                      </div>
+                      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.47rem', color: C.textSecondary }}>
+                        clustering_agreement={formatRate(clusteringSummary?.agreement_rate)}
+                      </div>
+                      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.47rem', color: C.textSecondary }}>
+                        cohesion_mean_relatedness={
+                          typeof cohesionMetrics.avg_mean_relatedness === 'number'
+                            ? cohesionMetrics.avg_mean_relatedness.toFixed(3)
+                            : 'n/a'
+                        }
+                      </div>
+                      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.47rem', color: C.textSecondary }}>
+                        cohesion_outlier_ratio={formatRate(cohesionMetrics.avg_outlier_ratio)}
+                      </div>
+                      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.47rem', color: C.textSecondary }}>
+                        cohesion_high_outlier_threshold={formatRate(cohesionMetrics.high_outlier_threshold)}
+                      </div>
+                      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.47rem', color: C.textSecondary }}>
+                        cohesion_outlier_p75={formatRate(cohesionMetrics.outlier_ratio_p75)} · p90={formatRate(cohesionMetrics.outlier_ratio_p90)}
+                      </div>
+                    </div>
+                  )}
+                  {!scorecardLoading && !scorecardError && !scorecard && (
+                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.54rem', color: C.textMuted }}>
+                      No scorecard snapshot available.
+                    </div>
+                  )}
+                </Section>
+
                 <Section title="Identity history" note="Recent resolver events">
                   {(payload.identity_history || []).length === 0 && <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.54rem', color: C.textMuted }}>No identity history entries.</div>}
                   {(payload.identity_history || []).slice(0, 16).map((row, idx) => (

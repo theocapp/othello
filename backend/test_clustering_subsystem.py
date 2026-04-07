@@ -145,6 +145,7 @@ def test_cluster_articles_event_shape_remains_compatible():
         "tier_1_source_count",
         "region_counts",
         "dominant_region",
+        "cluster_cohesion",
         "articles",
     }
     assert expected_keys.issubset(set(event.keys()))
@@ -152,3 +153,5 @@ def test_cluster_articles_event_shape_remains_compatible():
     assert event["topic"] == "geopolitics"
     assert event["label"] == "Consensus title"
     assert event["summary"] == "Consensus summary"
+    assert event["cluster_cohesion"]["pair_count"] == 1
+    assert event["cluster_cohesion"]["mean_relatedness"] is not None

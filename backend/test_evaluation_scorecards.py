@@ -7,6 +7,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 _BACKEND = Path(__file__).resolve().parent
 if str(_BACKEND) not in sys.path:
@@ -110,6 +111,60 @@ class TestEvaluationScorecards(unittest.TestCase):
         self.assertEqual(snapshot["files_scanned"], 0)
         self.assertEqual(snapshot["records_scanned"], 0)
         self.assertEqual(snapshot["records_considered"], 0)
+
+    def test_snapshot_includes_cluster_cohesion_operational_metrics(self):
+        with tempfile.TemporaryDirectory() as tmp_dir, patch(
+            "evaluation.scorecards._get_canonical_events",
+            return_value=[
+                {
+                    "event_id": "evt_1",
+                    "payload": {
+                        "cluster_cohesion": {
+                            "mean_relatedness": 6.2,
+                            "outlier_ratio": 0.0,
+                        }
+                    },
+                },
+                {
+                    "event_id": "evt_2",
+                    "payload": {
+                        "cluster_cohesion": {
+                            "mean_relatedness": 4.0,
+                            "outlier_ratio": 0.5,
+                        }
+                    },
+                },
+            ],
+        ):
+            snapshot = build_scorecard_snapshot(labels_dir=str(Path(tmp_dir)))
+
+        cohesion = snapshot["operational_metrics"]["cluster_cohesion"]
+        self.assertEqual(cohesion["event_count"], 2)
+        self.assertEqual(cohesion["events_with_cohesion"], 2)
+        self.assertEqual(cohesion["coverage_rate"], 1.0)
+        self.assertEqual(cohesion["avg_mean_relatedness"], 5.1)
+        self.assertEqual(cohesion["avg_outlier_ratio"], 0.25)
+        self.assertEqual(cohesion["outlier_ratio_p75"], 0.375)
+        self.assertEqual(cohesion["outlier_ratio_p90"], 0.45)
+        self.assertEqual(cohesion["high_outlier_threshold"], 0.34)
+        self.assertEqual(cohesion["high_outlier_event_rate"], 0.5)
+
+    def test_snapshot_respects_configured_high_outlier_threshold(self):
+        with tempfile.TemporaryDirectory() as tmp_dir, patch(
+            "evaluation.scorecards._get_canonical_events",
+            return_value=[
+                {"event_id": "evt_1", "payload": {"cluster_cohesion": {"outlier_ratio": 0.5}}},
+                {"event_id": "evt_2", "payload": {"cluster_cohesion": {"outlier_ratio": 0.4}}},
+            ],
+        ), patch(
+            "evaluation.scorecards.EVALUATION_COHESION_HIGH_OUTLIER_THRESHOLD",
+            0.6,
+        ):
+            snapshot = build_scorecard_snapshot(labels_dir=str(Path(tmp_dir)))
+
+        cohesion = snapshot["operational_metrics"]["cluster_cohesion"]
+        self.assertEqual(cohesion["high_outlier_threshold"], 0.6)
+        self.assertEqual(cohesion["high_outlier_event_rate"], 0.0)
 
 
 if __name__ == "__main__":

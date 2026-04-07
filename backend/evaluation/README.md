@@ -57,3 +57,28 @@ Optional query params:
 - `topic`: filter labels by topic
 - `limit_files`: max JSONL files scanned (default `80`)
 - `include_error_samples`: include validation error examples (`true|false`)
+
+## Event Debug QA Helper
+
+Run a repeatable QA pass over sampled live canonical events:
+
+```bash
+python backend/evaluation/run_event_debug_qa.py --topic geopolitics --event-limit 5
+```
+
+Strict mode (fail when no validated labels are present):
+
+```bash
+python backend/evaluation/run_event_debug_qa.py --topic geopolitics --event-limit 5 --require-label-records
+```
+
+Checks performed:
+
+- sampled canonical event IDs are still present on a second fetch (stability sanity check)
+- each sampled event returns a debug payload with expected importance/cohesion surfaces
+- scorecard payload includes operational cohesion metrics for the selected topic
+- optional strict gate for non-zero `records_considered` using `--require-label-records`
+
+Optional calibration:
+
+- set `OTHELLO_EVALUATION_COHESION_HIGH_OUTLIER_THRESHOLD` to tune the `high_outlier_event_rate` threshold (default `0.34`)

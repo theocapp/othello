@@ -14,7 +14,7 @@ from urllib.request import urlopen
 from dotenv import load_dotenv
 from newsapi import NewsApiClient
 import requests
-from source_catalog import SOURCE_PACKS, SOURCE_SEEDS, source_pack_for
+from sources.source_catalog import SOURCE_PACKS, SOURCE_SEEDS, source_pack_for
 
 load_dotenv(Path(__file__).with_name(".env"))
 

@@ -416,7 +416,7 @@ def build_structured_story_clusters(
             c = _clean_text(item.get("country"))
             if c and len(c) == 2 and c.isupper():
                 try:
-                    from gdelt_gkg_ingestion import COUNTRY_CODE_TO_NAME
+                    from ingestion.gdelt_gkg_ingestion import COUNTRY_CODE_TO_NAME
 
                     c = COUNTRY_CODE_TO_NAME.get(c, c)
                 except ImportError:
