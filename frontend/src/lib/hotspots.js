@@ -1,11 +1,9 @@
 export const ATTENTION_WINDOWS = [
-  { id: '24h', label: '24 Hours' },
-  { id: '7d', label: 'This Week' },
-  { id: '30d', label: 'This Month' },
-  { id: '90d', label: 'Past 3 Months' },
-  { id: '180d', label: 'Past 6 Months' },
-  { id: '365d', label: 'Past Year' },
-  { id: '1825d', label: 'Past 5 Years' },
+  { id: '24h', label: '1 Day' },
+  { id: '30d', label: '30 Days' },
+  { id: '90d', label: '90 Days' },
+  { id: '365d', label: '365 Days' },
+  { id: 'custom', label: 'Custom' },
 ]
 
 export const HOTSPOT_TYPE_PALETTE = {
@@ -22,7 +20,8 @@ export function totalNarrativeFlags(event) {
 export function getHotspotAspect(hotspot) {
   const aspect = String(hotspot?.aspect || '').toLowerCase()
   if (aspect === 'conflict' || aspect === 'political' || aspect === 'economic') return aspect
-  const types = (hotspot.event_types || []).map(t => t.toLowerCase())
+  const types = (Array.isArray(hotspot?.event_types) ? hotspot.event_types : [])
+    .map(t => String(t || '').toLowerCase())
   if (types.some(t => t.includes('conflict') || t.includes('battle') || t.includes('violence') || t.includes('explosion') || t.includes('attack') || t.includes('airstrike') || t.includes('strike') || t.includes('missile') || t.includes('drone') || t.includes('war') || t.includes('military') || t.includes('clash'))) return 'conflict'
   if (types.some(t => t.includes('politic') || t.includes('riot') || t.includes('protest') || t.includes('government'))) return 'political'
   if (types.some(t => t.includes('econom') || t.includes('market') || t.includes('sanction') || t.includes('trade'))) return 'economic'
@@ -65,10 +64,11 @@ export function buildHotspotClusterAnalysisQuery(hotspot) {
 }
 
 export function collectHotspotSourceUrls(hotspot) {
-  if (!hotspot?.sample_events?.length) return []
+  const sampleEvents = Array.isArray(hotspot?.sample_events) ? hotspot.sample_events : []
+  if (!sampleEvents.length) return []
   const urls = []
   const seen = new Set()
-  for (const event of hotspot.sample_events) {
+  for (const event of sampleEvents) {
     const candidates = [
       ...(Array.isArray(event?.source_urls) ? event.source_urls : []),
       event?.event_id,

@@ -43,6 +43,21 @@ python backend/evaluation/validate_annotation_labels.py backend/evaluation/batch
 
 The validator returns non-zero if malformed records are found and reports line-level errors.
 
+## Seed Local Clustering Labels
+
+Bootstrap valid clustering labels from sampled canonical events for local QA:
+
+```bash
+python backend/evaluation/seed_clustering_labels.py \
+  --topic geopolitics \
+  --event-limit 12 \
+  --decision unsure \
+  --annotator-id qa_seed \
+  --output backend/evaluation/batches/clustering_seeded.jsonl
+```
+
+By default, the seeder falls back to synthetic observation keys (`seed_obs:<event_id>`) when no observation history is available, so local strict QA can still run. Add `--no-event-fallback` to disable this behavior.
+
 ## Scorecard Snapshot API
 
 You can fetch deterministic label aggregates from the API:

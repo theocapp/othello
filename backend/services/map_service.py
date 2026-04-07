@@ -1438,18 +1438,69 @@ def _build_story_hotspots(window: str, now: datetime) -> tuple[list[dict], int]:
     return hotspots, story_candidates
 
 
-def _build_hotspot_attention_map(window: str = "24h") -> dict:
+def _build_hotspot_attention_map(window: str = "24h", start: str | None = None, end: str | None = None, days: int | None = None) -> dict:
+    # support explicit custom timeframes via start/end ISO dates or numeric days
     normalized_window = (window or "24h").strip().lower()
-    cached = _MAP_ATTENTION_CACHE.get(normalized_window)
+    custom = bool(start or end or (days is not None))
+
+    # build a cache key that includes custom params when provided
+    cache_key = normalized_window
+    if custom:
+        cache_key = f"custom|window={normalized_window}|start={start or ''}|end={end or ''}|days={days or ''}"
+
+    cached = _MAP_ATTENTION_CACHE.get(cache_key)
     now_ts = time.time()
     if cached and (now_ts - cached[0]) < MAP_CACHE_TTL_SECONDS:
         return cached[1]
 
-    hours = _attention_window_hours(normalized_window)
-    days = _window_days(normalized_window)
-    now = datetime.now(timezone.utc)
-    cutoff = now - timedelta(hours=hours)
-    structured_days = min(days, MAX_MAP_STRUCTURED_DAYS)
+    # compute hours/days/cutoff based on either preset window or provided custom params
+    if custom:
+        # explicit days provided
+        if days is not None and int(days) > 0:
+            hours = int(days) * 24
+            computed_days = max(1, math.ceil(hours / 24))
+            now = datetime.now(timezone.utc)
+            cutoff = now - timedelta(hours=hours)
+        else:
+            # parse start/end datetimes (accept ISO date or datetime strings)
+            start_dt = _event_datetime_for_hotspot(start) if start else None
+            end_dt = _event_datetime_for_hotspot(end) if end else None
+            # if only end provided, treat end as end of that day; if only start provided, use now as end
+            if end_dt and not start_dt:
+                # use 24 hours ending at end_dt by default
+                start_dt = end_dt - timedelta(days=1)
+            if start_dt and not end_dt:
+                end_dt = datetime.now(timezone.utc)
+
+            if not start_dt or not end_dt:
+                # fallback to default 24h window
+                hours = _attention_window_hours(normalized_window)
+                computed_days = _window_days(normalized_window)
+                now = datetime.now(timezone.utc)
+                cutoff = now - timedelta(hours=hours)
+            else:
+                # ensure end is inclusive of the selected end date (treat end as end of day if date-only)
+                # if supplied strings were date-only, _event_datetime_for_hotspot produces midnight; extend to end of day
+                # add one day to end to include the day's coverage
+                if isinstance(end, str) and 'T' not in end:
+                    end_dt = end_dt + timedelta(days=1)
+                if isinstance(start, str) and 'T' not in start:
+                    # start remains at midnight of start
+                    pass
+
+                now = end_dt
+                cutoff = start_dt
+                delta_hours = max(0.0, (now - cutoff).total_seconds() / 3600)
+                hours = max(1, int(math.ceil(delta_hours)))
+                computed_days = max(1, math.ceil(hours / 24))
+    else:
+        hours = _attention_window_hours(normalized_window)
+        computed_days = _window_days(normalized_window)
+        now = datetime.now(timezone.utc)
+        cutoff = now - timedelta(hours=hours)
+
+    # limit structured days for heavy semantic workloads
+    structured_days = min(computed_days, MAX_MAP_STRUCTURED_DAYS)
     semantic_clusters = build_map_structured_story_clusters(
         structured_days=structured_days,
         limit=40,
@@ -1495,9 +1546,11 @@ def _build_hotspot_attention_map(window: str = "24h") -> dict:
             )
 
     payload = {
-        "window": normalized_window,
+        "window": "custom" if custom else normalized_window,
         "hours": hours,
-        "days": days,
+        "days": computed_days,
+        "start": cutoff.isoformat().replace("+00:00", "Z") if custom else None,
+        "end": now.isoformat().replace("+00:00", "Z") if custom else None,
         "generated_at": now.isoformat().replace("+00:00", "Z"),
         "total_events": structured_candidate_count + total_story_candidates,
         "hotspot_count": len(combined),
@@ -1505,7 +1558,7 @@ def _build_hotspot_attention_map(window: str = "24h") -> dict:
         "available_windows": list(ATTENTION_WINDOW_HOURS.keys()),
         "hotspots": combined,
     }
-    _MAP_ATTENTION_CACHE[normalized_window] = (now_ts, payload)
+    _MAP_ATTENTION_CACHE[cache_key] = (now_ts, payload)
     return payload
 
 

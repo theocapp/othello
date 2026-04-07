@@ -13,6 +13,8 @@ from collections import Counter
 from datetime import datetime
 
 import spacy
+from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
 
 from corpus import get_source_registry, load_latest_source_reliability
 from news import normalize_article_description, normalize_article_title
@@ -153,11 +155,108 @@ SENSATIONAL_TITLE_TERMS = {
 }
 
 _nlp = None
+_semantic_model = None
 _source_registry_cache = None
 _source_reliability_cache = {}
 _source_reliability_cache_time = {}
 
-RELATEDNESS_THRESHOLD = 4.1
+RELATEDNESS_THRESHOLD = 0.380  # Cosine similarity threshold for semantic relatedness
+
+# Auto-tunable clustering parameters (used by continuous improvement loop).
+GEO_MISMATCH_PENALTY = 0.500
+TOPICAL_BASE_PENALTY = 0.780
+TOPICAL_LOW_OVERLAP_MULTIPLIER = 0.92
+CONTEXT_PENALTY_FLOOR = 0.95
+CONSEQUENCE_CONTEXT_PENALTY = 0.78
+CONSEQUENCE_IRAN_ONLY_PENALTY = 0.420
+LABOR_MILITARY_PENALTY = 0.600
+ACTOR_STRIKE_DIFF_GPE_PENALTY = 0.720
+ANALYSIS_ABSTRACTION_PENALTY = 0.450
+MULTI_THEATER_STRIKE_PENALTY = 0.350
+
+BASE_CONTEXT_BOOST = 0.200
+HORMUZ_BRIDGE_BOOST = 0.24
+LONG_CONFLICT_CONTINUITY_BOOST = 0.06
+SHORT_ACTOR_CONTINUITY_BOOST = 0.120
+LONG_ACTOR_ANCHOR_BOOST = 0.120
+LONG_ACTOR_ANCHOR_STRONG_KW_BOOST = 0.24
+LONG_WAR_CONTEXT_BOOST = 0.080
+
+_CONTEXT_TERMS = {
+    "iran",
+    "war",
+    "hormuz",
+    "ceasefire",
+    "trump",
+    "oil",
+    "talk",
+    "talks",
+    "diplomatic",
+    "diplomacy",
+}
+
+_CONSEQUENCE_TERMS = {
+    "market",
+    "markets",
+    "stocks",
+    "shares",
+    "energy",
+    "supplies",
+    "supply",
+    "economy",
+    "economic",
+    "prices",
+    "inflation",
+    "barrel",
+    "oil",
+}
+
+_LABOR_TERMS = {
+    "teachers",
+    "teacher",
+    "workers",
+    "worker",
+    "union",
+    "wage",
+    "pension",
+    "schools",
+    "school",
+    "walkout",
+    "protest",
+}
+
+_MILITARY_TERMS = {
+    "military",
+    "forces",
+    "aircraft",
+    "missile",
+    "drone",
+    "militant",
+    "targets",
+    "defense",
+    "defence",
+    "fighters",
+    "artillery",
+}
+
+_ANALYSIS_TERMS = {
+    "analysis",
+    "takeaway",
+    "takeaways",
+    "overview",
+    "explainer",
+    "interview",
+    "opinion",
+}
+
+_BROAD_CONFLICT_GPE_TERMS = {
+    "Iran",
+    "Israel",
+    "US",
+    "United States",
+    "Tehran",
+    "Washington",
+}
 
 
 def get_nlp():
@@ -171,6 +270,14 @@ def get_nlp():
                 "Install it with: python3 -m spacy download en_core_web_sm"
             ) from exc
     return _nlp
+
+
+def get_semantic_model():
+    """Load the sentence transformer model for semantic similarity."""
+    global _semantic_model
+    if _semantic_model is None:
+        _semantic_model = SentenceTransformer("all-MiniLM-L6-v2")
+    return _semantic_model
 
 
 def _normalize_text(text: str) -> str:
@@ -261,6 +368,19 @@ def _article_entities(text: str) -> set[str]:
     }
 
 
+def _article_entity_breakdown(text: str) -> tuple[set[str], set[str]]:
+    doc = get_nlp()(text[:700])
+    gpe_entities = {
+        ent.text.strip() for ent in doc.ents if ent.label_ == "GPE" and ent.text.strip()
+    }
+    actor_entities = {
+        ent.text.strip()
+        for ent in doc.ents
+        if ent.label_ in {"PERSON", "ORG", "NORP", "EVENT"} and ent.text.strip()
+    }
+    return gpe_entities, actor_entities
+
+
 def _article_framing_labels(text: str) -> set[str]:
     lowered = (text or "").lower()
     labels = set()
@@ -271,21 +391,52 @@ def _article_framing_labels(text: str) -> set[str]:
 
 
 def _article_signature(article: dict) -> dict:
-    text = _normalize_text(
-        f"{article.get('title', '')}. {article.get('description', '')}"
-    )
+    title = _normalize_text(article.get('title', ''))
+    description = _normalize_text(article.get('description', ''))
+    lead = description.split('.')[0].strip()
+    text = _normalize_text(f"{title}. {lead}" if lead else title)
     entities = _article_entities(text)
+    gpe_entities, actor_entities = _article_entity_breakdown(text)
     keywords = _token_keywords(text)
     anchors = _extract_event_anchors(keywords, text)
     published_dt = _parse_published_at(article.get("published_at"))
     return {
         "text": text,
         "entities": entities,
+        "gpe_entities": gpe_entities,
+        "actor_entities": actor_entities,
         "keywords": keywords,
         "anchors": anchors,
         "published_at": article.get("published_at"),
         "published_dt": published_dt,
     }
+
+
+def _context_term_overlap(left_text: str, right_text: str) -> set[str]:
+    left_lower = left_text.lower()
+    right_lower = right_text.lower()
+    return {
+        term
+        for term in _CONTEXT_TERMS
+        if re.search(rf"\b{re.escape(term)}\b", left_lower)
+        and re.search(rf"\b{re.escape(term)}\b", right_lower)
+    }
+
+
+def _term_overlap(left_text: str, right_text: str, terms: set[str]) -> set[str]:
+    left_lower = left_text.lower()
+    right_lower = right_text.lower()
+    return {
+        term
+        for term in terms
+        if re.search(rf"\b{re.escape(term)}\b", left_lower)
+        and re.search(rf"\b{re.escape(term)}\b", right_lower)
+    }
+
+
+def _has_any_term(text: str, terms: set[str]) -> bool:
+    lowered = text.lower()
+    return any(re.search(rf"\b{re.escape(term)}\b", lowered) for term in terms)
 
 
 def build_article_signatures(articles: list[dict]) -> list[dict]:
@@ -558,35 +709,238 @@ def _dominant_region(region_counts: dict[str, int]) -> str:
 
 
 def relatedness_score(left: dict, right: dict) -> float:
-    entity_overlap = len(left["entities"] & right["entities"])
-    keyword_overlap = len(left["keywords"] & right["keywords"])
-    anchor_overlap = len(left["anchors"] & right["anchors"])
-    entity_similarity = _soft_jaccard(left["entities"], right["entities"])
-    keyword_similarity = _soft_jaccard(left["keywords"], right["keywords"])
-    anchor_similarity = _soft_jaccard(left["anchors"], right["anchors"])
+    """Calculate semantic relatedness using fine-tuned sentence embeddings.
+    
+    Score range: [0, 1] from cosine similarity, then scaled down by temporal weight.
+    Penalty: Articles mentioning different geographic entities (different cities)
+    get a lower score, requiring stronger semantic similarity to cluster.
+    Threshold: 0.40 (after temporal decay).
+    """
+    model = get_semantic_model()
+    
+    # Get the combined text (title + description) for semantic encoding
+    left_text = left.get("text", "")
+    right_text = right.get("text", "")
+    
+    if not left_text or not right_text:
+        return 0.0
+    
+    # Encode both texts to embeddings
+    embeddings = model.encode([left_text, right_text], convert_to_numpy=True)
+    left_embedding = embeddings[0]
+    right_embedding = embeddings[1]
+    
+    # Compute cosine similarity (returns value between -1 and 1, typically 0-1 for text)
+    semantic_score = float(cosine_similarity(
+        left_embedding.reshape(1, -1),
+        right_embedding.reshape(1, -1)
+    )[0][0])
+    
+    # Get temporal weight
     hours_apart = _time_distance_hours(
         left.get("published_dt"), right.get("published_dt")
     )
     time_weight = _temporal_weight(hours_apart)
+    
+    # Check for geographic separation penalty
+    # If both articles mention GPE (geographic/political entity) but they don't overlap,
+    # apply a penalty to require stronger semantic similarity
+    left_entities = left.get("entities", set())
+    right_entities = right.get("entities", set())
+    
+    # Use explicit GPE entities for location checks to avoid NORP/actor bleed.
+    left_gpes = left.get("gpe_entities", set())
+    right_gpes = right.get("gpe_entities", set())
+    
+    # If both articles mention locations but they don't overlap, apply penalty
+    geo_penalty = 1.0
+    if left_gpes and right_gpes and not (left_gpes & right_gpes):
+        # They mention locations but different ones (e.g., Cairo vs Alexandria)
+        # Reduce the semantic score by 30% to require stronger semantic match
+        geo_penalty = GEO_MISMATCH_PENALTY
 
-    score = (
-        (entity_overlap * 1.9)
-        + (keyword_overlap * 0.42)
-        + (anchor_overlap * 1.65)
-        + (entity_similarity * 2.0)
-        + (keyword_similarity * 1.4)
-        + (anchor_similarity * 1.5)
-    ) * time_weight
+    entity_overlap = left_entities & right_entities
+    actor_overlap = left.get("actor_entities", set()) & right.get("actor_entities", set())
+    anchor_overlap = left.get("anchors", set()) & right.get("anchors", set())
+    keyword_overlap = left.get("keywords", set()) & right.get("keywords", set())
 
-    if _anchor_conflict(left["anchors"], right["anchors"]) and (
-        hours_apart is None or hours_apart > 6
+    # Penalize broad country-level topical overlap without shared actors.
+    # This reduces false merges among "Iran-adjacent" but event-distinct stories.
+    topical_bleed_penalty = 1.0
+    if entity_overlap and not actor_overlap and len(entity_overlap) <= 2:
+        topical_bleed_penalty = TOPICAL_BASE_PENALTY
+    if len(entity_overlap) <= 1 and not anchor_overlap and len(keyword_overlap) < 3:
+        topical_bleed_penalty *= TOPICAL_LOW_OVERLAP_MULTIPLIER
+
+    context_overlap = _context_term_overlap(left_text, right_text)
+    consequence_overlap = _term_overlap(left_text, right_text, _CONSEQUENCE_TERMS)
+    ongoing_context_boost = 0.0
+    # Recover low-overlap same-situation updates by boosting shared conflict context.
+    if (
+        hours_apart is not None
+        and hours_apart <= 72
+        and len(context_overlap) >= 2
+        and ({"iran", "war"} <= context_overlap or "hormuz" in context_overlap)
+        and not anchor_overlap
+        and len(keyword_overlap) <= 8
     ):
-        score -= 2.6
-    if hours_apart is not None and hours_apart > 168 and entity_overlap < 3:
-        score -= 2.2
-    if entity_overlap == 0 and anchor_overlap == 0:
-        score -= 0.8
-    return round(score, 3)
+        ongoing_context_boost = BASE_CONTEXT_BOOST
+
+    # When strong shared context exists, reduce topical-bleed penalty severity.
+    if hours_apart is not None and hours_apart <= 96 and len(context_overlap) >= 2:
+        topical_bleed_penalty = max(topical_bleed_penalty, CONTEXT_PENALTY_FLOOR)
+
+    # Penalize broad macro-consequence coverage that shares war context but not incident actors.
+    if (
+        len(consequence_overlap) >= 2
+        and not actor_overlap
+        and not anchor_overlap
+        and ({"iran", "war"} <= context_overlap or {"iran", "oil"} <= context_overlap)
+    ):
+        topical_bleed_penalty *= CONSEQUENCE_CONTEXT_PENALTY
+
+    # Separate broad downstream consequence stories across different countries.
+    # Rule is conflict-agnostic: any single shared GPE with different spillover locations
+    # (e.g., Iran spillover to India vs UAE, Sudan spillover to Ethiopia vs Kenya, etc.)
+    gpe_intersection = left_gpes & right_gpes
+    if len(gpe_intersection) == 1:
+        # Exactly one shared conflict entity
+        common_gpe = list(gpe_intersection)[0]
+        left_extra_gpes = left_gpes - {common_gpe}
+        right_extra_gpes = right_gpes - {common_gpe}
+        
+        # Consequence-type anchors (market, policy) shouldn't block spillover penalty
+        consequence_anchors = {"market", "policy"}
+        strong_anchor_overlap = anchor_overlap - consequence_anchors
+        
+        if (
+            not actor_overlap
+            and not strong_anchor_overlap
+            and left_extra_gpes
+            and right_extra_gpes
+            and len(keyword_overlap) <= 3
+        ):
+            topical_bleed_penalty *= CONSEQUENCE_IRAN_ONLY_PENALTY
+
+    left_labor = _term_overlap(left_text, left_text, _LABOR_TERMS)
+    right_labor = _term_overlap(right_text, right_text, _LABOR_TERMS)
+    left_military = _term_overlap(left_text, left_text, _MILITARY_TERMS)
+    right_military = _term_overlap(right_text, right_text, _MILITARY_TERMS)
+
+    # Separate labor strike coverage from military strike coverage.
+    if (left_labor and right_military) or (right_labor and left_military):
+        topical_bleed_penalty *= LABOR_MILITARY_PENALTY
+
+    gpe_overlap = left_gpes & right_gpes
+    # Same actor + strike language in different locations is often separate incidents.
+    if anchor_overlap and actor_overlap and not gpe_overlap:
+        topical_bleed_penalty *= ACTOR_STRIKE_DIFF_GPE_PENALTY
+
+    # Distinct strike incidents across different theaters should not merge
+    # just because they share broad conflict entities.
+    left_specific_gpes = left_gpes - _BROAD_CONFLICT_GPE_TERMS
+    right_specific_gpes = right_gpes - _BROAD_CONFLICT_GPE_TERMS
+    if (
+        "strike" in left.get("anchors", set())
+        and "strike" in right.get("anchors", set())
+        and left_specific_gpes
+        and right_specific_gpes
+        and not (left_specific_gpes & right_specific_gpes)
+    ):
+        topical_bleed_penalty *= MULTI_THEATER_STRIKE_PENALTY
+
+    abstraction_mismatch = False
+    left_analysis = _has_any_term(left_text, _ANALYSIS_TERMS)
+    right_analysis = _has_any_term(right_text, _ANALYSIS_TERMS)
+    left_incident_anchors = bool(left.get("anchors", set()) & {"strike", "detention", "filing", "aid", "vote"})
+    right_incident_anchors = bool(right.get("anchors", set()) & {"strike", "detention", "filing", "aid", "vote"})
+    # Avoid merging broad analysis/takeaway framing with incident-driven updates.
+    if (
+        left_analysis ^ right_analysis
+        and not actor_overlap
+        and (left_incident_anchors ^ right_incident_anchors)
+        and len(gpe_overlap) <= 1
+    ):
+        topical_bleed_penalty *= ANALYSIS_ABSTRACTION_PENALTY
+        abstraction_mismatch = True
+
+    # Bridge terse rolling updates that mention Hormuz in one report and
+    # Iran-war framing in another report from the same short time window.
+    left_lower = left_text.lower()
+    right_lower = right_text.lower()
+    if hours_apart is not None and hours_apart <= 72:
+        left_hormuz = bool(re.search(r"\bhormuz\b", left_lower))
+        right_hormuz = bool(re.search(r"\bhormuz\b", right_lower))
+        left_conflict = bool(re.search(r"\biran\b", left_lower)) and bool(
+            re.search(r"\b(war|oil|trump|ceasefire|talks?)\b", left_lower)
+        )
+        right_conflict = bool(re.search(r"\biran\b", right_lower)) and bool(
+            re.search(r"\b(war|oil|trump|ceasefire|talks?)\b", right_lower)
+        )
+        if (left_hormuz and right_conflict) or (right_hormuz and left_conflict):
+            ongoing_context_boost = max(ongoing_context_boost, HORMUZ_BRIDGE_BOOST)
+
+    # Keep long-running conflicts grouped when lexical continuity is strong.
+    if (
+        hours_apart is not None
+        and 72 <= hours_apart <= 144
+        and len(keyword_overlap) >= 3
+        and len(entity_overlap) >= 1
+    ):
+        ongoing_context_boost = max(ongoing_context_boost, LONG_CONFLICT_CONTINUITY_BOOST)
+
+    # Recover same-situation updates when shared actor/entity continuity is present.
+    if hours_apart is not None and hours_apart <= 72 and actor_overlap:
+        ongoing_context_boost = max(ongoing_context_boost, SHORT_ACTOR_CONTINUITY_BOOST)
+    if (
+        hours_apart is not None
+        and hours_apart <= 192
+        and actor_overlap
+        and anchor_overlap
+    ):
+        ongoing_context_boost = max(ongoing_context_boost, LONG_ACTOR_ANCHOR_BOOST)
+    if (
+        hours_apart is not None
+        and hours_apart <= 192
+        and actor_overlap
+        and anchor_overlap
+        and len(keyword_overlap) >= 4
+    ):
+        ongoing_context_boost = max(ongoing_context_boost, LONG_ACTOR_ANCHOR_STRONG_KW_BOOST)
+
+    # Recover long-horizon same-war updates that share high-level conflict context.
+    if (
+        hours_apart is not None
+        and 72 < hours_apart <= 192
+        and len(entity_overlap) >= 1
+        and ({"iran", "war"} <= context_overlap or {"iran", "oil"} <= context_overlap)
+    ):
+        ongoing_context_boost = max(ongoing_context_boost, LONG_WAR_CONTEXT_BOOST)
+
+    # Conflict-level continuity boosts should not override clear abstraction mismatch.
+    if abstraction_mismatch:
+        ongoing_context_boost = 0.0
+
+    # Combine semantic similarity with temporal weight and geographic penalty
+    final_score = (semantic_score * time_weight * geo_penalty * topical_bleed_penalty) + ongoing_context_boost
+    final_score = min(1.0, max(0.0, final_score))
+    
+    return round(final_score, 3)
+
+
+def _is_likely_location(entity: str) -> bool:
+    """Check if entity text looks like a geographic location.
+    
+    Simple heuristic: capitalized multi-word phrases, or known city/country patterns.
+    """
+    if not entity:
+        return False
+    
+    # Capitalized words (heuristic for proper nouns, especially places)
+    if len(entity) > 1 and entity[0].isupper():
+        return True
+    
+    return False
 
 
 def _median(values: list[float]) -> float | None:
@@ -665,34 +1019,7 @@ def _cluster_cohesion_metrics(
 
 
 def is_related(left: dict, right: dict) -> bool:
-    entity_overlap = len(left["entities"] & right["entities"])
-    keyword_overlap = len(left["keywords"] & right["keywords"])
-    anchor_overlap = len(left["anchors"] & right["anchors"])
-    hours_apart = _time_distance_hours(
-        left.get("published_dt"), right.get("published_dt")
-    )
     score = relatedness_score(left, right)
-
-    if (
-        anchor_overlap >= 1
-        and entity_overlap >= 1
-        and (hours_apart is None or hours_apart <= 96)
-    ):
-        return True
-    if (
-        entity_overlap >= 2
-        and keyword_overlap >= 2
-        and (hours_apart is None or hours_apart <= 120)
-    ):
-        return True
-    if (
-        keyword_overlap >= 6
-        and anchor_overlap >= 1
-        and (hours_apart is None or hours_apart <= 48)
-    ):
-        return True
-    if _anchor_conflict(left["anchors"], right["anchors"]) and entity_overlap < 3:
-        return False
     return score >= RELATEDNESS_THRESHOLD
 
 

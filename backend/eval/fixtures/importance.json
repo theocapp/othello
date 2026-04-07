@@ -1,0 +1,120 @@
+{
+  "_comment": "Pairwise ranking cases. For each pair, 'expected_higher' is 'a' or 'b'. We check that the importance score of the expected_higher event is actually higher. Cases probe known scoring issues.",
+  "cases": [
+    {
+      "id": "mass_casualty_plateau",
+      "description": "5000-fatality event vs 50-fatality event. Log-damping caps fatality_score at 14.0, so both score nearly the same on that component. The 5000-fatality event should still rank higher overall, but the margin will be tiny — revealing the cap problem.",
+      "event_a": {
+        "label": "Mass casualty attack kills 5000 in conflict zone",
+        "entity_focus": ["Sudan", "RSF", "Khartoum"],
+        "articles": [
+          {"source": "Reuters", "source_domain": "reuters.com", "language": "en"},
+          {"source": "BBC", "source_domain": "bbc.com", "language": "en"},
+          {"source": "AP", "source_domain": "apnews.com", "language": "en"}
+        ],
+        "story_anchor_focus": ["strike", "attack"],
+        "contradictions": [],
+        "linked_structured_ids": ["ACLED-001"],
+        "structured_meta": {"ACLED-001": {"fatalities": 5000}},
+        "latest_observation": null
+      },
+      "event_b": {
+        "label": "Clashes in border region kill 50",
+        "entity_focus": ["Sudan", "RSF"],
+        "articles": [
+          {"source": "Reuters", "source_domain": "reuters.com", "language": "en"}
+        ],
+        "story_anchor_focus": ["attack"],
+        "contradictions": [],
+        "linked_structured_ids": ["ACLED-002"],
+        "structured_meta": {"ACLED-002": {"fatalities": 50}},
+        "latest_observation": null
+      },
+      "expected_higher": "a",
+      "notes": "log1p(5000)*3.5 = 29.8, capped at 14.0. log1p(50)*3.5 = 13.7. The cap means 5000 deaths scores only 0.3 points more than 50 deaths on the fatality component. The difference comes from source_count (3 vs 1). Exposes how insensitive the score is to mass casualty scale."
+    },
+    {
+      "id": "new_twitter_storm_vs_ongoing_humanitarian_crisis",
+      "description": "A brand-new low-severity event gets a novelty bonus; a long-running high-severity crisis gets zero novelty. The crisis should still rank higher.",
+      "event_a": {
+        "label": "Major humanitarian crisis: famine and displacement ongoing",
+        "entity_focus": ["South Sudan", "UN", "UNHCR", "famine", "displacement"],
+        "articles": [
+          {"source": "Reuters", "source_domain": "reuters.com", "language": "en"},
+          {"source": "BBC", "source_domain": "bbc.com", "language": "en"},
+          {"source": "Al Jazeera", "source_domain": "aljazeera.com", "language": "en"},
+          {"source": "AFP", "source_domain": "afp.com", "language": "fr"}
+        ],
+        "story_anchor_focus": [],
+        "contradictions": [],
+        "linked_structured_ids": ["ACLED-100", "ACLED-101"],
+        "structured_meta": {
+          "ACLED-100": {"fatalities": 200},
+          "ACLED-101": {"fatalities": 150}
+        },
+        "latest_observation": {"article_count": 12}
+      },
+      "event_b": {
+        "label": "Diplomatic spat over trade tariffs dominates social media",
+        "entity_focus": ["USA", "China", "tariffs"],
+        "articles": [
+          {"source": "Reuters", "source_domain": "reuters.com", "language": "en"},
+          {"source": "Bloomberg", "source_domain": "bloomberg.com", "language": "en"}
+        ],
+        "story_anchor_focus": ["sanctions"],
+        "contradictions": [],
+        "linked_structured_ids": [],
+        "structured_meta": {},
+        "latest_observation": null
+      },
+      "expected_higher": "a",
+      "notes": "Event B gets growth_novelty bonus (newly observed, 6 points). Event A gets zero novelty (existing observation). A should still win due to fatalities + source diversity. Tests whether novelty bonus is large enough to incorrectly flip the ranking."
+    },
+    {
+      "id": "tier1_sources_vs_high_volume_low_tier",
+      "description": "3 tier-1 sources vs 10 tier-3 sources. Tests whether raw source count inflates importance over source quality.",
+      "event_a": {
+        "label": "Confirmed: chemical weapons used in conflict",
+        "entity_focus": ["Syria", "chemical weapons", "OPCW"],
+        "articles": [
+          {"source": "Reuters", "source_domain": "reuters.com", "language": "en"},
+          {"source": "BBC", "source_domain": "bbc.com", "language": "en"},
+          {"source": "AP", "source_domain": "apnews.com", "language": "en"}
+        ],
+        "story_anchor_focus": ["strike", "attack"],
+        "contradictions": [],
+        "linked_structured_ids": [],
+        "structured_meta": {},
+        "latest_observation": null
+      },
+      "event_b": {
+        "label": "Minor border incident reported",
+        "entity_focus": ["India", "Pakistan", "border"],
+        "articles": [
+          {"source": "Blog A", "source_domain": "blog-a.com", "language": "en"},
+          {"source": "Blog B", "source_domain": "blog-b.com", "language": "en"},
+          {"source": "Blog C", "source_domain": "blog-c.com", "language": "en"},
+          {"source": "Blog D", "source_domain": "blog-d.com", "language": "en"},
+          {"source": "Blog E", "source_domain": "blog-e.com", "language": "en"},
+          {"source": "Blog F", "source_domain": "blog-f.com", "language": "en"},
+          {"source": "Blog G", "source_domain": "blog-g.com", "language": "en"},
+          {"source": "Blog H", "source_domain": "blog-h.com", "language": "en"},
+          {"source": "Blog I", "source_domain": "blog-i.com", "language": "en"},
+          {"source": "Blog J", "source_domain": "blog-j.com", "language": "en"}
+        ],
+        "story_anchor_focus": [],
+        "contradictions": [],
+        "linked_structured_ids": [],
+        "structured_meta": {},
+        "latest_observation": null
+      },
+      "registry_by_domain": {
+        "reuters.com": {"trust_tier": "tier_1", "region": "global"},
+        "bbc.com": {"trust_tier": "tier_1", "region": "global"},
+        "apnews.com": {"trust_tier": "tier_1", "region": "global"}
+      },
+      "expected_higher": "a",
+      "notes": "With registry populated: tier_1 multiplier (1.45 * 1.0 * 1.0 = 1.45) applies to Reuters/BBC/AP. Event A source_credibility_score includes tier-1 bonus. Event B: all tier-3 (multiplier 0.45). Tests that source quality matters more than raw count."
+    }
+  ]
+}

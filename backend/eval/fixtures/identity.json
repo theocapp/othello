@@ -1,0 +1,103 @@
+{
+  "_comment": "Cases for score_observation_against_candidate and resolve_canonical_event_id. 'observation' is the new incoming event. 'candidates' are existing canonical events. 'expected_match_index' is null if no match expected.",
+  "cases": [
+    {
+      "id": "url_overlap_hard_match",
+      "description": "Observation shares an article URL with a candidate — should be a hard match regardless of label.",
+      "observation": {
+        "observation_key": "conflict-1",
+        "label": "Kyiv missile strike kills civilians",
+        "entity_focus": ["Kyiv", "Ukraine", "Russia"],
+        "article_urls": ["https://reuters.com/article/kyiv-strike-01", "https://apnews.com/article/kyiv-02"],
+        "linked_structured_event_ids": []
+      },
+      "candidates": [
+        {
+          "event_id": "canon-001",
+          "label": "Russian missile attack on Kyiv",
+          "entity_focus": ["Ukraine", "Russia", "Kyiv", "Putin"],
+          "article_urls": ["https://reuters.com/article/kyiv-strike-01", "https://bbc.com/kyiv-01"],
+          "linked_structured_event_ids": []
+        },
+        {
+          "event_id": "canon-002",
+          "label": "North Korea ballistic missile test",
+          "entity_focus": ["North Korea", "Kim Jong Un", "Japan"],
+          "article_urls": ["https://bbc.com/nk-missile-01"],
+          "linked_structured_event_ids": []
+        }
+      ],
+      "expected_match_index": 0,
+      "expected_min_score": 0.9,
+      "notes": "URL overlap triggers hard match at 0.93. Tests that hard rules work."
+    },
+    {
+      "id": "entity_overlap_soft_match",
+      "description": "Same ongoing conflict, different ingestion cycle — no URL overlap but strong entity and label match.",
+      "observation": {
+        "observation_key": "conflict-2",
+        "label": "Sudan RSF advances in Khartoum fighting",
+        "entity_focus": ["Sudan", "RSF", "SAF", "Khartoum", "Omdurman"],
+        "article_urls": ["https://reuters.com/sudan-03", "https://apnews.com/sudan-04"],
+        "linked_structured_event_ids": ["ACLED-SDN-2024-001", "ACLED-SDN-2024-002"]
+      },
+      "candidates": [
+        {
+          "event_id": "canon-010",
+          "label": "Sudan civil war: RSF vs SAF in Khartoum",
+          "entity_focus": ["Sudan", "RSF", "SAF", "Khartoum", "Burhan"],
+          "article_urls": ["https://bbc.com/sudan-01", "https://reuters.com/sudan-02"],
+          "linked_structured_event_ids": ["ACLED-SDN-2024-001"]
+        },
+        {
+          "event_id": "canon-011",
+          "label": "Gaza conflict: Hamas and Israeli forces",
+          "entity_focus": ["Gaza", "Hamas", "Israel", "IDF", "Netanyahu"],
+          "article_urls": ["https://reuters.com/gaza-01"],
+          "linked_structured_event_ids": []
+        }
+      ],
+      "expected_match_index": 0,
+      "expected_min_score": 0.62,
+      "notes": "4 shared entities + partial label match should trigger heuristic boost to >= 0.68. Structured ID overlap adds to score."
+    },
+    {
+      "id": "false_merge_same_country_different_events",
+      "description": "Two distinct Egyptian events — protest and election — share 'Egypt' and 'Cairo' but are different events.",
+      "observation": {
+        "observation_key": "egypt-protest-1",
+        "label": "Cairo economic protests clash with police",
+        "entity_focus": ["Egypt", "Cairo", "protesters", "police"],
+        "article_urls": ["https://apnews.com/cairo-protest-01"],
+        "linked_structured_event_ids": []
+      },
+      "candidates": [
+        {
+          "event_id": "canon-020",
+          "label": "Egypt election results disputed by opposition",
+          "entity_focus": ["Egypt", "Cairo", "Sisi", "election", "opposition"],
+          "article_urls": ["https://reuters.com/egypt-election-01"],
+          "linked_structured_event_ids": []
+        }
+      ],
+      "expected_match_index": null,
+      "expected_max_score": 0.62,
+      "notes": "2 shared entities (Egypt, Cairo) but low label Jaccard (protest != election). Score should fall below 0.62 threshold. Tests that entity overlap alone is not enough."
+    },
+    {
+      "id": "no_candidates",
+      "description": "New event with no candidates — should always create a new canonical event.",
+      "observation": {
+        "observation_key": "new-event-1",
+        "label": "Coup attempt in Burkina Faso",
+        "entity_focus": ["Burkina Faso", "military", "Traore"],
+        "article_urls": ["https://reuters.com/burkina-01"],
+        "linked_structured_event_ids": []
+      },
+      "candidates": [],
+      "expected_match_index": null,
+      "expected_action": "created_new",
+      "notes": "Trivial base case: empty candidate list always creates new."
+    }
+  ]
+}

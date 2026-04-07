@@ -1,16 +1,39 @@
-export const C = {
-  bg: '#13161a',
-  bgRaised: '#1a1e24',
-  bgHover: '#1e2329',
-  border: '#1e2228',
-  borderMid: '#2a2f38',
-  textPrimary: '#f6f7f9',
-  textSecondary: '#b3bac4',
-  textMuted: '#7d8794',
-  silver: '#c3cad3',
-  red: '#ef4444',
-  redDeep: '#dc2626',
-  white: '#ffffff',
+const THEMES = {
+  dark: {
+    bg: '#13161a',
+    bgRaised: '#1a1e24',
+    bgHover: '#1e2329',
+    border: '#1e2228',
+    borderMid: '#2a2f38',
+    textPrimary: '#f6f7f9',
+    textSecondary: '#b3bac4',
+    textMuted: '#7d8794',
+    silver: '#c3cad3',
+    red: '#ef4444',
+    redDeep: '#dc2626',
+    white: '#ffffff',
+  },
+  light: {
+    bg: '#f3f5f8',
+    bgRaised: '#ffffff',
+    bgHover: '#edf2f7',
+    border: '#d8dee8',
+    borderMid: '#c5ceda',
+    textPrimary: '#151b24',
+    textSecondary: '#394556',
+    textMuted: '#667386',
+    silver: '#2f3b4b',
+    red: '#d7263d',
+    redDeep: '#b91c2f',
+    white: '#ffffff',
+  },
+}
+
+export const C = { ...THEMES.dark }
+
+export function applyTheme(mode) {
+  const palette = THEMES[mode] || THEMES.dark
+  Object.assign(C, palette)
 }
 
 export function buildAppStyles() {
@@ -41,7 +64,8 @@ export function buildAppStyles() {
     .query-input:focus { outline: none; border-color: ${C.silver} !important; }
     .query-input::placeholder { color: ${C.textMuted}; font-style: italic; }
     @media (max-width: 1180px) {
-      .home-shell { grid-template-columns: 1fr !important; grid-template-areas: "map" "sidebar" "lower" !important; }
+      .home-shell { grid-template-columns: 1fr !important; }
+      .home-sidebar { margin-top: 0 !important; }
       .lower-grid { grid-template-columns: 1fr !important; }
     }
     @media (max-width: 960px) {

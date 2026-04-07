@@ -12,7 +12,6 @@ export default function ConflictBriefingPage({ topic, hotspot, hotspots, contrad
   const [briefError, setBriefError] = useState(null)
 
   useEffect(() => {
-    setBriefLoading(true)
     fetchBriefing('conflict')
       .then(result => {
         setBriefData(result)

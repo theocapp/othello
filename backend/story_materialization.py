@@ -364,8 +364,8 @@ def _build_importance_scoring_artifacts(
     )
 
     source_credibility_score = min(
-        35.0,
-        (source_count * 3.2) + (tier_1_source_count * 4.0) + (avg_credibility * 18.0),
+        70.0,
+        (source_count * 3.2) + (tier_1_source_count * 8.0) + (avg_credibility * 18.0),
     )
     diversity_score = min(
         15.0,
@@ -384,7 +384,7 @@ def _build_importance_scoring_artifacts(
         int(meta.get("fatalities") or 0) for meta in structured_meta_by_id.values()
     )
 
-    fatality_score = min(14.0, math.log1p(total_fatalities) * 3.5) if total_fatalities > 0 else 0.0
+    fatality_score = min(40.0, math.log1p(total_fatalities) * 3.5) if total_fatalities > 0 else 0.0
     anchor_score = min(8.0, len(escalation_hits) * 2.0)
     contradiction_score = min(6.0, contradiction_count * 1.8)
     structured_signal_score = min(5.0, len(linked_structured_ids) * 1.25)

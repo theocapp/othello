@@ -46,8 +46,8 @@ def get_region_attention(window: str = "24h"):
 
 
 @router.get("/coverage/map")
-def get_hotspot_attention_map(window: str = "24h"):
-    return get_hotspot_attention_map_payload(window)
+def get_hotspot_attention_map(window: str = "24h", start: str | None = None, end: str | None = None, days: int | None = None):
+    return get_hotspot_attention_map_payload(window, start=start, end=end, days=days)
 
 
 @router.get("/instability")

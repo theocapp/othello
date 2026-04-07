@@ -60,6 +60,8 @@ export default function HomeDashboard({
   setTimelinePage,
   entitySignals,
   entitySignalsError,
+  themeMode,
+  onToggleThemeMode,
 }) {
   const dateStr = formatDateLabel(time)
   const timeStr = formatClock(time, localTimeZone)
@@ -71,12 +73,32 @@ export default function HomeDashboard({
     { label: 'Dubai', zone: 'Asia/Dubai' },
     { label: 'Tokyo', zone: 'Asia/Tokyo' },
   ]
+  const entitySpikes = Array.isArray(entitySignals?.spikes) ? entitySignals.spikes : []
+  const topEntities = Array.isArray(entitySignals?.top_entities) ? entitySignals.top_entities : []
+  const surgingEntities = entitySpikes.filter(e => e?.trend === 'RISING' || e?.trend === 'NEW').slice(0, 4)
 
   return (
     <>
       <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, transform: headerVisible ? 'translateY(0)' : 'translateY(-100%)', transition: 'transform 0.3s ease', background: `${C.bg}e8`, backdropFilter: 'blur(16px)', borderBottom: `1px solid ${C.border}`, padding: '0.85rem 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1.5rem' }}>
         <div style={{ fontFamily: "'Libre Baskerville', serif", fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.01em', color: C.textPrimary, flexShrink: 0 }}>OTHELLO</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <button
+            type="button"
+            onClick={onToggleThemeMode}
+            style={{
+              border: `1px solid ${C.borderMid}`,
+              background: C.bgRaised,
+              color: C.textSecondary,
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: '0.48rem',
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              padding: '0.42rem 0.58rem',
+              cursor: 'pointer',
+            }}
+          >
+            {themeMode === 'dark' ? 'Light Mode' : 'Dark Mode'}
+          </button>
           {worldClocks.map((clock, index) => <div key={clock.zone} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}><div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.47rem', color: C.textMuted, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{clock.label}</div><div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.52rem', color: C.textSecondary, letterSpacing: '0.03em' }}>{formatClock(time, clock.zone)}</div>{index < worldClocks.length - 1 && <div style={{ width: '1px', height: '0.7rem', background: C.borderMid, marginLeft: '0.1rem' }} />}</div>)}
         </div>
       </div>
@@ -90,8 +112,9 @@ export default function HomeDashboard({
         </header>
         {healthFetchError && <div style={{ marginBottom: '1rem', border: `1px solid ${C.redDeep}`, background: `${C.redDeep}18`, padding: '0.85rem 1rem', animation: 'fadeUp 0.4s ease both' }}><div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.52rem', color: C.red, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '0.3rem' }}>API health check failed</div><div style={{ fontFamily: "'Source Serif 4', serif", fontSize: '0.88rem', color: C.textSecondary, lineHeight: 1.5 }}>{healthFetchError}</div></div>}
         {!healthFetchError && healthSnapshot?.runtime && (!healthSnapshot.runtime.llm_ready || !healthSnapshot.runtime.contradiction_ready) && <div style={{ marginBottom: '1rem', border: `1px solid rgba(251,191,36,0.35)`, background: 'rgba(251,191,36,0.06)', padding: '0.75rem 1rem', animation: 'fadeUp 0.4s ease both' }}><div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.5rem', color: '#fbbf24', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '0.28rem' }}>Partial capability</div><div style={{ fontFamily: "'Source Serif 4', serif", fontSize: '0.86rem', color: C.textSecondary, lineHeight: 1.55 }}>{!healthSnapshot.runtime.llm_ready && 'LLM-backed answers and briefings may use fallbacks (set GROQ_API_KEY on the API). '}{!healthSnapshot.runtime.contradiction_ready && 'Narrative fracture mining is limited without ANTHROPIC_API_KEY. '}</div></div>}
-        <div className="home-shell" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.45fr) 360px', gridTemplateAreas: '"map sidebar" "lower sidebar"', gap: '1.25rem', alignItems: 'start', paddingBottom: '10vh' }}>
-          <section style={{ gridArea: 'map', animation: 'fadeUp 0.6s ease 0.08s both' }}>
+        <div className="home-shell" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.45fr) 360px', gap: '1.25rem', alignItems: 'start', paddingBottom: '10vh' }}>
+          <div className="home-primary-column" style={{ display: 'grid', gap: '1.25rem', alignContent: 'start' }}>
+            <section style={{ animation: 'fadeUp 0.6s ease 0.08s both' }}>
         <Suspense
           fallback={
            <div
@@ -113,11 +136,7 @@ export default function HomeDashboard({
     />
   </Suspense>
 </section>
-          <aside style={{ gridArea: 'sidebar', display: 'flex', flexDirection: 'column', gap: '1rem', animation: 'fadeUp 0.6s ease 0.14s both' }}>
-            <MapSummaryPanel data={mapAttention} hotspot={selectedHotspot} onOpenBriefing={setBriefingPage} onAnalyzeCluster={openHotspotClusterAnalysis} />
-            <NewsColumn headlines={headlines} headlinesLoading={headlinesLoading} headlinesLoaded={headlinesLoaded} headlinesError={headlinesError} headlineSort={headlineSort} headlineRegion={headlineRegion} headlineRegions={headlineRegions} onChangeSort={async value => { setHeadlineSort(value); await loadHeadlines({ sortBy: value, region: headlineRegion }) }} onChangeRegion={async value => { setHeadlineRegion(value); await loadHeadlines({ sortBy: headlineSort, region: value }) }} onRefresh={() => loadHeadlines()} onOpenStory={openStoryDeepDive} onOpenEventDebug={openEventDebug} />
-          </aside>
-          <section style={{ gridArea: 'lower', animation: 'fadeUp 0.6s ease 0.2s both' }}>
+            <section style={{ animation: 'fadeUp 0.6s ease 0.2s both' }}>
             <DecisionSurfacePanel
               canonicalEvents={canonicalEvents}
               canonicalEventsLoading={canonicalEventsLoading}
@@ -148,13 +167,18 @@ export default function HomeDashboard({
                   <div style={{ height: '1px', background: C.border, marginBottom: '0.5rem' }} />
                   {!entitySignals && (entitySignalsError ? <div style={{ padding: '0.8rem 0.2rem', borderBottom: `1px solid ${C.border}`, fontFamily: "'JetBrains Mono', monospace", fontSize: '0.56rem', color: C.textSecondary, lineHeight: 1.6 }}>{entitySignalsError}</div> : <div>{[0, 1, 2, 3, 4].map(i => <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0.2rem', borderBottom: `1px solid ${C.border}` }}><div className="skeleton" style={{ height: '0.75rem', width: '55%' }} /><div className="skeleton" style={{ height: '0.75rem', width: '15%' }} /></div>)}</div>)}
                   {entitySignals && <div>
-                    {entitySignals.spikes?.filter(e => e.trend === 'RISING' || e.trend === 'NEW').slice(0, 4).length > 0 && <div style={{ marginBottom: '1.25rem' }}><div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.2rem', marginBottom: '0.1rem' }}><div style={{ width: 4, height: 4, borderRadius: '50%', background: C.red }} /><div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.48rem', color: C.red, letterSpacing: '0.15em' }}>SURGING</div></div>{entitySignals.spikes.filter(e => e.trend === 'RISING' || e.trend === 'NEW').slice(0, 4).map((e, i) => <div key={i} className="entity-item" onClick={() => setDeepDive({ title: `Intelligence Analysis: ${e.entity}`, query: `Give me a comprehensive intelligence analysis of ${e.entity}. Who or what are they, what role are they playing in current geopolitical events, why are they suddenly getting increased attention in the news, what are their motivations and capabilities, and what should we expect from them in the coming weeks? Be specific and analytical.`, entity: e.entity, queryTopic: 'geopolitics' })} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0.2rem', borderBottom: `1px solid ${C.border}`, cursor: 'pointer', borderRadius: 2 }}><div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><span style={{ fontSize: '0.85rem', color: C.textPrimary, fontFamily: "'Source Serif 4', serif" }}>{e.entity}</span><span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.44rem', color: C.textMuted, letterSpacing: '0.06em' }}>{e.type}</span></div><span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.52rem', color: C.silver, flexShrink: 0 }}>{e.trend === 'NEW' ? 'NEW' : `${e.spike_ratio}×`}</span></div>)}</div>}
-                    {entitySignals.top_entities?.length > 0 && <div><div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.48rem', color: C.textSecondary, letterSpacing: '0.12em', padding: '0.4rem 0.2rem', marginBottom: '0.1rem' }}>MOST DISCUSSED</div>{entitySignals.top_entities.slice(0, 6).map((e, i) => <div key={i} className="entity-item" onClick={() => setDeepDive({ title: `Intelligence Analysis: ${e.entity}`, query: `Give me a comprehensive intelligence analysis of ${e.entity}. Who or what are they, what role are they currently playing in world events, what are their key actions and motivations right now, and what should we be watching for? Be direct and analytically precise.`, entity: e.entity, queryTopic: 'geopolitics' })} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0.2rem', borderBottom: `1px solid ${C.border}`, cursor: 'pointer', borderRadius: 2 }}><div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.48rem', color: C.textMuted, width: '0.9rem' }}>{i + 1}</span><span style={{ fontSize: '0.85rem', color: C.textSecondary, fontFamily: "'Source Serif 4', serif" }}>{e.entity}</span></div><span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.5rem', color: C.textMuted, flexShrink: 0 }}>{e.mentions}</span></div>)}</div>}
+                    {surgingEntities.length > 0 && <div style={{ marginBottom: '1.25rem' }}><div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.2rem', marginBottom: '0.1rem' }}><div style={{ width: 4, height: 4, borderRadius: '50%', background: C.red }} /><div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.48rem', color: C.red, letterSpacing: '0.15em' }}>SURGING</div></div>{surgingEntities.map((e, i) => <div key={i} className="entity-item" onClick={() => setDeepDive({ title: `Intelligence Analysis: ${e.entity}`, query: `Give me a comprehensive intelligence analysis of ${e.entity}. Who or what are they, what role are they playing in current geopolitical events, why are they suddenly getting increased attention in the news, what are their motivations and capabilities, and what should we expect from them in the coming weeks? Be specific and analytical.`, entity: e.entity, queryTopic: 'geopolitics' })} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0.2rem', borderBottom: `1px solid ${C.border}`, cursor: 'pointer', borderRadius: 2 }}><div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><span style={{ fontSize: '0.85rem', color: C.textPrimary, fontFamily: "'Source Serif 4', serif" }}>{e.entity}</span><span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.44rem', color: C.textMuted, letterSpacing: '0.06em' }}>{e.type}</span></div><span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.52rem', color: C.silver, flexShrink: 0 }}>{e.trend === 'NEW' ? 'NEW' : `${e.spike_ratio}×`}</span></div>)}</div>}
+                    {topEntities.length > 0 && <div><div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.48rem', color: C.textSecondary, letterSpacing: '0.12em', padding: '0.4rem 0.2rem', marginBottom: '0.1rem' }}>MOST DISCUSSED</div>{topEntities.slice(0, 6).map((e, i) => <div key={i} className="entity-item" onClick={() => setDeepDive({ title: `Intelligence Analysis: ${e.entity}`, query: `Give me a comprehensive intelligence analysis of ${e.entity}. Who or what are they, what role are they currently playing in world events, what are their key actions and motivations right now, and what should we be watching for? Be direct and analytically precise.`, entity: e.entity, queryTopic: 'geopolitics' })} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0.2rem', borderBottom: `1px solid ${C.border}`, cursor: 'pointer', borderRadius: 2 }}><div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.48rem', color: C.textMuted, width: '0.9rem' }}>{i + 1}</span><span style={{ fontSize: '0.85rem', color: C.textSecondary, fontFamily: "'Source Serif 4', serif" }}>{e.entity}</span></div><span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.5rem', color: C.textMuted, flexShrink: 0 }}>{e.mentions}</span></div>)}</div>}
                   </div>}
                 </div>
               </div>
             </div>
-          </section>
+            </section>
+          </div>
+          <aside className="home-sidebar" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', animation: 'fadeUp 0.6s ease 0.14s both' }}>
+            <MapSummaryPanel data={mapAttention} hotspot={selectedHotspot} onOpenBriefing={setBriefingPage} onAnalyzeCluster={openHotspotClusterAnalysis} />
+            <NewsColumn headlines={headlines} headlinesLoading={headlinesLoading} headlinesLoaded={headlinesLoaded} headlinesError={headlinesError} headlineSort={headlineSort} headlineRegion={headlineRegion} headlineRegions={headlineRegions} onChangeSort={async value => { setHeadlineSort(value); await loadHeadlines({ sortBy: value, region: headlineRegion }) }} onChangeRegion={async value => { setHeadlineRegion(value); await loadHeadlines({ sortBy: headlineSort, region: value }) }} onRefresh={() => loadHeadlines()} onOpenStory={openStoryDeepDive} onOpenEventDebug={openEventDebug} />
+          </aside>
         </div>
       </div>
     </>

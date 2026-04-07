@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect, useRef, useState, useMemo } from 'react'
 import useHealth from './hooks/useHealth'
 import HomeDashboard from './components/HomeDashboard'
-import { buildAppStyles, C } from './constants/theme'
+import { applyTheme, buildAppStyles, C } from './constants/theme'
 import { friendlyErrorMessage, formatRegionLabel, parseDateValue } from './lib/formatters'
 import {
   buildHotspotClusterAnalysisQuery,
@@ -73,9 +73,30 @@ function OverlayFallback() {
 }
 
 export default function App() {
+  const [themeMode, setThemeMode] = useState(() => {
+    if (typeof window === 'undefined') return 'dark'
+    return window.localStorage.getItem('othello-theme-mode') === 'light' ? 'light' : 'dark'
+  })
   const [time, setTime] = useState(new Date())
   const [headerVisible, setHeaderVisible] = useState(true)
   const { data: healthSnapshot, error: healthFetchError } = useHealth()
+
+  useEffect(() => {
+    applyTheme(themeMode)
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('othello-theme-mode', themeMode)
+    }
+  }, [themeMode])
+
+  function toErrorText(error, label) {
+    if (!error) return null
+    if (typeof error === 'string') return error
+    if (error instanceof Error && error.message) return error.message
+    if (error?.response?.data?.detail) return String(error.response.data.detail)
+    if (label) return `Unable to load ${label}.`
+    return String(error)
+  }
+
   const lastUpdated = useMemo(() => {
     try {
       return healthSnapshot?.runtime?.corpus?.latest_published_at
@@ -106,6 +127,10 @@ export default function App() {
     isLoading: mapAttentionLoading,
     refetch: refetchMapAttention,
   } = useMapAttention(mapAttentionWindow)
+  const mapHotspots = useMemo(
+    () => (Array.isArray(mapAttention?.hotspots) ? mapAttention.hotspots : []),
+    [mapAttention]
+  )
 
   const {
     data: instabilityData,
@@ -211,6 +236,16 @@ export default function App() {
     ? friendlyErrorMessage(canonicalEventsError, 'canonical event feed')
     : null
 
+  const healthFetchErrorText = toErrorText(healthFetchError, 'health status')
+  const mapAttentionErrorText = toErrorText(mapAttentionError, 'map attention')
+  const entitySignalsErrorText = toErrorText(entitySignalsError, 'entity signals')
+  const instabilityErrorText = toErrorText(instabilityError, 'instability index')
+  const correlationErrorText = toErrorText(correlationError, 'signal convergence')
+  const predictionLedgerErrorText = toErrorText(predictionLedgerError, 'prediction ledger')
+  const beforeNewsErrorText = toErrorText(beforeNewsError, 'before-news archive')
+  const canonicalEventsErrorText = toErrorText(canonicalEventsError, 'canonical event feed')
+  const contradictionsErrorText = toErrorText(contradictionsError, 'narrative fractures')
+
   const [deepDive, setDeepDive] = useState(null)
   const [briefingPage, setBriefingPage] = useState(null)
   const [selectedContradiction, setSelectedContradiction] = useState(null)
@@ -220,6 +255,24 @@ export default function App() {
 
   const lastScrollY = useRef(0)
   const localTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+
+  useEffect(() => {
+    const handleWindowError = event => {
+      console.error('Unhandled frontend error', event.error || event.message)
+    }
+
+    const handleUnhandledRejection = event => {
+      console.error('Unhandled promise rejection', event.reason)
+    }
+
+    window.addEventListener('error', handleWindowError)
+    window.addEventListener('unhandledrejection', handleUnhandledRejection)
+
+    return () => {
+      window.removeEventListener('error', handleWindowError)
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection)
+    }
+  }, [])
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000)
@@ -247,15 +300,16 @@ export default function App() {
     refetchCanonicalEvents()
   }
 
-  async function loadMapAttention(window = mapAttentionWindow) {
-    setMapAttentionWindow(window)
+  async function loadMapAttention(windowParam = mapAttentionWindow) {
+    setMapAttentionWindow(windowParam)
     try {
       const res = await refetchMapAttention()
       const data = res?.data ?? res
+      const hotspots = Array.isArray(data?.hotspots) ? data.hotspots : []
       setSelectedMapHotspot(current =>
-        current && (data?.hotspots || []).some(item => item.hotspot_id === current)
+        current && hotspots.some(item => item.hotspot_id === current)
           ? current
-          : data?.hotspots?.[0]?.hotspot_id || null
+          : hotspots[0]?.hotspot_id || null
       )
     } catch {
       // mapAttentionError is provided by the hook; no local error state needed
@@ -263,10 +317,10 @@ export default function App() {
   }
 
   useEffect(() => {
-    if (!selectedMapHotspot && (mapAttention?.hotspots || []).length) {
-      setSelectedMapHotspot(mapAttention.hotspots[0]?.hotspot_id || null)
+    if (!selectedMapHotspot && mapHotspots.length) {
+      setSelectedMapHotspot(mapHotspots[0]?.hotspot_id || null)
     }
-  }, [mapAttention, selectedMapHotspot])
+  }, [mapHotspots, selectedMapHotspot])
 
   function openStoryDeepDive(story) {
     const sourceUrls = (story.sources || [])
@@ -314,9 +368,13 @@ export default function App() {
   }
 
   const selectedHotspot =
-    (mapAttention?.hotspots || []).find(item => item.hotspot_id === selectedMapHotspot) ||
-    mapAttention?.hotspots?.[0] ||
+    mapHotspots.find(item => item.hotspot_id === selectedMapHotspot) ||
+    mapHotspots[0] ||
     null
+
+  function toggleThemeMode() {
+    setThemeMode(current => (current === 'dark' ? 'light' : 'dark'))
+  }
 
   return (
     <div style={{ background: C.bg, minHeight: '100vh', color: C.textPrimary }}>
@@ -327,10 +385,10 @@ export default function App() {
         headerVisible={headerVisible}
         localTimeZone={localTimeZone}
         lastUpdated={lastUpdated}
-        healthFetchError={healthFetchError}
+        healthFetchError={healthFetchErrorText}
         healthSnapshot={healthSnapshot}
         mapAttention={mapAttention}
-        mapAttentionError={mapAttentionError}
+        mapAttentionError={mapAttentionErrorText}
         mapAttentionLoading={mapAttentionLoading}
         selectedMapHotspot={selectedMapHotspot}
         selectedHotspot={selectedHotspot}
@@ -351,25 +409,27 @@ export default function App() {
         openStoryDeepDive={openStoryDeepDive}
         openEventDebug={openEventDebug}
         canonicalEvents={canonicalEvents}
-        canonicalEventsError={canonicalEventsError}
+        canonicalEventsError={canonicalEventsErrorText}
         canonicalEventsLoading={canonicalEventsLoading}
         topics={TOPICS}
         setForesightPage={setForesightPage}
         instabilityData={instabilityData}
         instabilityLoading={instabilityLoading}
-        instabilityError={instabilityError}
+        instabilityError={instabilityErrorText}
         correlationData={correlationData}
         correlationLoading={correlationLoading}
-        correlationError={correlationError}
+        correlationError={correlationErrorText}
         setDeepDive={setDeepDive}
         contradictionEvents={contradictionEvents}
         contradictionsLoading={contradictionsLoading}
-        contradictionsError={contradictionsError}
+        contradictionsError={contradictionsErrorText}
         setSelectedContradiction={setSelectedContradiction}
         theaters={THEATERS}
         setTimelinePage={setTimelinePage}
         entitySignals={entitySignals}
-        entitySignalsError={entitySignalsError}
+        entitySignalsError={entitySignalsErrorText}
+        themeMode={themeMode}
+        onToggleThemeMode={toggleThemeMode}
       />
 
       {deepDive && (
@@ -388,7 +448,7 @@ export default function App() {
             <ConflictBriefingPage
               topic={briefingPage}
               hotspot={selectedHotspot}
-              hotspots={mapAttention?.hotspots || []}
+              hotspots={mapHotspots}
               contradictionEvents={contradictionEvents}
               windowId={mapAttentionWindow}
               onClose={() => setBriefingPage(null)}
@@ -420,7 +480,7 @@ export default function App() {
           <ForesightPage
             mode={foresightPage}
             records={foresightPage === 'predictions' ? predictionLedger : beforeNewsArchive}
-            error={foresightPage === 'predictions' ? predictionLedgerError : beforeNewsError}
+            error={foresightPage === 'predictions' ? predictionLedgerErrorText : beforeNewsErrorText}
             onClose={() => setForesightPage(null)}
           />
         </Suspense>

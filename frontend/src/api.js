@@ -2,11 +2,12 @@ import axios from 'axios'
 
 function defaultApiBaseUrl() {
   if (typeof window === 'undefined') return 'http://127.0.0.1:8001'
-  if (import.meta.env.DEV) return 'http://127.0.0.1:8001'
+  if (import.meta.env.DEV) return '/api'
   return ''
 }
 
-const baseURL = (import.meta.env.VITE_API_BASE_URL ?? defaultApiBaseUrl()).replace(/\/+$/, '')
+const configuredApiBaseUrl = import.meta.env.DEV ? null : import.meta.env.VITE_API_BASE_URL
+const baseURL = (configuredApiBaseUrl ?? defaultApiBaseUrl()).replace(/\/+$/, '')
 
 const api = axios.create({
   baseURL,
@@ -64,9 +65,18 @@ export async function fetchEvaluationScorecard({
   return response.data
 }
 
-export async function fetchRegionAttention(window = '24h') {
+export async function fetchRegionAttention(windowOrParams = '24h') {
+  let params
+  if (typeof windowOrParams === 'string') {
+    params = { window: windowOrParams }
+  } else if (windowOrParams && typeof windowOrParams === 'object') {
+    params = windowOrParams
+  } else {
+    params = { window: '24h' }
+  }
+
   const response = await api.get('/coverage/map', {
-    params: compactParams({ window }),
+    params: compactParams(params),
   })
   return response.data
 }

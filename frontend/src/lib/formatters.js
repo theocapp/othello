@@ -113,6 +113,7 @@ export const BRIEFING_SECTION_KEYS = [
 ]
 
 export function parseBriefingSections(text) {
+  const source = typeof text === 'string' ? text : ''
   const result = {}
   BRIEFING_SECTION_KEYS.forEach((section, i) => {
     const next = BRIEFING_SECTION_KEYS[i + 1]
@@ -121,7 +122,7 @@ export function parseBriefingSections(text) {
       `(?:#{1,3}\\s*)?${escaped}:?\\s*([\\s\\S]*?)${next ? `(?=(?:#{1,3}\\s*)?${next.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}:?)` : '$'}`,
       'i',
     )
-    const match = text.match(regex)
+    const match = source.match(regex)
     result[section] = match ? match[1].trim() : ''
   })
   return result

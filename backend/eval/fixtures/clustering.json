@@ -1,0 +1,255 @@
+{
+  "_comment": "Each case lists articles by index. expected_clusters groups those indices. Cases are chosen to probe known failure modes, not just happy paths.",
+  "cases": [
+    {
+      "id": "clear_same_event",
+      "description": "Two wires covering the same missile strike within hours — should cluster.",
+      "articles": [
+        {
+          "url": "https://reuters.com/article/kyiv-strike-01",
+          "title": "Russia fires ballistic missiles at Kyiv, killing at least 8",
+          "description": "Russian forces launched a wave of ballistic missiles at Kyiv on Monday, striking a residential district and killing at least eight people, Ukrainian officials said.",
+          "published_at": "2024-03-04T08:00:00",
+          "source": "Reuters",
+          "source_domain": "reuters.com"
+        },
+        {
+          "url": "https://apnews.com/article/kyiv-strike-01",
+          "title": "Ukraine capital hit by Russian missile barrage, 8 dead",
+          "description": "A Russian missile barrage struck Kyiv early Monday, killing eight people and wounding dozens in a residential area, Ukrainian emergency services said.",
+          "published_at": "2024-03-04T09:30:00",
+          "source": "AP",
+          "source_domain": "apnews.com"
+        }
+      ],
+      "expected_clusters": [[0, 1]],
+      "expected_behavior": "pass",
+      "notes": "Strong entity + anchor overlap within 1.5 hours. Should cluster easily."
+    },
+    {
+      "id": "clear_different_events",
+      "description": "Unrelated events from different regions on the same day — must not cluster.",
+      "articles": [
+        {
+          "url": "https://bbc.com/news/north-korea-missile-01",
+          "title": "North Korea fires ballistic missile into the sea",
+          "description": "North Korea launched a ballistic missile that flew over Japan before falling into the sea, South Korea's military said, condemning the test as a provocation.",
+          "published_at": "2024-03-04T07:00:00",
+          "source": "BBC",
+          "source_domain": "bbc.com"
+        },
+        {
+          "url": "https://aljazeera.com/news/kenya-election-protests-01",
+          "title": "Kenya opposition supporters protest disputed election results",
+          "description": "Thousands of opposition supporters rallied in Nairobi on Monday to protest what they called a stolen election, with police firing tear gas to disperse crowds.",
+          "published_at": "2024-03-04T10:00:00",
+          "source": "Al Jazeera",
+          "source_domain": "aljazeera.com"
+        }
+      ],
+      "expected_clusters": [[0], [1]],
+      "expected_behavior": "pass",
+      "notes": "No shared entities or anchors. Trivially different."
+    },
+    {
+      "id": "same_event_across_5_days",
+      "description": "Ongoing conflict covered on day 0 and day 5 — same event, but temporal window will split them.",
+      "articles": [
+        {
+          "url": "https://reuters.com/article/sudan-rsk-01",
+          "title": "Sudan's RSF captures key Khartoum district after fierce fighting",
+          "description": "Sudan's Rapid Support Forces seized control of a major district in Khartoum on Tuesday after days of intense fighting with the Sudanese Armed Forces, witnesses said.",
+          "published_at": "2024-03-04T10:00:00",
+          "source": "Reuters",
+          "source_domain": "reuters.com"
+        },
+        {
+          "url": "https://bbc.com/news/sudan-rsf-khartoum-02",
+          "title": "Khartoum fighting intensifies as RSF advances further into city",
+          "description": "Fighting between the RSF and SAF for control of Khartoum escalated on Sunday, with artillery fire reported across multiple districts, five days after initial clashes.",
+          "published_at": "2024-03-09T08:00:00",
+          "source": "BBC",
+          "source_domain": "bbc.com"
+        }
+      ],
+      "expected_clusters": [[0, 1]],
+      "expected_behavior": "pass",
+      "notes": "120 hours apart. Semantic similarity captures the ongoing conflict meaning despite temporal distance. FIXED by semantic embeddings approach."
+    },
+    {
+      "id": "different_cities_same_country",
+      "description": "Two separate protest events in different Egyptian cities — must not cluster.",
+      "articles": [
+        {
+          "url": "https://apnews.com/article/cairo-protest-01",
+          "title": "Protesters in Cairo clash with police over economic conditions",
+          "description": "Thousands of protesters gathered in central Cairo on Wednesday to demonstrate against rising food prices and unemployment, clashing with riot police who deployed tear gas.",
+          "published_at": "2024-03-05T14:00:00",
+          "source": "AP",
+          "source_domain": "apnews.com"
+        },
+        {
+          "url": "https://reuters.com/article/alexandria-protest-01",
+          "title": "Anti-government demonstrations erupt in Alexandria",
+          "description": "Separate demonstrations broke out in Alexandria on Wednesday as Egyptians took to the streets over deteriorating living standards, in what appeared to be uncoordinated protests.",
+          "published_at": "2024-03-05T15:30:00",
+          "source": "Reuters",
+          "source_domain": "reuters.com"
+        }
+      ],
+      "expected_clusters": [[0], [1]],
+      "expected_behavior": "pass",
+      "notes": "Both mention Egypt, protests, and economic grievances — but city names (Cairo vs Alexandria) and lack of shared anchors keep the score below threshold. Verified correct on first run."
+    },
+    {
+      "id": "anchor_confusion_labor_vs_military_strike",
+      "description": "A labor strike and a military airstrike — anchor 'strike' should not merge them.",
+      "articles": [
+        {
+          "url": "https://lemonde.fr/article/france-teachers-strike-01",
+          "title": "French teachers strike over pension reform shuts thousands of schools",
+          "description": "Hundreds of thousands of French teachers walked off the job on Thursday in a nationwide strike against proposed pension reforms, closing roughly 40 percent of schools.",
+          "published_at": "2024-03-06T08:00:00",
+          "source": "Le Monde",
+          "source_domain": "lemonde.fr"
+        },
+        {
+          "url": "https://reuters.com/article/mali-strike-01",
+          "title": "French forces strike militant targets in northern Mali",
+          "description": "French military aircraft conducted strikes against militant positions in northern Mali on Thursday, killing an estimated 15 fighters, the French defense ministry said.",
+          "published_at": "2024-03-06T12:00:00",
+          "source": "Reuters",
+          "source_domain": "reuters.com"
+        }
+      ],
+      "expected_clusters": [[0], [1]],
+      "expected_behavior": "pass",
+      "notes": "Semantic scoring now separates labor-action coverage from military-strike coverage even with shared token 'strike' and shared country adjective."
+    },
+    {
+      "id": "ceasefire_then_violation",
+      "description": "Ceasefire announced on day 1, broken on day 2 — these are sequential updates to the same story, not contradictions.",
+      "articles": [
+        {
+          "url": "https://reuters.com/article/sudan-ceasefire-01",
+          "title": "Sudan warring factions agree to 72-hour humanitarian ceasefire",
+          "description": "Sudan's Rapid Support Forces and the Sudanese Armed Forces agreed to a 72-hour ceasefire to allow humanitarian aid into besieged areas, mediators said Saturday.",
+          "published_at": "2024-03-02T10:00:00",
+          "source": "Reuters",
+          "source_domain": "reuters.com"
+        },
+        {
+          "url": "https://bbc.com/news/sudan-ceasefire-broken-01",
+          "title": "Sudan ceasefire collapses as RSF resumes attacks on Khartoum",
+          "description": "The brief ceasefire between Sudan's warring factions collapsed on Sunday as the Rapid Support Forces resumed artillery attacks on Khartoum, just hours after it came into effect.",
+          "published_at": "2024-03-03T14:00:00",
+          "source": "BBC",
+          "source_domain": "bbc.com"
+        }
+      ],
+      "expected_clusters": [[0, 1]],
+      "expected_behavior": "pass",
+      "notes": "Both are about the same Sudan ceasefire story. Shared entities (Sudan, RSF, Khartoum) and ceasefire anchor keep the score above threshold despite the anchor_conflict penalty. Verified correct on first run."
+    },
+    {
+      "id": "same_conflict_different_incident_bucket3",
+      "description": "A specific battlefield incident and a macroeconomic consequence of the same war should stay separate events.",
+      "articles": [
+        {
+          "url": "https://news.example.com/lebanon-hospital-strikes-01",
+          "title": "Israeli strikes hit hospital, homes in south Lebanon",
+          "description": "Israeli strikes hit residential areas and a hospital in southern Lebanon as cross-border fighting continued.",
+          "published_at": "2026-04-01T10:00:00Z",
+          "source": "Example News",
+          "source_domain": "news.example.com"
+        },
+        {
+          "url": "https://news.example.com/iran-universities-01",
+          "title": "Iran says 30 universities hit in US-Israeli strikes",
+          "description": "Iranian officials said universities were damaged during US-Israeli strikes amid the wider war.",
+          "published_at": "2026-04-01T12:00:00Z",
+          "source": "Example News",
+          "source_domain": "news.example.com"
+        }
+      ],
+      "expected_clusters": [[0], [1]],
+      "expected_behavior": "pass",
+      "notes": "Regression fixture for the dangerous same-conflict/different-incident pattern. These are related in context but describe different incidents, so they must not merge."
+    },
+    {
+      "id": "analysis_vs_incident_same_conflict",
+      "description": "A macro analysis/update article and a specific incident-focused report within the same conflict should not merge by default.",
+      "articles": [
+        {
+          "url": "https://news.example.com/iran-war-takeaways-01",
+          "title": "War on Iran: Three key takeaways from Araghchi's interview with Al Jazeera",
+          "description": "The piece summarizes diplomatic signals and broader implications from an interview, rather than reporting one concrete battlefield incident.",
+          "published_at": "2026-04-01T08:00:00Z",
+          "source": "Example Analysis",
+          "source_domain": "news.example.com"
+        },
+        {
+          "url": "https://news.example.com/iran-war-day-33-01",
+          "title": "Iran war: What is happening on day 33 of US-Israel attacks?",
+          "description": "Day-by-day conflict update covering specific attacks and tactical developments reported across active fronts.",
+          "published_at": "2026-04-01T09:00:00Z",
+          "source": "Example Live",
+          "source_domain": "news.example.com"
+        }
+      ],
+      "expected_clusters": [[0], [1]],
+      "expected_behavior": "pass",
+      "notes": "Regression fixture for abstraction mismatch: macro takeaways/analysis vs incident-focused operational update. Same conflict context alone must not force a merge."
+    },
+    {
+      "id": "multi_theater_strike_distinct_incidents",
+      "description": "Two strike reports in the same conflict but different theaters should not merge into one event.",
+      "articles": [
+        {
+          "url": "https://news.example.com/houthis-airport-claims-01",
+          "title": "Houthis claim joint attacks with Iran, Hezbollah targeting Ben Gurion Airport",
+          "description": "The report focuses on claimed attacks linked to Yemen-based actors and threats around Ben Gurion Airport.",
+          "published_at": "2026-04-05T02:00:00Z",
+          "source": "Example Wire",
+          "source_domain": "news.example.com"
+        },
+        {
+          "url": "https://news.example.com/israel-200-strikes-01",
+          "title": "Israel claims over 200 strikes on Iran and Hezbollah targets",
+          "description": "The report summarizes Israeli military operations and strike counts tied to Iran and Lebanon theaters.",
+          "published_at": "2026-04-05T03:00:00Z",
+          "source": "Example Wire",
+          "source_domain": "news.example.com"
+        }
+      ],
+      "expected_clusters": [[0], [1]],
+      "expected_behavior": "pass",
+      "notes": "Regression fixture for multi-theater strike conflation: shared conflict entities but distinct operational incidents and locations."
+    },
+    {
+      "id": "cross_theater_consequence_spillover",
+      "description": "Two consequence stories tied to the same war but affecting different places and sectors should not merge.",
+      "articles": [
+        {
+          "url": "https://news.example.com/india-heat-energy-01",
+          "title": "India set for searing summer as Iran war strains energy supplies",
+          "description": "Heat and fuel planning concerns in India follow the conflict-related energy shock.",
+          "published_at": "2026-04-01T08:00:00Z",
+          "source": "Example Business",
+          "source_domain": "news.example.com"
+        },
+        {
+          "url": "https://news.example.com/dubai-markets-01",
+          "title": "Iran war wipes $120bn off Dubai, Abu Dhabi stock markets",
+          "description": "UAE financial markets react to the conflict's regional fallout.",
+          "published_at": "2026-04-01T09:00:00Z",
+          "source": "Example Business",
+          "source_domain": "news.example.com"
+        }
+      ],
+      "expected_clusters": [[0], [1]],
+      "expected_behavior": "pass",
+      "notes": "Regression fixture for cross-theater consequence spillover: both are war fallout, but one is India energy supply pressure and the other is UAE market impact."
+    }
+  ]
+}

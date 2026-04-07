@@ -13,7 +13,7 @@ const CONVERGENCE_COLORS = {
 }
 
 export default function CorrelationPanel({ data, loading, error, onAnalyze }) {
-  const cards = data?.cards || []
+  const cards = Array.isArray(data?.cards) ? data.cards : []
 
   return (
     <div style={{ border: `1px solid ${C.border}`, background: C.bgRaised, padding: '1rem' }}>
@@ -33,14 +33,14 @@ export default function CorrelationPanel({ data, loading, error, onAnalyze }) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <span style={{ fontFamily: "'Source Serif 4', serif", fontSize: '0.92rem', color: C.textPrimary }}>{card.label}</span>
-              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.42rem', color: CONVERGENCE_COLORS[card.convergence_type] || C.textMuted, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{card.convergence_type.replace(/_/g, ' ')}</span>
+              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.42rem', color: CONVERGENCE_COLORS[card.convergence_type] || C.textMuted, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{String(card.convergence_type || 'unknown').replace(/_/g, ' ')}</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
               <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.54rem', color: C.textPrimary }}>{card.score}</span>
               <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.48rem', color: TREND_COLORS[card.trend] || C.textMuted }}>{TREND_ARROWS[card.trend] || '—'}</span>
             </div>
           </div>
-          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.44rem', color: C.textMuted, lineHeight: 1.6 }}>{card.domain_count} domains active: {card.active_domains.map(d => d.replace(/_/g, ' ')).join(' · ')}</div>
+          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.44rem', color: C.textMuted, lineHeight: 1.6 }}>{card.domain_count} domains active: {(Array.isArray(card.active_domains) ? card.active_domains : []).map(d => String(d || '').replace(/_/g, ' ')).join(' · ')}</div>
           {card.convergence_description && <div style={{ fontFamily: "'Source Serif 4', serif", fontSize: '0.78rem', color: C.textSecondary, marginTop: '0.25rem', lineHeight: 1.5 }}>{card.convergence_description}</div>}
         </div>
       ))}

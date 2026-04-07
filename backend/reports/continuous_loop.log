@@ -1,0 +1,656 @@
+[2026-04-07T11:17:13Z] continuous-loop start (topic=geopolitics provider=groq count=2 interval=1m backfill=2d)
+[2026-04-07T11:17:13Z] cycle=1 start_date=2026-04-05 end_date=2026-04-07
+/Users/theo/signal-intelligence/backend/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'api.gdeltproject.org'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+/Users/theo/signal-intelligence/backend/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'api.gdeltproject.org'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+[entities] Database initialized
+{
+  "topics": [
+    "geopolitics"
+  ],
+  "start": "2026-04-05T00:00:00+00:00",
+  "end": "2026-04-08T00:00:00+00:00",
+  "fetched": 177,
+  "inserted_or_updated": 0,
+  "results": [
+    {
+      "topic": "geopolitics",
+      "fetched": 177,
+      "inserted_or_updated": 0,
+      "status": "ok",
+      "window_start": "2026-04-05T00:00:00+00:00",
+      "window_end": "2026-04-08T00:00:00+00:00"
+    }
+  ]
+}
+Using label provider: Groq (llama-3.3-70b-versatile)
+Fetching articles from corpus...
+  171 articles found
+Scoring all pairs...
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 7509.49it/s]
+[1mBertModel LOAD REPORT[0m from: sentence-transformers/all-MiniLM-L6-v2
+Key                     | Status     |  | 
+------------------------+------------+--+-
+embeddings.position_ids | UNEXPECTED |  | 
+
+[3mNotes:
+- UNEXPECTED[3m	:can be ignored when loading from different task/architecture; not ok if you expect identical arch.[0m
+Batches:   0%|          | 0/6 [00:00<?, ?it/s]Batches:  17%|█▋        | 1/6 [00:00<00:03,  1.40it/s]Batches:  33%|███▎      | 2/6 [00:00<00:01,  2.64it/s]Batches:  67%|██████▋   | 4/6 [00:00<00:00,  5.57it/s]Batches: 100%|██████████| 6/6 [00:01<00:00,  5.62it/s]
+  14535 pairs scored
+  Sampled 2 pairs across score buckets
+  51 existing generated cases found
+  [2/2] = score=  0.36  'How will Pakistan deal with the fallout from '  vs  'War on Iran: US’s history of making other nat'
+  Skipped 1 pairs with URLs already in existing fixtures
+
+Wrote 1 new cases (1 SAME, 0 DIFFERENT) to /Users/theo/signal-intelligence/backend/eval/fixtures/clustering_generated.json
+Total cases in file: 52
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 13816.03it/s]
+[1mBertModel LOAD REPORT[0m from: sentence-transformers/all-MiniLM-L6-v2
+Key                     | Status     |  | 
+------------------------+------------+--+-
+embeddings.position_ids | UNEXPECTED |  | 
+
+[3mNotes:
+- UNEXPECTED[3m	:can be ignored when loading from different task/architecture; not ok if you expect identical arch.[0m
+
+=== CLUSTERING EVAL ===
+
+  [PASS] clear_same_event
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] clear_different_events
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] same_event_across_5_days
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] different_cities_same_country
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] anchor_confusion_labor_vs_military_strike
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] ceasefire_then_violation
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0000
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0001
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0002
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0003
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0004
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0005
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0006
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0007
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0008
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0009
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0010
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0011
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0012
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0013
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0014
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0015
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0016
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0017
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0018
+         P=0.0 R=1.0 F1=0.0  clusters=[2]
+         note: Claude label: DIFFERENT. System relatedness_score=0.24. because Article 1 reports on India's summer heat wave and energy supply concerns while Article 2 reports on financial market impacts in the UAE from the Iran conflict—these are separate consequences in different countries and sectors rather than the same specific event.
+  [PASS] generated_0019
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0020
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0021
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0022
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0023
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0024
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0025
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0026
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0027
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0028
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0029
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0030
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0031
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0032
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0033
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [FAIL] generated_0034
+         P=0.0 R=1.0 F1=0.0  clusters=[2]
+         note: Groq label: DIFFERENT. System relatedness_score=0.42. The two articles appear to be reporting on separate incidents, one involving Israeli strikes in southern Lebanon and the other involving US-Israeli strikes on universities in Iran.
+  [PASS] generated_0035
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0036
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0037
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0038
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0039
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0040
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0041
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0042
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0043
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0044
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0045
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0046
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.27. The articles appear to be reporting on the same ongoing conflict between the US and Iran, with the first article providing an update on the situation and the second article discussing the broader implications and reactions to the conflict.
+  [PASS] generated_0047
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0048
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.14. The articles are reporting on the same conflict between the US and Iran, with one article discussing potential mediation efforts and the other discussing the market impact of the ongoing war.
+  [PASS] generated_0049
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0050
+         P=0.0 R=1.0 F1=0.0  clusters=[2]
+         note: Groq label: DIFFERENT. System relatedness_score=0.24. The two articles are reporting on different events, one related to Iran and Israel's potential military targets and the other about pro-Palestine rallies in Syria in response to the Israeli occupation.
+  [FAIL] generated_0051
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.36. The articles are discussing the same Iran war and its implications, with Article 1 focusing on the economic impact on Pakistan and Article 2 discussing the US's approach to financing the war.
+
+  52/58 cases as expected
+
+=== IDENTITY EVAL ===
+
+  [PASS] url_overlap_hard_match  action=mapped_existing  best_score=0.93
+  [PASS] entity_overlap_soft_match  action=mapped_existing  best_score=0.9
+  [PASS] false_merge_same_country_different_events  action=created_new  best_score=0.0
+  [PASS] no_candidates  action=created_new  no_candidates
+
+  4/4 passed
+
+
+=== IMPORTANCE EVAL ===
+
+  [PASS] mass_casualty_plateau
+         A=46.1  B=34.06  margin=12.04  expected=A higher  got=A
+         A reasons: ['escalation signals: attack, strike', '5000 linked fatalities', '3 distinct sources (0 tier-1)', 'newly observed canonical event', 'source diversity across 1 regions and 1 languages']
+         B reasons: ['escalation signals: attack', '50 linked fatalities', '1 distinct sources (0 tier-1)', 'newly observed canonical event', 'source diversity across 1 regions and 1 languages']
+  [PASS] new_twitter_storm_vs_ongoing_humanitarian_crisis
+         A=55.05  B=24.65  margin=30.4  expected=A higher  got=A
+         A reasons: ['4 distinct sources (0 tier-1)', 'escalation/severity context from linked signals', '350 linked fatalities', 'coverage growth (+0 articles, +4 sources)', 'source diversity across 1 regions and 2 languages']
+         B reasons: ['2 distinct sources (0 tier-1)', 'newly observed canonical event', 'source diversity across 1 regions and 1 languages', 'escalation signals: sanctions']
+  [PASS] tier1_sources_vs_high_volume_low_tier
+         A=59.8  B=49.25  margin=10.55  expected=A higher  got=A
+         A reasons: ['3 distinct sources (3 tier-1)', 'newly observed canonical event', 'escalation signals: attack, strike', 'source diversity across 1 regions and 1 languages']
+         B reasons: ['10 distinct sources (0 tier-1)', 'newly observed canonical event', 'source diversity across 1 regions and 1 languages']
+
+  3/3 passed
+
+=== SUMMARY ===
+
+  Clustering failures (6):
+    - generated_0018: P=0.0 R=1.0 F1=0.0
+    - generated_0034: P=0.0 R=1.0 F1=0.0
+    - generated_0046: P=1.0 R=0.0 F1=0.0
+    - generated_0048: P=1.0 R=0.0 F1=0.0
+    - generated_0050: P=0.0 R=1.0 F1=0.0
+    - generated_0051: P=1.0 R=0.0 F1=0.0
+
+[2026-04-07T11:18:20Z] cycle=1 eval=FAIL
+[2026-04-07T11:18:20Z] reached max cycles (1), stopping
+[2026-04-07T11:21:17Z] continuous-loop start (topic=geopolitics provider=groq count=2 interval=1m backfill=2d)
+[2026-04-07T11:21:17Z] cycle=1 start_date=2026-04-05 end_date=2026-04-07
+/Users/theo/signal-intelligence/backend/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'api.gdeltproject.org'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+/Users/theo/signal-intelligence/backend/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:1097: InsecureRequestWarning: Unverified HTTPS request is being made to host 'api.gdeltproject.org'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
+  warnings.warn(
+[entities] Database initialized
+{
+  "topics": [
+    "geopolitics"
+  ],
+  "start": "2026-04-05T00:00:00+00:00",
+  "end": "2026-04-08T00:00:00+00:00",
+  "fetched": 178,
+  "inserted_or_updated": 153,
+  "results": [
+    {
+      "topic": "geopolitics",
+      "fetched": 178,
+      "inserted_or_updated": 153,
+      "status": "ok",
+      "window_start": "2026-04-05T00:00:00+00:00",
+      "window_end": "2026-04-08T00:00:00+00:00"
+    }
+  ]
+}
+Using label provider: Groq (llama-3.3-70b-versatile)
+Fetching articles from corpus...
+  171 articles found
+Scoring all pairs...
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 5535.58it/s]
+[1mBertModel LOAD REPORT[0m from: sentence-transformers/all-MiniLM-L6-v2
+Key                     | Status     |  | 
+------------------------+------------+--+-
+embeddings.position_ids | UNEXPECTED |  | 
+
+[3mNotes:
+- UNEXPECTED[3m	:can be ignored when loading from different task/architecture; not ok if you expect identical arch.[0m
+Batches:   0%|          | 0/6 [00:00<?, ?it/s]Batches:  17%|█▋        | 1/6 [00:00<00:03,  1.50it/s]Batches:  33%|███▎      | 2/6 [00:00<00:01,  2.85it/s]Batches:  67%|██████▋   | 4/6 [00:00<00:00,  5.75it/s]Batches: 100%|██████████| 6/6 [00:01<00:00,  5.82it/s]
+  14535 pairs scored
+  Sampled 2 pairs across score buckets
+  52 existing generated cases found
+  Skipped 2 pairs with URLs already in existing fixtures
+
+Wrote 0 new cases (0 SAME, 0 DIFFERENT) to /Users/theo/signal-intelligence/backend/eval/fixtures/clustering_generated.json
+Total cases in file: 52
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 11917.61it/s]
+[1mBertModel LOAD REPORT[0m from: sentence-transformers/all-MiniLM-L6-v2
+Key                     | Status     |  | 
+------------------------+------------+--+-
+embeddings.position_ids | UNEXPECTED |  | 
+
+[3mNotes:
+- UNEXPECTED[3m	:can be ignored when loading from different task/architecture; not ok if you expect identical arch.[0m
+
+=== CLUSTERING EVAL ===
+
+  [PASS] clear_same_event
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] clear_different_events
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] same_event_across_5_days
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] different_cities_same_country
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] anchor_confusion_labor_vs_military_strike
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] ceasefire_then_violation
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0000
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0001
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0002
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0003
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0004
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0005
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0006
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0007
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0008
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0009
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0010
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0011
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0012
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0013
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0014
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0015
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0016
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0017
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0018
+         P=0.0 R=1.0 F1=0.0  clusters=[2]
+         note: Claude label: DIFFERENT. System relatedness_score=0.24. because Article 1 reports on India's summer heat wave and energy supply concerns while Article 2 reports on financial market impacts in the UAE from the Iran conflict—these are separate consequences in different countries and sectors rather than the same specific event.
+  [PASS] generated_0019
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0020
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0021
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0022
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0023
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0024
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0025
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0026
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0027
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0028
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0029
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0030
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0031
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0032
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0033
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [FAIL] generated_0034
+         P=0.0 R=1.0 F1=0.0  clusters=[2]
+         note: Groq label: DIFFERENT. System relatedness_score=0.42. The two articles appear to be reporting on separate incidents, one involving Israeli strikes in southern Lebanon and the other involving US-Israeli strikes on universities in Iran.
+  [PASS] generated_0035
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0036
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0037
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0038
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0039
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0040
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0041
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0042
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0043
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0044
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0045
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0046
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.27. The articles appear to be reporting on the same ongoing conflict between the US and Iran, with the first article providing an update on the situation and the second article discussing the broader implications and reactions to the conflict.
+  [PASS] generated_0047
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0048
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.14. The articles are reporting on the same conflict between the US and Iran, with one article discussing potential mediation efforts and the other discussing the market impact of the ongoing war.
+  [PASS] generated_0049
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0050
+         P=0.0 R=1.0 F1=0.0  clusters=[2]
+         note: Groq label: DIFFERENT. System relatedness_score=0.24. The two articles are reporting on different events, one related to Iran and Israel's potential military targets and the other about pro-Palestine rallies in Syria in response to the Israeli occupation.
+  [FAIL] generated_0051
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.36. The articles are discussing the same Iran war and its implications, with Article 1 focusing on the economic impact on Pakistan and Article 2 discussing the US's approach to financing the war.
+
+  52/58 cases as expected
+
+=== IDENTITY EVAL ===
+
+  [PASS] url_overlap_hard_match  action=mapped_existing  best_score=0.93
+  [PASS] entity_overlap_soft_match  action=mapped_existing  best_score=0.9
+  [PASS] false_merge_same_country_different_events  action=created_new  best_score=0.0
+  [PASS] no_candidates  action=created_new  no_candidates
+
+  4/4 passed
+
+
+=== IMPORTANCE EVAL ===
+
+  [PASS] mass_casualty_plateau
+         A=46.1  B=34.06  margin=12.04  expected=A higher  got=A
+         A reasons: ['escalation signals: attack, strike', '5000 linked fatalities', '3 distinct sources (0 tier-1)', 'newly observed canonical event', 'source diversity across 1 regions and 1 languages']
+         B reasons: ['escalation signals: attack', '50 linked fatalities', '1 distinct sources (0 tier-1)', 'newly observed canonical event', 'source diversity across 1 regions and 1 languages']
+  [PASS] new_twitter_storm_vs_ongoing_humanitarian_crisis
+         A=55.05  B=24.65  margin=30.4  expected=A higher  got=A
+         A reasons: ['4 distinct sources (0 tier-1)', 'escalation/severity context from linked signals', '350 linked fatalities', 'coverage growth (+0 articles, +4 sources)', 'source diversity across 1 regions and 2 languages']
+         B reasons: ['2 distinct sources (0 tier-1)', 'newly observed canonical event', 'source diversity across 1 regions and 1 languages', 'escalation signals: sanctions']
+  [PASS] tier1_sources_vs_high_volume_low_tier
+         A=59.8  B=49.25  margin=10.55  expected=A higher  got=A
+         A reasons: ['3 distinct sources (3 tier-1)', 'newly observed canonical event', 'escalation signals: attack, strike', 'source diversity across 1 regions and 1 languages']
+         B reasons: ['10 distinct sources (0 tier-1)', 'newly observed canonical event', 'source diversity across 1 regions and 1 languages']
+
+  3/3 passed
+
+=== SUMMARY ===
+
+  Clustering failures (6):
+    - generated_0018: P=0.0 R=1.0 F1=0.0
+    - generated_0034: P=0.0 R=1.0 F1=0.0
+    - generated_0046: P=1.0 R=0.0 F1=0.0
+    - generated_0048: P=1.0 R=0.0 F1=0.0
+    - generated_0050: P=0.0 R=1.0 F1=0.0
+    - generated_0051: P=1.0 R=0.0 F1=0.0
+
+[2026-04-07T11:22:22Z] cycle=1 eval=FAIL
+[2026-04-07T11:22:22Z] cycle=1 auto_tune=START iterations=2
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 7240.77it/s]
+[1mBertModel LOAD REPORT[0m from: sentence-transformers/all-MiniLM-L6-v2
+Key                     | Status     |  | 
+------------------------+------------+--+-
+embeddings.position_ids | UNEXPECTED |  | 
+
+[3mNotes:
+- UNEXPECTED[3m	:can be ignored when loading from different task/architecture; not ok if you expect identical arch.[0m
+baseline: failures=6 mean_f1=0.8966
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 7254.51it/s]
+[1mBertModel LOAD REPORT[0m from: sentence-transformers/all-MiniLM-L6-v2
+Key                     | Status     |  | 
+------------------------+------------+--+-
+embeddings.position_ids | UNEXPECTED |  | 
+
+[3mNotes:
+- UNEXPECTED[3m	:can be ignored when loading from different task/architecture; not ok if you expect identical arch.[0m
+iter=001 reject failures=8 mean_f1=0.8621
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 6023.36it/s]
+[1mBertModel LOAD REPORT[0m from: sentence-transformers/all-MiniLM-L6-v2
+Key                     | Status     |  | 
+------------------------+------------+--+-
+embeddings.position_ids | UNEXPECTED |  | 
+
+[3mNotes:
+- UNEXPECTED[3m	:can be ignored when loading from different task/architecture; not ok if you expect identical arch.[0m
+iter=002 reject failures=6 mean_f1=0.8966
+best params:
+  ACTOR_STRIKE_DIFF_GPE_PENALTY=0.720
+  BASE_CONTEXT_BOOST=0.200
+  CONSEQUENCE_IRAN_ONLY_PENALTY=0.620
+  GEO_MISMATCH_PENALTY=0.700
+  LABOR_MILITARY_PENALTY=0.600
+  LONG_ACTOR_ANCHOR_BOOST=0.140
+  RELATEDNESS_THRESHOLD=0.380
+  SHORT_ACTOR_CONTINUITY_BOOST=0.120
+  TOPICAL_BASE_PENALTY=0.780
+best score: failures=6 mean_f1=0.8966
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 8206.00it/s]
+[1mBertModel LOAD REPORT[0m from: sentence-transformers/all-MiniLM-L6-v2
+Key                     | Status     |  | 
+------------------------+------------+--+-
+embeddings.position_ids | UNEXPECTED |  | 
+
+[3mNotes:
+- UNEXPECTED[3m	:can be ignored when loading from different task/architecture; not ok if you expect identical arch.[0m
+
+=== CLUSTERING EVAL ===
+
+  [PASS] clear_same_event
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] clear_different_events
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] same_event_across_5_days
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] different_cities_same_country
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] anchor_confusion_labor_vs_military_strike
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] ceasefire_then_violation
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0000
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0001
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0002
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0003
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0004
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0005
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0006
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0007
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0008
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0009
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0010
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0011
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0012
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0013
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0014
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0015
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0016
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0017
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0018
+         P=0.0 R=1.0 F1=0.0  clusters=[2]
+         note: Claude label: DIFFERENT. System relatedness_score=0.24. because Article 1 reports on India's summer heat wave and energy supply concerns while Article 2 reports on financial market impacts in the UAE from the Iran conflict—these are separate consequences in different countries and sectors rather than the same specific event.
+  [PASS] generated_0019
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0020
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0021
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0022
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0023
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0024
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0025
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0026
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0027
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0028
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0029
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0030
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0031
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0032
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0033
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [FAIL] generated_0034
+         P=0.0 R=1.0 F1=0.0  clusters=[2]
+         note: Groq label: DIFFERENT. System relatedness_score=0.42. The two articles appear to be reporting on separate incidents, one involving Israeli strikes in southern Lebanon and the other involving US-Israeli strikes on universities in Iran.
+  [PASS] generated_0035
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0036
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0037
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0038
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0039
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0040
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0041
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0042
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0043
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0044
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0045
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0046
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.27. The articles appear to be reporting on the same ongoing conflict between the US and Iran, with the first article providing an update on the situation and the second article discussing the broader implications and reactions to the conflict.
+  [PASS] generated_0047
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0048
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.14. The articles are reporting on the same conflict between the US and Iran, with one article discussing potential mediation efforts and the other discussing the market impact of the ongoing war.
+  [PASS] generated_0049
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0050
+         P=0.0 R=1.0 F1=0.0  clusters=[2]
+         note: Groq label: DIFFERENT. System relatedness_score=0.24. The two articles are reporting on different events, one related to Iran and Israel's potential military targets and the other about pro-Palestine rallies in Syria in response to the Israeli occupation.
+  [FAIL] generated_0051
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.36. The articles are discussing the same Iran war and its implications, with Article 1 focusing on the economic impact on Pakistan and Article 2 discussing the US's approach to financing the war.
+
+  52/58 cases as expected
+
+=== IDENTITY EVAL ===
+
+  [PASS] url_overlap_hard_match  action=mapped_existing  best_score=0.93
+  [PASS] entity_overlap_soft_match  action=mapped_existing  best_score=0.9
+  [PASS] false_merge_same_country_different_events  action=created_new  best_score=0.0
+  [PASS] no_candidates  action=created_new  no_candidates
+
+  4/4 passed
+
+
+=== IMPORTANCE EVAL ===
+
+  [PASS] mass_casualty_plateau
+         A=46.1  B=34.06  margin=12.04  expected=A higher  got=A
+         A reasons: ['escalation signals: attack, strike', '5000 linked fatalities', '3 distinct sources (0 tier-1)', 'newly observed canonical event', 'source diversity across 1 regions and 1 languages']
+         B reasons: ['escalation signals: attack', '50 linked fatalities', '1 distinct sources (0 tier-1)', 'newly observed canonical event', 'source diversity across 1 regions and 1 languages']
+  [PASS] new_twitter_storm_vs_ongoing_humanitarian_crisis
+         A=55.05  B=24.65  margin=30.4  expected=A higher  got=A
+         A reasons: ['4 distinct sources (0 tier-1)', 'escalation/severity context from linked signals', '350 linked fatalities', 'coverage growth (+0 articles, +4 sources)', 'source diversity across 1 regions and 2 languages']
+         B reasons: ['2 distinct sources (0 tier-1)', 'newly observed canonical event', 'source diversity across 1 regions and 1 languages', 'escalation signals: sanctions']
+  [PASS] tier1_sources_vs_high_volume_low_tier
+         A=59.8  B=49.25  margin=10.55  expected=A higher  got=A
+         A reasons: ['3 distinct sources (3 tier-1)', 'newly observed canonical event', 'escalation signals: attack, strike', 'source diversity across 1 regions and 1 languages']
+         B reasons: ['10 distinct sources (0 tier-1)', 'newly observed canonical event', 'source diversity across 1 regions and 1 languages']
+
+  3/3 passed
+
+=== SUMMARY ===
+
+  Clustering failures (6):
+    - generated_0018: P=0.0 R=1.0 F1=0.0
+    - generated_0034: P=0.0 R=1.0 F1=0.0
+    - generated_0046: P=1.0 R=0.0 F1=0.0
+    - generated_0048: P=1.0 R=0.0 F1=0.0
+    - generated_0050: P=0.0 R=1.0 F1=0.0
+    - generated_0051: P=1.0 R=0.0 F1=0.0
+
+[2026-04-07T11:23:12Z] cycle=1 auto_tune=DONE eval=STILL_FAIL
+[2026-04-07T11:23:12Z] reached max cycles (1), stopping
