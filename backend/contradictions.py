@@ -324,7 +324,7 @@ def heuristic_contradictions(event: dict, max_items: int = 6) -> list[dict]:
                         "source_records": [_resolve_article_record(left), _resolve_article_record(right)],
                         "claim_a": f"{left.get('source')}: {left_features['snippet']}",
                         "claim_b": f"{right.get('source')}: {right_features['snippet']}",
-                        "confidence": 0.52,
+                        "confidence": 0.78,
                         "most_credible_source": "unresolved",
                         "most_credible_record": None,
                         "reasoning": f"These reports describe {focus} with different key numerical details.",
@@ -341,7 +341,7 @@ def heuristic_contradictions(event: dict, max_items: int = 6) -> list[dict]:
                         "source_records": [_resolve_article_record(left), _resolve_article_record(right)],
                         "claim_a": f"{left.get('source')}: {left.get('title')}",
                         "claim_b": f"{right.get('source')}: {right.get('title')}",
-                        "confidence": 0.56,
+                        "confidence": 0.77,
                         "most_credible_source": "unresolved",
                         "most_credible_record": None,
                         "reasoning": f"These reports frame {focus} with opposite {dimension} status signals.",
@@ -359,7 +359,7 @@ def heuristic_contradictions(event: dict, max_items: int = 6) -> list[dict]:
                         "source_records": [_resolve_article_record(left), _resolve_article_record(right)],
                         "claim_a": f"{left.get('source')}: {left.get('title')}",
                         "claim_b": f"{right.get('source')}: {right.get('title')}",
-                        "confidence": 0.48,
+                        "confidence": 0.65,
                         "most_credible_source": "unresolved",
                         "most_credible_record": None,
                         "reasoning": f"These sources use different framing labels for {focus}, suggesting a narrative fracture rather than consensus language.",
@@ -419,7 +419,7 @@ def detect_narrative_fractures(event: dict, max_items: int = 4) -> list[dict]:
                     "source_records_a": [_resolve_article_record(row) for row in left_articles[:3]],
                     "source_records_b": [_resolve_article_record(row) for row in right_articles[:3]],
                     "reasoning": f"Sources are labeling {focus} differently, using '{left_label}' versus '{right_label}' framing for the same event cluster.",
-                    "confidence": 0.46,
+                    "confidence": 0.64,
                 }
             )
 

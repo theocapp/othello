@@ -1963,11 +1963,9 @@ def upsert_articles(
                 continue
 
             v2_records.append(record)
-            existing = conn.execute(
-                "SELECT content_hash FROM articles WHERE url = %s",
-                (record["url"],),
-            ).fetchone()
-            conn.execute(
+            
+            # Use atomic UPSERT with RETURNING to reliably detect inserts vs updates
+            result = conn.execute(
                 """
                 INSERT INTO articles (
                     url, canonical_url, title, description, source, source_domain, published_at,
@@ -1985,6 +1983,8 @@ def upsert_articles(
                     content_hash = EXCLUDED.content_hash,
                     last_ingested_at = EXCLUDED.last_ingested_at,
                     payload = EXCLUDED.payload
+                WHERE articles.content_hash IS DISTINCT FROM EXCLUDED.content_hash
+                RETURNING xmax = 0 AS is_new
                 """,
                 (
                     record["url"],
@@ -2001,7 +2001,13 @@ def upsert_articles(
                     now,
                     json.dumps(record["payload"]),
                 ),
-            )
+            ).fetchone()
+            
+            # Count only if this was a true insert or a content change
+            if result and result["is_new"]:
+                inserted += 1
+            
+            # Atomically insert topics (reuses the same transaction)
             for topic_name in topics:
                 conn.execute(
                     """
@@ -2011,17 +2017,14 @@ def upsert_articles(
                     """,
                     (record["url"], topic_name, now),
                 )
-            existing_hash = existing["content_hash"] if existing else None
-            if existing_hash is None or existing_hash != record["content_hash"]:
-                inserted += 1
 
         # ── dual-write to v2 tables (Postgres only) ─────────────────
-            try:
-                now_iso = datetime.now(timezone.utc).isoformat()
-                _bulk_upsert_articles_pg(conn, v2_records, topics, now_iso)
-            except Exception:
-                import logging
-                logging.getLogger(__name__).exception("articles_v2 dual-write failed (non-fatal)")
+        try:
+            now_iso = datetime.now(timezone.utc).isoformat()
+            _bulk_upsert_articles_pg(conn, v2_records, topics, now_iso)
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception("articles_v2 dual-write failed (non-fatal)")
 
     return inserted
 

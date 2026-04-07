@@ -2,10 +2,14 @@ import json
 import os
 import sqlite3
 import time
+import logging
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 DB_PATH = Path(__file__).with_name("othello_cache.db")
 SQLITE_TIMEOUT_SECONDS = float(os.getenv("OTHELLO_SQLITE_TIMEOUT_SECONDS", "30"))
+LOCK_TIMEOUT_SECONDS = float(os.getenv("OTHELLO_CACHE_LOCK_TIMEOUT_SECONDS", "60"))
 
 
 def _connect():
@@ -58,12 +62,82 @@ def init_db():
         )
         """
     )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS cache_locks (
+            lock_key TEXT PRIMARY KEY,
+            locked_at REAL,
+            locked_by TEXT
+        )
+        """
+    )
 
     if not _column_exists(conn, "briefing_cache", "events"):
         conn.execute("ALTER TABLE briefing_cache ADD COLUMN events TEXT DEFAULT '[]'")
 
     conn.commit()
     conn.close()
+
+
+def acquire_lock(lock_key: str, lock_holder_id: str = "default") -> bool:
+    """
+    Attempt to acquire a distributed lock using SQLite.
+    Returns True if lock acquired, False if already held by someone else.
+    Locks expire after LOCK_TIMEOUT_SECONDS to prevent deadlocks.
+    """
+    _ensure_initialized()
+    conn = _connect()
+    try:
+        now = time.time()
+        
+        # Check if lock exists and is still valid
+        existing = conn.execute(
+            "SELECT locked_at FROM cache_locks WHERE lock_key = ?",
+            (lock_key,),
+        ).fetchone()
+        
+        if existing:
+            locked_at = existing[0]
+            if now - locked_at < LOCK_TIMEOUT_SECONDS:
+                # Lock is held by someone else and not expired
+                conn.close()
+                return False
+            else:
+                # Lock expired, remove it
+                conn.execute("DELETE FROM cache_locks WHERE lock_key = ?", (lock_key,))
+        
+        # Try to insert our lock
+        try:
+            conn.execute(
+                "INSERT INTO cache_locks (lock_key, locked_at, locked_by) VALUES (?, ?, ?)",
+                (lock_key, now, lock_holder_id),
+            )
+            conn.commit()
+            conn.close()
+            logger.debug(f"[cache] Acquired lock '{lock_key}'")
+            return True
+        except sqlite3.IntegrityError:
+            # Someone else inserted between our check and insert
+            conn.close()
+            return False
+    except Exception as exc:
+        logger.error(f"[cache] Error acquiring lock '{lock_key}': {exc}")
+        conn.close()
+        return False
+
+
+def release_lock(lock_key: str) -> None:
+    """Release a distributed lock."""
+    _ensure_initialized()
+    conn = _connect()
+    try:
+        conn.execute("DELETE FROM cache_locks WHERE lock_key = ?", (lock_key,))
+        conn.commit()
+        logger.debug(f"[cache] Released lock '{lock_key}'")
+    except Exception as exc:
+        logger.error(f"[cache] Error releasing lock '{lock_key}': {exc}")
+    finally:
+        conn.close()
 
 
 def load_briefing(topic: str, ttl: int = 3600) -> dict | None:

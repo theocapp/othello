@@ -362,56 +362,68 @@ def _fallback_headlines(events: list[dict]) -> list[dict]:
 
 def rebuild_headlines_cache(use_llm: bool = False) -> list[dict]:
     from analyst import build_headlines_from_events
+    from cache import acquire_lock, release_lock
+    import time as time_module
+    
+    # Acquire distributed lock to prevent thundering herd on cache rebuild
+    lock_acquired = acquire_lock("headlines_cache_rebuild", lock_holder_id=f"rebuild_{int(time_module.time())}")
+    if not lock_acquired:
+        # Another process is rebuilding, wait and return stale cache if available
+        print("[headlines] Another process is rebuilding cache, returning cached data if available")
+        return load_headlines(ttl=0) or []  # Return any cached data, even if stale
 
-    events = _build_global_events(limit=8)
-    if not events:
-        return []
+    try:
+        events = _build_global_events(limit=8)
+        if not events:
+            return []
 
-    fallback_stories = _fallback_headlines(events)
-    if use_llm and os.getenv("GROQ_API_KEY"):
-        try:
-            stories = build_headlines_from_events(events)
-        except Exception as exc:
-            print(f"[headlines] LLM headline build failed, using fallback: {exc}")
+        fallback_stories = _fallback_headlines(events)
+        if use_llm and os.getenv("GROQ_API_KEY"):
+            try:
+                stories = build_headlines_from_events(events)
+            except Exception as exc:
+                print(f"[headlines] LLM headline build failed, using fallback: {exc}")
+                stories = fallback_stories
+        else:
             stories = fallback_stories
-    else:
-        stories = fallback_stories
 
-    event_map = {event["event_id"]: event for event in events}
-    fallback_map = {story["event_id"]: story for story in fallback_stories if story.get("event_id")}
-    enriched = []
-    seen_event_ids = set()
-    for story in stories:
-        event = event_map.get(story.get("event_id"))
-        if not event:
-            continue
-        seen_event_ids.add(event["event_id"])
-        enriched_story = {
-            **fallback_map.get(event["event_id"], {}),
-            **story,
-            "topic": story.get("topic") or event.get("topic"),
-            "entity_focus": event.get("entity_focus", []),
-            "source_count": event.get("source_count", 0),
-            "article_count": event.get("article_count", 0),
-            "contradiction_count": event.get("contradiction_count", 0),
-            "latest_update": event.get("latest_update"),
-            "dominant_region": event.get("dominant_region"),
-            "region_counts": event.get("region_counts", {}),
-            "ranking_score": _event_rank_score(event),
-            "sources": event.get("articles", []),
-        }
-        enriched.append(_standardize_headline_story(enriched_story, event=event))
+        event_map = {event["event_id"]: event for event in events}
+        fallback_map = {story["event_id"]: story for story in fallback_stories if story.get("event_id")}
+        enriched = []
+        seen_event_ids = set()
+        for story in stories:
+            event = event_map.get(story.get("event_id"))
+            if not event:
+                continue
+            seen_event_ids.add(event["event_id"])
+            enriched_story = {
+                **fallback_map.get(event["event_id"], {}),
+                **story,
+                "topic": story.get("topic") or event.get("topic"),
+                "entity_focus": event.get("entity_focus", []),
+                "source_count": event.get("source_count", 0),
+                "article_count": event.get("article_count", 0),
+                "contradiction_count": event.get("contradiction_count", 0),
+                "latest_update": event.get("latest_update"),
+                "dominant_region": event.get("dominant_region"),
+                "region_counts": event.get("region_counts", {}),
+                "ranking_score": _event_rank_score(event),
+                "sources": event.get("articles", []),
+            }
+            enriched.append(_standardize_headline_story(enriched_story, event=event))
 
-    for event in events:
-        if event["event_id"] in seen_event_ids:
-            continue
-        fallback_story = fallback_map.get(event["event_id"])
-        if fallback_story:
-            enriched.append(_standardize_headline_story(fallback_story, event=event))
+        for event in events:
+            if event["event_id"] in seen_event_ids:
+                continue
+            fallback_story = fallback_map.get(event["event_id"])
+            if fallback_story:
+                enriched.append(_standardize_headline_story(fallback_story, event=event))
 
-    sorted_stories = _sort_headline_stories(enriched, sort_by="relevance")
-    save_headlines(sorted_stories)
-    return sorted_stories
+        sorted_stories = _sort_headline_stories(enriched, sort_by="relevance")
+        save_headlines(sorted_stories)
+        return sorted_stories
+    finally:
+        release_lock("headlines_cache_rebuild")
 
 
 # ---------------------------------------------------------------------------
