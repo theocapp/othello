@@ -443,6 +443,10 @@ def ingest_global(page_size: int = 100) -> dict:
         rejected = 0
 
         for article in articles:
+            if not is_english_article(article):
+                rejected += 1
+                tier2_articles.append(article)
+                continue
             article_topics = infer_article_topics(article)
             if not article_topics:
                 unclassified += 1
@@ -1094,6 +1098,9 @@ def ingest_article_fallback(page_size: int = 40) -> dict:
         topic_buckets = {topic: [] for topic in TOPICS}
         rejected = 0
         for article in articles:
+            if not is_english_article(article):
+                rejected += 1
+                continue
             article_topics = infer_article_topics(article)
             if not article_topics:
                 continue

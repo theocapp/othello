@@ -88,6 +88,22 @@ def source_in_pack(
     return source_pack_for(source) in set(packs)
 
 
+# Temporary quarantine list for feeds that currently return persistent auth blocks.
+# Keep entries in the catalog for easy reactivation when upstream access recovers.
+QUARANTINED_SOURCE_DOMAINS = {
+    "reuters.com",
+    "politico.com",
+}
+
+
+def source_is_blocked(source: dict) -> bool:
+    metadata = source.get("metadata") or {}
+    if metadata.get("blocked") is True:
+        return True
+    domain = (source.get("source_domain") or "").strip().lower()
+    return domain in QUARANTINED_SOURCE_DOMAINS
+
+
 # Minimal seed list kept for backward compatibility with top-level imports
 # and bootstrap scripts. The original file contained a much larger catalog;
 # during migration we preserve a small but representative set so tests
@@ -116,7 +132,19 @@ SOURCE_SEEDS = [
         "tier_1",
         "global",
         "en",
-        {"adapter": "rss", "pack": "global_wires", "feeds": [{"url": "https://www.reuters.com/rssFeed/worldNews", "topic_hints": ["geopolitics"]}]},
+        {
+            "adapter": "rss",
+            "pack": "global_wires",
+            # Reversible quarantine: Reuters RSS is returning 401 in production cycles.
+            "blocked": True,
+            "blocked_reason": "quarantined_rss_401",
+            "feeds": [
+                {
+                    "url": "https://www.reuters.com/rssFeed/worldNews",
+                    "topic_hints": ["geopolitics"],
+                }
+            ],
+        },
     ),
     _seed(
         "Financial Times",
@@ -152,7 +180,19 @@ SOURCE_SEEDS = [
         "tier_2",
         "north-america",
         "en",
-        {"adapter": "rss", "pack": "regional_flagships", "feeds": [{"url": "https://www.politico.com/rss/politics08.xml", "topic_hints": ["geopolitics"]}]},
+        {
+            "adapter": "rss",
+            "pack": "regional_flagships",
+            # Reversible quarantine: Politico RSS is returning 403 in production cycles.
+            "blocked": True,
+            "blocked_reason": "quarantined_rss_403",
+            "feeds": [
+                {
+                    "url": "https://www.politico.com/rss/politics08.xml",
+                    "topic_hints": ["geopolitics"],
+                }
+            ],
+        },
     ),
 ]
 

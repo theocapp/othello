@@ -14,7 +14,18 @@ from urllib.request import urlopen
 from dotenv import load_dotenv
 from newsapi import NewsApiClient
 import requests
-from sources.source_catalog import SOURCE_PACKS, SOURCE_SEEDS, source_pack_for
+from sources.source_catalog import (
+    SOURCE_PACKS,
+    SOURCE_SEEDS,
+    source_is_blocked,
+    source_pack_for,
+)
+
+try:
+    from langdetect import LangDetectException, detect
+except Exception:  # pragma: no cover - optional runtime dependency
+    LangDetectException = Exception
+    detect = None
 
 load_dotenv(Path(__file__).with_name(".env"))
 
@@ -63,15 +74,18 @@ TOPIC_KEYWORDS = {
         "strike",
     },
     "economics": {
+        "cargo",
         "inflation",
         "market",
         "markets",
+        "futures",
         "rates",
         "tariffs",
         "trade",
         "economy",
         "economic",
         "recession",
+        "supply crunch",
         "yield",
         "yields",
         "fed",
@@ -439,6 +453,8 @@ def _parse_feed_entries(xml_text: str) -> list[dict]:
 def _direct_feed_sources(topic: str | None = None) -> list[dict]:
     sources = []
     for seed in SOURCE_SEEDS:
+        if source_is_blocked(seed):
+            continue
         metadata = seed.get("metadata") or {}
         if seed.get("source_type") != "article" or metadata.get("adapter") != "rss":
             continue
@@ -705,6 +721,102 @@ def _fetch_gdelt_payload(params: dict) -> dict:
 
 
 def _normalize_gdelt_payload(payload: dict) -> list[dict]:
+    language_name_map = {
+        "arabic": "ar",
+        "bulgarian": "bg",
+        "chinese": "zh",
+        "english": "en",
+        "french": "fr",
+        "german": "de",
+        "hindi": "hi",
+        "japanese": "ja",
+        "korean": "ko",
+        "norwegian": "no",
+        "polish": "pl",
+        "portuguese": "pt",
+        "romanian": "ro",
+        "russian": "ru",
+        "spanish": "es",
+        "turkish": "tr",
+    }
+
+    def _normalize_language_value(value: str | None) -> str | None:
+        text = str(value or "").strip()
+        if not text:
+            return None
+        lowered = text.lower().replace("_", "-")
+        base = lowered.split("-", 1)[0]
+        if base in ENGLISH_LANGUAGE_CODES:
+            return "en"
+        if re.fullmatch(r"[a-z]{2,3}", base):
+            return base
+        return language_name_map.get(lowered)
+
+    def _extract_translation_language(value) -> str | None:
+        if isinstance(value, dict):
+            for key in (
+                "sourceLanguage",
+                "source_language",
+                "language",
+                "fromLanguage",
+                "from_language",
+            ):
+                normalized = _normalize_language_value(value.get(key))
+                if normalized:
+                    return normalized
+            return None
+        text = str(value or "")
+        if not text:
+            return None
+        for token in re.findall(r"[A-Za-z]{2,12}", text):
+            normalized = _normalize_language_value(token)
+            if normalized:
+                return normalized
+        return None
+
+    def _gdelt_language(article: dict) -> str:
+        for key in (
+            "language",
+            "Language",
+            "sourceLanguage",
+            "source_language",
+        ):
+            normalized = _normalize_language_value(article.get(key))
+            if normalized:
+                return normalized
+
+        for key in ("TranslationInfo", "translationinfo", "translationInfo"):
+            normalized = _extract_translation_language(article.get(key))
+            if normalized:
+                return normalized
+
+        for key in ("Extras", "extras"):
+            extras = article.get(key)
+            if isinstance(extras, dict):
+                normalized = _extract_translation_language(extras)
+                if normalized:
+                    return normalized
+                for subkey in (
+                    "language",
+                    "Language",
+                    "sourceLanguage",
+                    "source_language",
+                ):
+                    normalized = _normalize_language_value(extras.get(subkey))
+                    if normalized:
+                        return normalized
+
+        title = (article.get("title") or "").strip()
+        if detect and title:
+            try:
+                detected = _normalize_language_value(detect(title))
+                if detected:
+                    return detected
+            except LangDetectException:
+                pass
+
+        return "unknown"
+
     articles = []
     for article in payload.get("articles", []):
         title = article.get("title") or ""
@@ -722,7 +834,7 @@ def _normalize_gdelt_payload(payload: dict) -> list[dict]:
         published_at = (
             article.get("seendate") or article.get("published") or article.get("date")
         )
-        language = article.get("language") or "English"
+        language = _gdelt_language(article)
         article_record = _normalize_article(
             title=title,
             description=description,
@@ -1101,7 +1213,7 @@ def fetch_articles(topic: str, page_size: int = 50) -> list[dict]:
             )
             + direct_feed_articles
         )
-    if ENABLE_NEWSAPI_FALLBACK and len(deduped) < max(10, page_size // 3):
+    if ENABLE_NEWSAPI_FALLBACK:
         deduped = _dedupe(
             deduped
             + fetch_articles_from_provider(
@@ -1201,7 +1313,7 @@ def fetch_global_articles(page_size: int = 90) -> list[dict]:
     deduped = _dedupe(
         _collect_query_batch(topic_queries, page_size=page_size) + direct_feed_articles
     )
-    if ENABLE_NEWSAPI_FALLBACK and len(deduped) < max(12, page_size // 3):
+    if ENABLE_NEWSAPI_FALLBACK:
         deduped = _dedupe(
             deduped
             + fetch_global_articles_from_provider(
