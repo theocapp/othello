@@ -6,8 +6,8 @@ import time
 from fastapi import HTTPException
 
 from cache import load_briefing, save_briefing
+from clustering import cluster_articles
 from contradictions import (
-    cluster_articles,
     enrich_events,
     format_contradictions_for_briefing,
     format_event_brief,

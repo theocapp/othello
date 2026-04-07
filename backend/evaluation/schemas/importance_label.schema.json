@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ImportanceLabel",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "kind",
+    "event_id",
+    "expected_rank_bucket",
+    "label_decision",
+    "annotator_id",
+    "annotated_at"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "minLength": 1 },
+    "kind": { "const": "importance" },
+    "event_id": { "type": "string", "minLength": 1 },
+    "expected_rank_bucket": {
+      "type": "string",
+      "enum": ["top_5", "top_10", "top_20", "not_top_20"]
+    },
+    "label_decision": {
+      "type": "string",
+      "enum": ["should_be_top_n", "ranked_too_high", "ranked_too_low", "unsure"]
+    },
+    "annotator_id": { "type": "string", "minLength": 1 },
+    "annotated_at": { "type": "string", "format": "date-time" },
+    "notes": { "type": "string" }
+  },
+  "additionalProperties": true
+}

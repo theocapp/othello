@@ -1,3 +1,60 @@
+"""Compatibility shim: re-export entities implementation from intel package.
+
+The full implementation lives in `backend/intel/entities.py`.
+This shim prefers importing the module by absolute package name but
+falls back to loading the implementation file directly to avoid
+executing package __init__ side-effects (e.g. relative imports).
+"""
+
+import importlib
+import importlib.util
+import os
+import sys
+
+
+def _load_by_path(path: str):
+    spec = importlib.util.spec_from_file_location("entities_impl", path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Cannot load entities implementation from {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)  # type: ignore
+    return module
+
+
+# Try importing common package locations first.
+_impl = None
+for mod_name in ("backend.intel.entities", "intel.entities"):
+    try:
+        _impl = importlib.import_module(mod_name)
+        break
+    except Exception:
+        _impl = None
+
+if _impl is None:
+    # Last-resort: load the file directly relative to this shim.
+    _candidate = os.path.join(os.path.dirname(__file__), "intel", "entities.py")
+    if os.path.exists(_candidate):
+        _impl = _load_by_path(_candidate)
+    else:
+        raise ImportError("Could not locate entities implementation")
+
+
+# Re-export public symbols from the implementation module.
+for _name in dir(_impl):
+    if not _name.startswith("_"):
+        globals()[_name] = getattr(_impl, _name)
+
+__all__ = [name for name in globals().keys() if not name.startswith("_")]
+"""Compatibility shim: re-export entities implementation from intel package.
+
+The full implementation now lives in `backend/intel/entities.py`.
+Keep this shim so existing imports of `entities` continue to work
+during the incremental migration.
+"""
+
+from intel.entities import *  # noqa: F401,F403
+
+__all__ = [name for name in globals().keys() if not name.startswith("_")]
 import importlib.util
 import os
 import spacy

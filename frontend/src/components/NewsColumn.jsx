@@ -13,6 +13,7 @@ export default function NewsColumn({
   onChangeRegion,
   onRefresh,
   onOpenStory,
+  onOpenEventDebug,
 }) {
   return (
     <div style={{ border: `1px solid ${C.border}`, background: C.bgRaised }}>
@@ -46,6 +47,30 @@ export default function NewsColumn({
           </div>
           <div style={{ fontFamily: "'Libre Baskerville', serif", fontSize: index === 0 ? '1rem' : '0.88rem', color: C.textSecondary, lineHeight: 1.28, marginBottom: '0.35rem' }}>{story.headline}</div>
           <div style={{ fontFamily: "'Source Serif 4', serif", fontSize: '0.76rem', color: C.textMuted, lineHeight: 1.55 }}>{truncateText(story.summary, 160)}</div>
+          {story.event_id && (
+            <div style={{ marginTop: '0.55rem' }}>
+              <button
+                onClick={event => {
+                  event.stopPropagation()
+                  onOpenEventDebug?.(story)
+                }}
+                style={{
+                  background: 'none',
+                  border: `1px solid ${C.borderMid}`,
+                  color: C.silver,
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: '0.46rem',
+                  letterSpacing: '0.11em',
+                  padding: '0.35rem 0.52rem',
+                  borderRadius: 2,
+                  cursor: 'pointer',
+                  textTransform: 'uppercase',
+                }}
+              >
+                Open debug
+              </button>
+            </div>
+          )}
         </div>
       ))}
     </div>

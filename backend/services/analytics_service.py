@@ -118,3 +118,28 @@ def narrative_drift_payload(
     return analyze_narrative_drift(
         subject, topic=topic, days=max(14, min(days, 365)), refresh=refresh
     )
+
+
+def evaluation_scorecard_payload(
+    kind: str | None = None,
+    topic: str | None = None,
+    limit_files: int = 80,
+    include_error_samples: bool = False,
+):
+    from evaluation.labels import SUPPORTED_KINDS
+    from evaluation.scorecards import build_scorecard_snapshot
+
+    normalized_kind = (kind or "").strip().lower() or None
+    if normalized_kind and normalized_kind not in SUPPORTED_KINDS:
+        allowed = ", ".join(sorted(SUPPORTED_KINDS))
+        raise HTTPException(
+            status_code=400,
+            detail=f"kind must be one of: {allowed}",
+        )
+
+    return build_scorecard_snapshot(
+        kind=normalized_kind,
+        topic=topic,
+        limit_files=max(1, min(int(limit_files), 5000)),
+        include_error_samples=bool(include_error_samples),
+    )

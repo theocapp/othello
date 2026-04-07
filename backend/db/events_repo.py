@@ -159,7 +159,18 @@ def get_structured_event_coordinates_by_ids(event_ids: list[str]) -> dict[str, d
     with _connect() as conn:
         rows = conn.execute(
             f"""
-            SELECT event_id, latitude, longitude, country, admin1, admin2, location, event_date
+            SELECT
+                event_id,
+                latitude,
+                longitude,
+                country,
+                admin1,
+                admin2,
+                location,
+                event_date,
+                fatalities,
+                source_count,
+                event_type
             FROM structured_events
             WHERE event_id IN ({placeholders})
             """,
@@ -178,6 +189,9 @@ def get_structured_event_coordinates_by_ids(event_ids: list[str]) -> dict[str, d
             "admin2": row.get("admin2"),
             "location": row.get("location"),
             "event_date": row.get("event_date"),
+            "fatalities": row.get("fatalities"),
+            "source_count": row.get("source_count"),
+            "event_type": row.get("event_type"),
         }
     return out
 
@@ -368,6 +382,9 @@ def upsert_canonical_events(rows: list[dict]) -> int:
             linked = json.dumps(
                 row.get("linked_structured_event_ids") or [], sort_keys=True
             )
+            importance_reasons = json.dumps(
+                row.get("importance_reasons") or [], sort_keys=True
+            )
             payload = json.dumps(row.get("payload") or {}, sort_keys=True, default=str)
             conn.execute(
                 """
@@ -376,6 +393,7 @@ def upsert_canonical_events(rows: list[dict]) -> int:
                     geo_country, geo_region, latitude, longitude,
                     first_reported_at, last_updated_at,
                     article_count, source_count, perspective_count, contradiction_count,
+                    importance_score, importance_reasons,
                     linked_structured_event_ids, article_urls,
                     first_seen_at, computed_at, payload
                 ) VALUES (
@@ -383,6 +401,7 @@ def upsert_canonical_events(rows: list[dict]) -> int:
                     %s, %s, %s, %s,
                     %s, %s,
                     %s, %s, %s, %s,
+                    %s, %s::jsonb,
                     %s::jsonb, %s::jsonb,
                     %s, %s, %s::jsonb
                 )
@@ -399,6 +418,11 @@ def upsert_canonical_events(rows: list[dict]) -> int:
                     article_count = EXCLUDED.article_count,
                     source_count = EXCLUDED.source_count,
                     contradiction_count = EXCLUDED.contradiction_count,
+                    importance_score = COALESCE(EXCLUDED.importance_score, canonical_events.importance_score),
+                    importance_reasons = CASE
+                        WHEN EXCLUDED.importance_reasons = '[]'::jsonb THEN canonical_events.importance_reasons
+                        ELSE EXCLUDED.importance_reasons
+                    END,
                     linked_structured_event_ids = EXCLUDED.linked_structured_event_ids,
                     article_urls = EXCLUDED.article_urls,
                     computed_at = EXCLUDED.computed_at,
@@ -420,6 +444,8 @@ def upsert_canonical_events(rows: list[dict]) -> int:
                     int(row.get("source_count") or 0),
                     int(row.get("perspective_count") or 0),
                     int(row.get("contradiction_count") or 0),
+                    float(row.get("importance_score") or 0.0),
+                    importance_reasons,
                     linked,
                     article_urls,
                     row.get("first_seen_at") or now,
@@ -491,7 +517,7 @@ def get_canonical_events(
             SELECT *
             FROM canonical_events
             {where}
-            ORDER BY computed_at DESC, last_updated_at DESC
+            ORDER BY COALESCE(importance_score, 0) DESC, computed_at DESC, last_updated_at DESC
             LIMIT %s
             """,
             params,
@@ -587,3 +613,299 @@ def get_event_perspectives(event_id: str) -> list[dict]:
             (event_id,),
         ).fetchall()
     return [_row_to_perspective(row) for row in rows]
+
+
+def get_latest_canonical_event_observation(event_id: str) -> dict | None:
+    key = (event_id or "").strip()
+    if not key:
+        return None
+    with _connect() as conn:
+        row = conn.execute(
+            """
+            SELECT *
+            FROM canonical_event_observations
+            WHERE event_id = %s
+            ORDER BY observed_at DESC
+            LIMIT 1
+            """,
+            (key,),
+        ).fetchone()
+    if not row:
+        return None
+    payload = row.get("payload")
+    if isinstance(payload, str):
+        payload = json.loads(payload) if payload else {}
+    return {
+        "event_id": row.get("event_id"),
+        "topic": row.get("topic"),
+        "observation_key": row.get("observation_key"),
+        "observed_at": row.get("observed_at"),
+        "article_count": int(row.get("article_count") or 0),
+        "source_count": int(row.get("source_count") or 0),
+        "contradiction_count": int(row.get("contradiction_count") or 0),
+        "tier_1_source_count": int(row.get("tier_1_source_count") or 0),
+        "importance_score": float(row.get("importance_score") or 0.0),
+        "payload": payload or {},
+    }
+
+
+def upsert_canonical_event_observations(rows: list[dict]) -> int:
+    if not rows:
+        return 0
+    now = time.time()
+    written = 0
+    with _connect() as conn:
+        for row in rows:
+            event_id = (row.get("event_id") or "").strip()
+            observation_key = (row.get("observation_key") or "").strip()
+            if not event_id or not observation_key:
+                continue
+            topic = (row.get("topic") or "").strip() or None
+            observed_at = float(row.get("observed_at") or now)
+            payload = row.get("payload")
+            payload_json = (
+                json.dumps(payload, sort_keys=True, default=str)
+                if isinstance(payload, dict)
+                else "{}"
+            )
+            conn.execute(
+                """
+                INSERT INTO canonical_event_observations (
+                    event_id,
+                    topic,
+                    observation_key,
+                    observed_at,
+                    article_count,
+                    source_count,
+                    contradiction_count,
+                    tier_1_source_count,
+                    importance_score,
+                    payload
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb)
+                ON CONFLICT (event_id, observation_key) DO UPDATE SET
+                    topic = COALESCE(EXCLUDED.topic, canonical_event_observations.topic),
+                    observed_at = GREATEST(canonical_event_observations.observed_at, EXCLUDED.observed_at),
+                    article_count = EXCLUDED.article_count,
+                    source_count = EXCLUDED.source_count,
+                    contradiction_count = EXCLUDED.contradiction_count,
+                    tier_1_source_count = EXCLUDED.tier_1_source_count,
+                    importance_score = EXCLUDED.importance_score,
+                    payload = EXCLUDED.payload
+                """,
+                (
+                    event_id,
+                    topic,
+                    observation_key,
+                    observed_at,
+                    int(row.get("article_count") or 0),
+                    int(row.get("source_count") or 0),
+                    int(row.get("contradiction_count") or 0),
+                    int(row.get("tier_1_source_count") or 0),
+                    float(row.get("importance_score") or 0.0),
+                    payload_json,
+                ),
+            )
+            written += 1
+    return written
+
+
+# ── event identity resolution
+
+
+def list_observation_keys_for_event(event_id: str, limit: int = 50) -> list[str]:
+    key = (event_id or "").strip()
+    if not key:
+        return []
+    safe_limit = max(1, min(int(limit), 500))
+    with _connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT observation_key
+            FROM event_identity_map
+            WHERE event_id = %s
+            ORDER BY last_seen_at DESC
+            LIMIT %s
+            """,
+            (key, safe_limit),
+        ).fetchall()
+    return [str(row.get("observation_key")) for row in rows if row.get("observation_key")]
+
+
+def load_event_identity_history(event_id: str, limit: int = 50) -> list[dict]:
+    key = (event_id or "").strip()
+    if not key:
+        return []
+    safe_limit = max(1, min(int(limit), 500))
+    with _connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT observation_key, event_id, action, confidence, reasons, created_at
+            FROM event_identity_events
+            WHERE event_id = %s
+            ORDER BY created_at DESC
+            LIMIT %s
+            """,
+            (key, safe_limit),
+        ).fetchall()
+    history: list[dict] = []
+    for row in rows:
+        reasons = row.get("reasons")
+        if isinstance(reasons, str):
+            reasons = json.loads(reasons) if reasons else {}
+        history.append(
+            {
+                "observation_key": row.get("observation_key"),
+                "event_id": row.get("event_id"),
+                "action": row.get("action"),
+                "confidence": row.get("confidence"),
+                "reasons": reasons or {},
+                "created_at": row.get("created_at"),
+            }
+        )
+    return history
+
+
+def get_event_id_for_observation_key(observation_key: str) -> str | None:
+    key = (observation_key or "").strip()
+    if not key:
+        return None
+    with _connect() as conn:
+        row = conn.execute(
+            "SELECT event_id FROM event_identity_map WHERE observation_key = %s",
+            (key,),
+        ).fetchone()
+    return (row.get("event_id") if row else None) or None
+
+
+def list_canonical_identity_candidates(
+    *, topic: str, limit: int = 500
+) -> list[dict]:
+    t = (topic or "").strip()
+    if not t:
+        return []
+    safe_limit = max(1, min(int(limit), 2000))
+    with _connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT event_id, label, article_urls, linked_structured_event_ids, payload, computed_at
+            FROM canonical_events
+            WHERE topic = %s
+            ORDER BY computed_at DESC
+            LIMIT %s
+            """,
+            (t, safe_limit),
+        ).fetchall()
+
+    candidates: list[dict] = []
+    for row in rows:
+        article_urls = row.get("article_urls")
+        linked = row.get("linked_structured_event_ids")
+        payload = row.get("payload")
+        if isinstance(article_urls, str):
+            article_urls = json.loads(article_urls) if article_urls else []
+        if isinstance(linked, str):
+            linked = json.loads(linked) if linked else []
+        if isinstance(payload, str):
+            payload = json.loads(payload) if payload else {}
+        candidates.append(
+            {
+                "event_id": row.get("event_id"),
+                "label": row.get("label"),
+                "article_urls": article_urls or [],
+                "linked_structured_event_ids": linked or [],
+                "payload": payload or {},
+            }
+        )
+    return candidates
+
+
+def upsert_event_identity_mappings(rows: list[dict]) -> int:
+    if not rows:
+        return 0
+    now = time.time()
+    written = 0
+    with _connect() as conn:
+        for row in rows:
+            observation_key = (row.get("observation_key") or "").strip()
+            event_id = (row.get("event_id") or "").strip()
+            if not observation_key or not event_id:
+                continue
+            topic = (row.get("topic") or "").strip() or None
+            confidence = row.get("identity_confidence")
+            reasons = row.get("identity_reasons")
+            first_mapped_at = float(row.get("first_mapped_at") or now)
+            last_seen_at = float(row.get("last_seen_at") or now)
+            reasons_json = (
+                json.dumps(reasons, sort_keys=True, default=str)
+                if isinstance(reasons, dict)
+                else "{}"
+            )
+            conn.execute(
+                """
+                INSERT INTO event_identity_map (
+                    observation_key, event_id, topic,
+                    first_mapped_at, last_seen_at,
+                    identity_confidence, identity_reasons
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s::jsonb)
+                ON CONFLICT (observation_key) DO UPDATE SET
+                    event_id = EXCLUDED.event_id,
+                    topic = COALESCE(EXCLUDED.topic, event_identity_map.topic),
+                    first_mapped_at = LEAST(event_identity_map.first_mapped_at, EXCLUDED.first_mapped_at),
+                    last_seen_at = GREATEST(event_identity_map.last_seen_at, EXCLUDED.last_seen_at),
+                    identity_confidence = COALESCE(EXCLUDED.identity_confidence, event_identity_map.identity_confidence),
+                    identity_reasons = CASE
+                        WHEN EXCLUDED.identity_reasons = '{}'::jsonb THEN event_identity_map.identity_reasons
+                        ELSE EXCLUDED.identity_reasons
+                    END
+                """,
+                (
+                    observation_key,
+                    event_id,
+                    topic,
+                    first_mapped_at,
+                    last_seen_at,
+                    float(confidence) if confidence is not None else None,
+                    reasons_json,
+                ),
+            )
+            written += 1
+    return written
+
+
+def append_event_identity_events(rows: list[dict]) -> int:
+    if not rows:
+        return 0
+    now = time.time()
+    written = 0
+    with _connect() as conn:
+        for row in rows:
+            observation_key = (row.get("observation_key") or "").strip()
+            event_id = (row.get("event_id") or "").strip()
+            action = (row.get("action") or "").strip()
+            if not observation_key or not event_id or not action:
+                continue
+            confidence = row.get("confidence")
+            reasons = row.get("reasons")
+            created_at = float(row.get("created_at") or now)
+            reasons_json = (
+                json.dumps(reasons, sort_keys=True, default=str)
+                if isinstance(reasons, dict)
+                else "{}"
+            )
+            conn.execute(
+                """
+                INSERT INTO event_identity_events (
+                    observation_key, event_id, action, confidence, reasons, created_at
+                ) VALUES (%s, %s, %s, %s, %s::jsonb, %s)
+                """,
+                (
+                    observation_key,
+                    event_id,
+                    action,
+                    float(confidence) if confidence is not None else None,
+                    reasons_json,
+                    created_at,
+                ),
+            )
+            written += 1
+    return written

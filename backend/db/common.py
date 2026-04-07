@@ -238,11 +238,14 @@ def _row_to_canonical_event(row) -> dict:
         return None
     article_urls = row.get("article_urls")
     linked = row.get("linked_structured_event_ids")
+    importance_reasons = row.get("importance_reasons")
     payload = row.get("payload")
     if isinstance(article_urls, str):
         article_urls = json.loads(article_urls) if article_urls else []
     if isinstance(linked, str):
         linked = json.loads(linked) if linked else []
+    if isinstance(importance_reasons, str):
+        importance_reasons = json.loads(importance_reasons) if importance_reasons else []
     if isinstance(payload, str):
         payload = json.loads(payload) if payload else {}
     return {
@@ -261,6 +264,8 @@ def _row_to_canonical_event(row) -> dict:
         "source_count": int(row.get("source_count") or 0),
         "perspective_count": int(row.get("perspective_count") or 0),
         "contradiction_count": int(row.get("contradiction_count") or 0),
+        "importance_score": float(row.get("importance_score") or 0.0),
+        "importance_reasons": importance_reasons or [],
         "neutral_summary": row.get("neutral_summary"),
         "neutral_confidence": row.get("neutral_confidence"),
         "neutral_generated_at": row.get("neutral_generated_at"),

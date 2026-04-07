@@ -1,8 +1,12 @@
-# Othello frontend
+# Frontend quickstart
 
-This frontend is a Vite + React client for the Othello backend API.
+Minimal instructions to get the developer UI running locally.
 
-## Local development
+Prerequisites:
+- Node 18+ and npm or yarn
+- Backend running at `http://127.0.0.1:8001` (default)
+
+Dev server:
 
 ```bash
 cd frontend
@@ -10,32 +14,23 @@ npm install
 npm run dev
 ```
 
-By default, local development targets `http://127.0.0.1:8001`.
+The app uses `VITE_API_BASE_URL` when set; otherwise local dev targets `http://127.0.0.1:8001`.
 
-## Environment
-
-Create a `.env` file from `.env.example` when you need an explicit API origin.
+Running a production preview:
 
 ```bash
-cp .env.example .env
-```
-
-`VITE_API_BASE_URL`
-- Leave blank in local development to use the built-in localhost default.
-- Set it in production if your API is hosted on a different origin than the frontend.
-- If your production frontend and API share the same origin, leave it unset so requests stay same-origin.
-
-## Production build
-
-```bash
-cd frontend
-npm install
 npm run build
 npm run preview
 ```
 
-## Common failure modes
+Folder notes:
+- `src/` — React UI. We favor small feature hooks under `src/hooks/` and minimal data-layer code in `src/api.js`.
+- `public/` — static assets
 
-- `Network Error`: the backend is not running, or `VITE_API_BASE_URL` points to the wrong place.
-- Blank data panels: the frontend loaded, but the backend endpoints are failing.
-- CORS errors: update `OTHELLO_CORS_ORIGINS` in the backend environment.
+Contributor tips (2-minute setup):
+- Start the backend: `cd backend && ./run_backend.sh` (or `uvicorn main:app --reload`)
+- Start frontend dev: `cd frontend && npm run dev`
+- Open `http://localhost:5173`
+
+If you run into API errors, confirm `VITE_API_BASE_URL` and that the backend is reachable.
+

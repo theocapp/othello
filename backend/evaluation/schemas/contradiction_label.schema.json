@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ContradictionLabel",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "kind",
+    "event_id",
+    "citation_adequate",
+    "label_decision",
+    "annotator_id",
+    "annotated_at"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "minLength": 1 },
+    "kind": { "const": "contradiction" },
+    "event_id": { "type": "string", "minLength": 1 },
+    "contradiction_id": { "type": ["string", "null"] },
+    "citation_adequate": { "type": "boolean" },
+    "label_decision": {
+      "type": "string",
+      "enum": ["true_contradiction", "framing_difference", "noise", "unclear"]
+    },
+    "annotator_id": { "type": "string", "minLength": 1 },
+    "annotated_at": { "type": "string", "format": "date-time" },
+    "notes": { "type": "string" }
+  },
+  "additionalProperties": true
+}

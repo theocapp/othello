@@ -1,6 +1,7 @@
 import { Suspense, lazy } from 'react'
 import BriefingLaunchPanel from './BriefingLaunchPanel'
 import CorrelationPanel from './CorrelationPanel'
+import DecisionSurfacePanel from './DecisionSurfacePanel'
 import InstabilityPanel from './InstabilityPanel'
 import MapSummaryPanel from './MapSummaryPanel'
 import NewsColumn from './NewsColumn'
@@ -38,6 +39,10 @@ export default function HomeDashboard({
   setHeadlineRegion,
   loadHeadlines,
   openStoryDeepDive,
+  openEventDebug,
+  canonicalEvents,
+  canonicalEventsLoading,
+  canonicalEventsError,
   topics,
   setForesightPage,
   instabilityData,
@@ -110,9 +115,15 @@ export default function HomeDashboard({
 </section>
           <aside style={{ gridArea: 'sidebar', display: 'flex', flexDirection: 'column', gap: '1rem', animation: 'fadeUp 0.6s ease 0.14s both' }}>
             <MapSummaryPanel data={mapAttention} hotspot={selectedHotspot} onOpenBriefing={setBriefingPage} onAnalyzeCluster={openHotspotClusterAnalysis} />
-            <NewsColumn headlines={headlines} headlinesLoading={headlinesLoading} headlinesLoaded={headlinesLoaded} headlinesError={headlinesError} headlineSort={headlineSort} headlineRegion={headlineRegion} headlineRegions={headlineRegions} onChangeSort={async value => { setHeadlineSort(value); await loadHeadlines({ sortBy: value, region: headlineRegion }) }} onChangeRegion={async value => { setHeadlineRegion(value); await loadHeadlines({ sortBy: headlineSort, region: value }) }} onRefresh={() => loadHeadlines()} onOpenStory={openStoryDeepDive} />
+            <NewsColumn headlines={headlines} headlinesLoading={headlinesLoading} headlinesLoaded={headlinesLoaded} headlinesError={headlinesError} headlineSort={headlineSort} headlineRegion={headlineRegion} headlineRegions={headlineRegions} onChangeSort={async value => { setHeadlineSort(value); await loadHeadlines({ sortBy: value, region: headlineRegion }) }} onChangeRegion={async value => { setHeadlineRegion(value); await loadHeadlines({ sortBy: headlineSort, region: value }) }} onRefresh={() => loadHeadlines()} onOpenStory={openStoryDeepDive} onOpenEventDebug={openEventDebug} />
           </aside>
           <section style={{ gridArea: 'lower', animation: 'fadeUp 0.6s ease 0.2s both' }}>
+            <DecisionSurfacePanel
+              canonicalEvents={canonicalEvents}
+              canonicalEventsLoading={canonicalEventsLoading}
+              canonicalEventsError={canonicalEventsError}
+              onOpenEventDebug={openEventDebug}
+            />
             <div style={{ marginBottom: '1rem' }}><BriefingLaunchPanel topics={topics} onOpenBriefing={setBriefingPage} onOpenForesight={setForesightPage} /></div>
             <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '1.25rem', marginBottom: '1rem' }}>
               <InstabilityPanel data={instabilityData} loading={instabilityLoading} error={instabilityError} onAnalyze={country => setDeepDive({ title: `Instability Analysis: ${country.label}`, query: `Analyze the current instability situation in ${country.label}. The country scores ${country.score}/100 on the instability index (level: ${country.level}). Break down: what conflict events are occurring, what's driving media attention, are there contradictory narratives across sources, what entities are most active, and what should we watch for in the coming days? Components: conflict=${country.components?.conflict}, media=${country.components?.media_attention}, contradictions=${country.components?.contradiction}, severity=${country.components?.event_severity}. Be analytically precise.`, queryTopic: 'geopolitics', regionContext: country.country })} />

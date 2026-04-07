@@ -8,7 +8,8 @@ from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException
 
 from cache import load_headlines, save_headlines
-from contradictions import cluster_articles, enrich_events
+from clustering import cluster_articles
+from contradictions import enrich_events
 from corpus import get_article_count, get_recent_articles
 from news import (
     infer_article_topics,

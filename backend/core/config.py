@@ -201,6 +201,10 @@ HISTORICAL_FETCH_MAX_ATTEMPTS = int(
 STORY_MATERIALIZATION_REFRESH_MINUTES = int(
     os.getenv("OTHELLO_STORY_MATERIALIZATION_REFRESH_MINUTES", "45")
 )
+EVALUATION_LABELS_DIR = os.getenv(
+    "OTHELLO_EVALUATION_LABELS_DIR",
+    str(Path(__file__).resolve().parents[1] / "evaluation" / "batches"),
+)
 
 # ---------------------------------------------------------------------------
 # Feature flags

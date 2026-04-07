@@ -491,6 +491,8 @@ def init_db():
                 source_count INTEGER NOT NULL DEFAULT 0,
                 perspective_count INTEGER NOT NULL DEFAULT 0,
                 contradiction_count INTEGER NOT NULL DEFAULT 0,
+                importance_score DOUBLE PRECISION NOT NULL DEFAULT 0,
+                importance_reasons JSONB NOT NULL DEFAULT '[]'::jsonb,
                 neutral_summary TEXT,
                 neutral_confidence DOUBLE PRECISION,
                 neutral_generated_at DOUBLE PRECISION,
@@ -501,6 +503,12 @@ def init_db():
                 payload JSONB NOT NULL DEFAULT '{}'::jsonb
             )
             """)
+        conn.execute(
+            "ALTER TABLE canonical_events ADD COLUMN IF NOT EXISTS importance_score DOUBLE PRECISION NOT NULL DEFAULT 0"
+        )
+        conn.execute(
+            "ALTER TABLE canonical_events ADD COLUMN IF NOT EXISTS importance_reasons JSONB NOT NULL DEFAULT '[]'::jsonb"
+        )
         conn.execute("""
             CREATE TABLE IF NOT EXISTS event_perspectives (
                 perspective_id TEXT PRIMARY KEY,
@@ -523,6 +531,69 @@ def init_db():
                 payload JSONB NOT NULL DEFAULT '{}'::jsonb
             )
             """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS canonical_event_observations (
+                id BIGSERIAL PRIMARY KEY,
+                event_id TEXT NOT NULL REFERENCES canonical_events(event_id) ON DELETE CASCADE,
+                topic TEXT,
+                observation_key TEXT NOT NULL,
+                observed_at DOUBLE PRECISION NOT NULL,
+                article_count INTEGER NOT NULL,
+                source_count INTEGER NOT NULL,
+                contradiction_count INTEGER NOT NULL,
+                tier_1_source_count INTEGER NOT NULL DEFAULT 0,
+                importance_score DOUBLE PRECISION,
+                payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+                UNIQUE (event_id, observation_key)
+            )
+            """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS cluster_assignment_evidence (
+                id BIGSERIAL PRIMARY KEY,
+                observation_key TEXT NOT NULL,
+                event_id TEXT REFERENCES canonical_events(event_id) ON DELETE CASCADE,
+                topic TEXT,
+                article_url TEXT NOT NULL REFERENCES articles(url) ON DELETE CASCADE,
+                rule TEXT NOT NULL,
+                entity_overlap INTEGER NOT NULL DEFAULT 0,
+                anchor_overlap INTEGER NOT NULL DEFAULT 0,
+                keyword_overlap INTEGER NOT NULL DEFAULT 0,
+                time_gap_hours DOUBLE PRECISION,
+                final_score DOUBLE PRECISION NOT NULL DEFAULT 0,
+                payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+                computed_at DOUBLE PRECISION NOT NULL,
+                UNIQUE (observation_key, article_url)
+            )
+            """)
+        conn.execute(
+            "COMMENT ON TABLE cluster_assignment_evidence IS 'DERIVED: per-article assignment evidence for volatile observation clusters; refresh via story_materialization pipeline'"
+        )
+
+        # ── event identity resolution ─────────────────────────────────
+        # Map volatile observation keys (current clustering hashes) onto
+        # stable canonical event IDs.
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS event_identity_map (
+                observation_key TEXT PRIMARY KEY,
+                event_id TEXT NOT NULL REFERENCES canonical_events(event_id) ON DELETE CASCADE,
+                topic TEXT,
+                first_mapped_at DOUBLE PRECISION NOT NULL,
+                last_seen_at DOUBLE PRECISION NOT NULL,
+                identity_confidence DOUBLE PRECISION,
+                identity_reasons JSONB NOT NULL DEFAULT '{}'::jsonb
+            )
+            """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS event_identity_events (
+                id BIGSERIAL PRIMARY KEY,
+                observation_key TEXT NOT NULL,
+                event_id TEXT NOT NULL REFERENCES canonical_events(event_id) ON DELETE CASCADE,
+                action TEXT NOT NULL,
+                confidence DOUBLE PRECISION,
+                reasons JSONB NOT NULL DEFAULT '{}'::jsonb,
+                created_at DOUBLE PRECISION NOT NULL
+            )
+            """)
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_canonical_events_topic ON canonical_events (topic, computed_at DESC)"
         )
@@ -534,6 +605,33 @@ def init_db():
         )
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_event_perspectives_source ON event_perspectives (source_name, analyzed_at DESC)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_canonical_event_obs_event ON canonical_event_observations (event_id, observed_at DESC)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_canonical_event_obs_topic ON canonical_event_observations (topic, observed_at DESC)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_cluster_assignment_obs ON cluster_assignment_evidence (observation_key, computed_at DESC)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_cluster_assignment_event ON cluster_assignment_evidence (event_id, computed_at DESC)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_cluster_assignment_topic ON cluster_assignment_evidence (topic, computed_at DESC)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_event_identity_map_event ON event_identity_map (event_id, last_seen_at DESC)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_event_identity_map_topic ON event_identity_map (topic, last_seen_at DESC)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_event_identity_events_event ON event_identity_events (event_id, created_at DESC)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_event_identity_events_obs ON event_identity_events (observation_key, created_at DESC)"
         )
 
         # ── v2 tables (typed timestamps, Postgres-only) ──────────────

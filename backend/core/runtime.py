@@ -3,7 +3,7 @@ import time
 import logging
 import sys
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from cache import load_briefing
 from corpus import (
@@ -79,8 +79,11 @@ def init_logging(level: str | int | None = None) -> None:
         lvl = getattr(logging, lvl.upper(), logging.INFO)
 
     root = logging.getLogger()
-    # Only add a StreamHandler if none exists to avoid duplicates
-    if not any(isinstance(h, logging.StreamHandler) for h in root.handlers):
+    # Only add the structured stdout StreamHandler if one does not already exist.
+    if not any(
+        isinstance(h, logging.StreamHandler) and getattr(h, "stream", None) is sys.stdout
+        for h in root.handlers
+    ):
         handler = logging.StreamHandler(stream=sys.stdout)
         handler.setFormatter(JsonLogFormatter())
         root.addHandler(handler)
@@ -107,9 +110,7 @@ def runtime_status() -> dict:
         "sources": sources,
         "corpus": corpus,
         "entity_models": get_entity_model_capabilities(),
-        "ready": corpus["total_articles"] > 0
-        or sources["gdelt"]["enabled"]
-        or sources["directfeeds"]["enabled"],
+        "ready": corpus["total_articles"] > 0 or sources["gdelt"]["enabled"] or sources["directfeeds"]["enabled"],
     }
 
 
@@ -119,22 +120,16 @@ def topic_counts(hours: int = 72) -> dict[str, int]:
 
 def topic_summary(topic: str) -> dict:
     cached = load_briefing(topic, ttl=BRIEFING_TTL)
-    recent_articles = get_recent_articles(
-        topic=topic, limit=1, hours=CORPUS_WINDOW_HOURS
-    )
+    recent_articles = get_recent_articles(topic=topic, limit=1, hours=CORPUS_WINDOW_HOURS)
     latest_article = recent_articles[0] if recent_articles else None
     return {
         "topic": topic,
         "corpus_articles_72h": get_article_count(topic=topic, hours=72),
         "briefing_ready": cached is not None,
-        "briefing_age_minutes": (
-            int((time.time() - cached["generated_at"]) / 60) if cached else None
-        ),
+        "briefing_age_minutes": int((time.time() - cached["generated_at"]) / 60) if cached else None,
         "briefing_event_count": len(cached.get("events", [])) if cached else 0,
         "latest_article_title": latest_article.get("title") if latest_article else None,
-        "latest_published_at": (
-            latest_article.get("published_at") if latest_article else None
-        ),
+        "latest_published_at": latest_article.get("published_at") if latest_article else None,
     }
 
 

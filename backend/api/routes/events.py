@@ -6,6 +6,7 @@ from services.analytics_service import (
     get_instability_payload,
 )
 from services.events_service import (
+    get_canonical_event_debug_payload,
     get_canonical_event_payload,
     get_canonical_events_payload,
     get_event_perspectives_payload,
@@ -88,6 +89,11 @@ def get_event_perspectives_route(event_id: str):
 @router.get("/events/canonical/{event_id}")
 def get_canonical_event_route(event_id: str):
     return get_canonical_event_payload(event_id)
+
+
+@router.get("/events/canonical/{event_id}/debug")
+def get_canonical_event_debug_route(event_id: str):
+    return get_canonical_event_debug_payload(event_id)
 
 
 @router.get("/events/{topic}")

@@ -35,6 +35,18 @@ export async function fetchEvents(limit = 12) {
   return response.data
 }
 
+export async function fetchCanonicalEventDebug(eventId) {
+  const response = await api.get(`/events/canonical/${encodeURIComponent(eventId)}/debug`)
+  return response.data
+}
+
+export async function fetchCanonicalEvents({ topic = null, status = null, limit = 80 } = {}) {
+  const response = await api.get('/events/canonical', {
+    params: compactParams({ topic, status, limit }),
+  })
+  return response.data
+}
+
 export async function fetchRegionAttention(window = '24h') {
   const response = await api.get('/coverage/map', {
     params: compactParams({ window }),

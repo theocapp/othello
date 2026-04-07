@@ -1,15 +1,12 @@
-import { Suspense, lazy, useEffect, useRef, useState } from 'react'
+import { Suspense, lazy, useEffect, useRef, useState, useMemo } from 'react'
 import {
   fetchBeforeNewsArchive,
   fetchCorrelations,
-  fetchEntitySignals,
-  fetchEvents,
-  fetchHeadlines,
-  fetchHealth,
   fetchInstability,
   fetchPredictionLedger,
-  fetchRegionAttention,
 } from './api'
+import useHealth from './hooks/useHealth'
+import useHeadlines from './hooks/useHeadlines'
 import HomeDashboard from './components/HomeDashboard'
 import { buildAppStyles, C } from './constants/theme'
 import { friendlyErrorMessage, formatRegionLabel, parseDateValue } from './lib/formatters'
@@ -17,8 +14,15 @@ import {
   buildHotspotClusterAnalysisQuery,
   collectHotspotSourceUrls,
   normalizeStoryTopicForQuery,
-  totalNarrativeFlags,
 } from './lib/hotspots'
+import useContradictions from './hooks/useContradictions'
+import useEntitySignals from './hooks/useEntitySignals'
+import useMapAttention from './hooks/useMapAttention'
+import useInstability from './hooks/useInstability'
+import useCorrelations from './hooks/useCorrelations'
+import usePredictionLedger from './hooks/usePredictionLedger'
+import useBeforeNewsArchive from './hooks/useBeforeNewsArchive'
+import useCanonicalEvents from './hooks/useCanonicalEvents'
 
 const DeepDive = lazy(() => import('./pages/DeepDive'))
 const BriefingPage = lazy(() => import('./pages/BriefingPage'))
@@ -26,6 +30,7 @@ const ConflictBriefingPage = lazy(() => import('./pages/ConflictBriefingPage'))
 const ContradictionOverlay = lazy(() => import('./pages/ContradictionOverlay'))
 const TimelinePage = lazy(() => import('./pages/TimelinePage'))
 const ForesightPage = lazy(() => import('./pages/ForesightPage'))
+const EventDebugOverlay = lazy(() => import('./pages/EventDebugOverlay'))
 
 const TOPICS = [
   {
@@ -77,50 +82,81 @@ function OverlayFallback() {
 export default function App() {
   const [time, setTime] = useState(new Date())
   const [headerVisible, setHeaderVisible] = useState(true)
-  const [lastUpdated, setLastUpdated] = useState(null)
-  const [healthSnapshot, setHealthSnapshot] = useState(null)
-  const [healthFetchError, setHealthFetchError] = useState(null)
+  const { data: healthSnapshot, error: healthFetchError } = useHealth()
+  const lastUpdated = useMemo(() => {
+    try {
+      return healthSnapshot?.runtime?.corpus?.latest_published_at
+        ? parseDateValue(healthSnapshot.runtime.corpus.latest_published_at)
+        : null
+    } catch (e) {
+      return null
+    }
+  }, [healthSnapshot])
 
-  const [headlines, setHeadlines] = useState([])
-  const [headlineRegions, setHeadlineRegions] = useState([])
-  const [headlinesLoading, setHeadlinesLoading] = useState(false)
-  const [headlinesLoaded, setHeadlinesLoaded] = useState(false)
-  const [headlinesError, setHeadlinesError] = useState(null)
   const [headlineSort, setHeadlineSort] = useState('relevance')
   const [headlineRegion, setHeadlineRegion] = useState('all')
+  const {
+    data: headlinesData,
+    error: headlinesError,
+    isLoading: headlinesLoading,
+    refetch: refetchHeadlines,
+  } = useHeadlines(headlineSort, headlineRegion)
+  const headlines = headlinesData?.stories || []
+  const headlineRegions = headlinesData?.available_regions || []
+  const headlinesLoaded = headlines.length > 0
 
-  const [mapAttention, setMapAttention] = useState(null)
-  const [mapAttentionLoading, setMapAttentionLoading] = useState(true)
-  const [mapAttentionError, setMapAttentionError] = useState(null)
   const [mapAttentionWindow, setMapAttentionWindow] = useState('24h')
   const [selectedMapHotspot, setSelectedMapHotspot] = useState(null)
 
-  const [entitySignals, setEntitySignals] = useState(null)
-  const [entitySignalsError, setEntitySignalsError] = useState(null)
+  const { data: entitySignals, error: entitySignalsError } = useEntitySignals()
 
-  const [contradictionEvents, setContradictionEvents] = useState([])
-  const [contradictionsLoading, setContradictionsLoading] = useState(true)
-  const [contradictionsError, setContradictionsError] = useState(null)
+  const {
+    data: contradictionEvents = [],
+    error: contradictionsError,
+    isLoading: contradictionsLoading,
+    refetch: refetchContradictions,
+  } = useContradictions(6)
 
-  const [instabilityData, setInstabilityData] = useState(null)
-  const [instabilityLoading, setInstabilityLoading] = useState(true)
-  const [instabilityError, setInstabilityError] = useState(null)
+  const {
+    data: mapAttention,
+    error: mapAttentionError,
+    isLoading: mapAttentionLoading,
+    refetch: refetchMapAttention,
+  } = useMapAttention(mapAttentionWindow)
 
-  const [correlationData, setCorrelationData] = useState(null)
-  const [correlationLoading, setCorrelationLoading] = useState(true)
-  const [correlationError, setCorrelationError] = useState(null)
+  const {
+    data: instabilityData,
+    error: instabilityError,
+    isLoading: instabilityLoading,
+    refetch: refetchInstability,
+  } = useInstability(3)
 
-  const [predictionLedger, setPredictionLedger] = useState([])
-  const [predictionLedgerError, setPredictionLedgerError] = useState(null)
+  const {
+    data: correlationData,
+    error: correlationError,
+    isLoading: correlationLoading,
+    refetch: refetchCorrelations,
+  } = useCorrelations(3)
 
-  const [beforeNewsArchive, setBeforeNewsArchive] = useState([])
-  const [beforeNewsError, setBeforeNewsError] = useState(null)
+  const { data: predictionLedgerResp, error: predictionLedgerError } = usePredictionLedger()
+  const predictionLedger = predictionLedgerResp?.predictions || []
+
+  const { data: beforeNewsData, error: beforeNewsError } = useBeforeNewsArchive()
+  const beforeNewsArchive = beforeNewsData?.records || []
+
+  const {
+    data: canonicalEventsData,
+    error: canonicalEventsError,
+    isLoading: canonicalEventsLoading,
+  } = useCanonicalEvents({ topic: 'geopolitics', limit: 120 })
+  const canonicalEvents = canonicalEventsData?.events || []
 
   const [deepDive, setDeepDive] = useState(null)
   const [briefingPage, setBriefingPage] = useState(null)
   const [selectedContradiction, setSelectedContradiction] = useState(null)
   const [timelinePage, setTimelinePage] = useState(null)
   const [foresightPage, setForesightPage] = useState(null)
+  const [eventDebugPage, setEventDebugPage] = useState(null)
 
   const lastScrollY = useRef(0)
   const localTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
@@ -147,144 +183,49 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    fetchEntitySignals()
-      .then(data => {
-        setEntitySignals(data)
-        setEntitySignalsError(null)
-      })
-      .catch(err => {
-        setEntitySignals(null)
-        setEntitySignalsError(friendlyErrorMessage(err, 'entity signals'))
-      })
+    // entity signals and contradictions are handled by react-query hooks
 
-    setContradictionsLoading(true)
-    fetchEvents()
-      .then(data => {
-        const ranked = (data.events || [])
-          .filter(event => totalNarrativeFlags(event) > 0)
-          .sort((a, b) => totalNarrativeFlags(b) - totalNarrativeFlags(a))
-        setContradictionEvents(ranked.slice(0, 6))
-        setContradictionsError(null)
-      })
-      .catch(err => {
-        setContradictionEvents([])
-        setContradictionsError(friendlyErrorMessage(err, 'narrative fractures'))
-      })
-      .finally(() => setContradictionsLoading(false))
+    // prediction ledger and before-news archive are handled by react-query hooks
 
-    fetchPredictionLedger()
-      .then(data => {
-        setPredictionLedger(data.predictions || [])
-        setPredictionLedgerError(null)
-      })
-      .catch(err => {
-        setPredictionLedger([])
-        setPredictionLedgerError(friendlyErrorMessage(err, 'prediction ledger'))
-      })
-
-    fetchBeforeNewsArchive()
-      .then(data => {
-        setBeforeNewsArchive(data.records || [])
-        setBeforeNewsError(null)
-      })
-      .catch(err => {
-        setBeforeNewsArchive([])
-        setBeforeNewsError(friendlyErrorMessage(err, 'before-it-was-news archive'))
-      })
-
-    fetchHealth()
-      .then(data => {
-        setHealthSnapshot(data)
-        setHealthFetchError(null)
-        if (data?.runtime?.corpus?.latest_published_at) {
-          setLastUpdated(parseDateValue(data.runtime.corpus.latest_published_at))
-        }
-      })
-      .catch(err => {
-        setHealthSnapshot(null)
-        setHealthFetchError(friendlyErrorMessage(err, 'API health'))
-      })
-
+    // Health and headlines are fetched via react-query hooks.
     loadMapAttention('24h')
-    loadHeadlines()
     loadInstability()
     loadCorrelations()
   }, [])
 
   async function loadInstability() {
-    setInstabilityLoading(true)
-    setInstabilityError(null)
     try {
-      setInstabilityData(await fetchInstability(3))
+      await refetchInstability()
     } catch (err) {
-      setInstabilityError(friendlyErrorMessage(err, 'instability index'))
-    } finally {
-      setInstabilityLoading(false)
+      // instabilityError is provided by the hook
     }
   }
 
   async function loadCorrelations() {
-    setCorrelationLoading(true)
-    setCorrelationError(null)
     try {
-      setCorrelationData(await fetchCorrelations(3))
+      await refetchCorrelations()
     } catch (err) {
-      setCorrelationError(friendlyErrorMessage(err, 'signal correlations'))
-    } finally {
-      setCorrelationLoading(false)
+      // correlationError is provided by the hook
     }
   }
 
-  async function loadHeadlines(next = {}) {
-    const sortBy = next.sortBy || headlineSort
-    const region = next.region || headlineRegion
-
-    setHeadlinesLoading(true)
-    setHeadlinesLoaded(false)
-    setHeadlinesError(null)
-
-    try {
-      const data = await fetchHeadlines({ sortBy, region })
-      const stories = data.stories || []
-
-      setHeadlineRegions(data.available_regions || [])
-      setHeadlines(stories)
-      setHeadlinesLoaded(true)
-
-      const latestStoryUpdate =
-        stories
-          .map(story => story.latest_update || story.sources?.[0]?.published_at)
-          .map(value => parseDateValue(value))
-          .filter(Boolean)
-          .sort((a, b) => b.getTime() - a.getTime())[0] || null
-
-      setLastUpdated(current => current || latestStoryUpdate)
-    } catch (err) {
-      setHeadlines([])
-      setHeadlinesError(friendlyErrorMessage(err, 'headlines'))
-    } finally {
-      setHeadlinesLoading(false)
-    }
+  function loadHeadlines(next = {}) {
+    // Expose a compatible API for components: trigger a manual refetch.
+    refetchHeadlines()
   }
 
   async function loadMapAttention(window = mapAttentionWindow) {
-    setMapAttentionLoading(true)
-    setMapAttentionError(null)
-
+    setMapAttentionWindow(window)
     try {
-      const data = await fetchRegionAttention(window)
-      setMapAttention(data)
-      setMapAttentionWindow(data.window || window)
+      const res = await refetchMapAttention()
+      const data = res?.data ?? res
       setSelectedMapHotspot(current =>
-        current && (data.hotspots || []).some(item => item.hotspot_id === current)
+        current && (data?.hotspots || []).some(item => item.hotspot_id === current)
           ? current
-          : data.hotspots?.[0]?.hotspot_id || null
+          : data?.hotspots?.[0]?.hotspot_id || null
       )
     } catch (err) {
-      setMapAttention(null)
-      setMapAttentionError(friendlyErrorMessage(err, 'incident cloud map'))
-    } finally {
-      setMapAttentionLoading(false)
+      // mapAttentionError is provided by the hook; no local error state needed
     }
   }
 
@@ -303,6 +244,15 @@ export default function App() {
       storyEventId: story.event_id || undefined,
       sourceUrls: sourceUrls.length ? sourceUrls : undefined,
       regionContext: story.dominant_region ? formatRegionLabel(story.dominant_region) : undefined,
+    })
+  }
+
+  function openEventDebug(story) {
+    const eventId = (story?.event_id || '').trim()
+    if (!eventId) return
+    setEventDebugPage({
+      eventId,
+      label: story?.headline || story?.label || eventId,
     })
   }
 
@@ -360,6 +310,10 @@ export default function App() {
         setHeadlineRegion={setHeadlineRegion}
         loadHeadlines={loadHeadlines}
         openStoryDeepDive={openStoryDeepDive}
+        openEventDebug={openEventDebug}
+        canonicalEvents={canonicalEvents}
+        canonicalEventsError={canonicalEventsError}
+        canonicalEventsLoading={canonicalEventsLoading}
         topics={TOPICS}
         setForesightPage={setForesightPage}
         instabilityData={instabilityData}
@@ -429,6 +383,15 @@ export default function App() {
             records={foresightPage === 'predictions' ? predictionLedger : beforeNewsArchive}
             error={foresightPage === 'predictions' ? predictionLedgerError : beforeNewsError}
             onClose={() => setForesightPage(null)}
+          />
+        </Suspense>
+      )}
+
+      {eventDebugPage && (
+        <Suspense fallback={<OverlayFallback />}>
+          <EventDebugOverlay
+            eventId={eventDebugPage.eventId}
+            onClose={() => setEventDebugPage(null)}
           />
         </Suspense>
       )}

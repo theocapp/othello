@@ -1394,3 +1394,16 @@ def format_contradictions_for_briefing(events: list[dict]) -> str:
             lines.append(f"    Claim B: {contradiction.get('claim_b', '')}")
             lines.append(f"    Assessment: {contradiction.get('reasoning', '')}")
     return "\n".join(lines)
+
+
+# Backward-compatibility wrappers: clustering now lives in clustering.py.
+from clustering import cluster_articles as _cluster_articles_impl
+from clustering import event_cluster_key as _event_cluster_key_impl
+
+
+def cluster_articles(articles: list[dict], topic: str | None = None) -> list[dict]:
+    return _cluster_articles_impl(articles, topic=topic)
+
+
+def event_cluster_key(event: dict) -> str:
+    return _event_cluster_key_impl(event)

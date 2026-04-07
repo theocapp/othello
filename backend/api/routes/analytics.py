@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 
 from api.deps import require_write_access_dep
 from services.analytics_service import (
+    evaluation_scorecard_payload,
     narrative_drift_payload,
     source_reliability_payload,
 )
@@ -81,3 +82,18 @@ def narrative_drift(
     subject: str, topic: str | None = None, days: int = 180, refresh: bool = False
 ):
     return narrative_drift_payload(subject, topic, days, refresh)
+
+
+@router.get("/evaluation/scorecard")
+def evaluation_scorecard(
+    kind: str | None = None,
+    topic: str | None = None,
+    limit_files: int = 80,
+    include_error_samples: bool = False,
+):
+    return evaluation_scorecard_payload(
+        kind=kind,
+        topic=topic,
+        limit_files=limit_files,
+        include_error_samples=include_error_samples,
+    )

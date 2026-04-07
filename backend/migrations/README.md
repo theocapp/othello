@@ -7,10 +7,14 @@ SQLite helper script for local or fallback SQLite databases.
 
 Postgres
 --------
-Run the Postgres migration using `psql` (or your DB migration tool):
+Run Postgres migrations in order using `psql` (or your DB migration tool):
 
 ```bash
 psql $DATABASE_URL -f backend/migrations/0001_add_canonical_events_postgres.sql
+psql $DATABASE_URL -f backend/migrations/0002_mark_derived_tables_postgres.sql
+psql $DATABASE_URL -f backend/migrations/0003_add_event_identity_tables_postgres.sql
+psql $DATABASE_URL -f backend/migrations/0004_add_canonical_importance_postgres.sql
+psql $DATABASE_URL -f backend/migrations/0005_add_cluster_assignment_evidence_postgres.sql
 ```
 
 SQLite

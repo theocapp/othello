@@ -562,6 +562,143 @@ def load_materialized_story_clusters(
     return out
 
 
+def upsert_cluster_assignment_evidence(rows: list[dict]) -> int:
+    if not rows:
+        return 0
+    now = time.time()
+    written = 0
+    with _connect() as conn:
+        for row in rows:
+            observation_key = (row.get("observation_key") or "").strip()
+            article_url = (row.get("article_url") or "").strip()
+            if not observation_key or not article_url:
+                continue
+            event_id = (row.get("event_id") or "").strip() or None
+            topic = (row.get("topic") or "").strip() or None
+            payload = json.dumps(row.get("payload") or {}, sort_keys=True, default=str)
+            conn.execute(
+                """
+                INSERT INTO cluster_assignment_evidence (
+                    observation_key,
+                    event_id,
+                    topic,
+                    article_url,
+                    rule,
+                    entity_overlap,
+                    anchor_overlap,
+                    keyword_overlap,
+                    time_gap_hours,
+                    final_score,
+                    payload,
+                    computed_at
+                ) VALUES (
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s
+                )
+                ON CONFLICT (observation_key, article_url) DO UPDATE SET
+                    event_id = COALESCE(EXCLUDED.event_id, cluster_assignment_evidence.event_id),
+                    topic = COALESCE(EXCLUDED.topic, cluster_assignment_evidence.topic),
+                    rule = EXCLUDED.rule,
+                    entity_overlap = EXCLUDED.entity_overlap,
+                    anchor_overlap = EXCLUDED.anchor_overlap,
+                    keyword_overlap = EXCLUDED.keyword_overlap,
+                    time_gap_hours = EXCLUDED.time_gap_hours,
+                    final_score = EXCLUDED.final_score,
+                    payload = EXCLUDED.payload,
+                    computed_at = GREATEST(cluster_assignment_evidence.computed_at, EXCLUDED.computed_at)
+                """,
+                (
+                    observation_key,
+                    event_id,
+                    topic,
+                    article_url,
+                    row.get("rule") or "fallback_in_cluster",
+                    int(row.get("entity_overlap") or 0),
+                    int(row.get("anchor_overlap") or 0),
+                    int(row.get("keyword_overlap") or 0),
+                    (
+                        float(row.get("time_gap_hours"))
+                        if row.get("time_gap_hours") is not None
+                        else None
+                    ),
+                    float(row.get("final_score") or 0.0),
+                    payload,
+                    float(row.get("computed_at") or now),
+                ),
+            )
+            written += 1
+    return written
+
+
+def load_cluster_assignment_evidence(
+    observation_keys: list[str], limit_per_observation: int = 80
+) -> dict[str, list[dict]]:
+    keys = [str(key).strip() for key in observation_keys if str(key).strip()]
+    if not keys:
+        return {}
+    keys = list(dict.fromkeys(keys))
+    cap = max(1, min(int(limit_per_observation), 400))
+    placeholders = ", ".join(["%s"] * len(keys))
+    params: list[object] = [*keys, cap]
+    with _connect() as conn:
+        rows = conn.execute(
+            f"""
+            SELECT observation_key, event_id, topic, article_url, rule,
+                   entity_overlap, anchor_overlap, keyword_overlap,
+                   time_gap_hours, final_score, payload, computed_at
+            FROM (
+                SELECT
+                    observation_key,
+                    event_id,
+                    topic,
+                    article_url,
+                    rule,
+                    entity_overlap,
+                    anchor_overlap,
+                    keyword_overlap,
+                    time_gap_hours,
+                    final_score,
+                    payload,
+                    computed_at,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY observation_key
+                        ORDER BY computed_at DESC, final_score DESC
+                    ) AS rn
+                FROM cluster_assignment_evidence
+                WHERE observation_key IN ({placeholders})
+            ) ranked
+            WHERE rn <= %s
+            ORDER BY observation_key ASC, final_score DESC, computed_at DESC
+            """,
+            params,
+        ).fetchall()
+
+    grouped: dict[str, list[dict]] = {key: [] for key in keys}
+    for row in rows:
+        payload = row.get("payload")
+        if isinstance(payload, str):
+            payload = json.loads(payload) if payload else {}
+        obs_key = str(row.get("observation_key") or "").strip()
+        if not obs_key:
+            continue
+        grouped.setdefault(obs_key, []).append(
+            {
+                "observation_key": obs_key,
+                "event_id": row.get("event_id"),
+                "topic": row.get("topic"),
+                "article_url": row.get("article_url"),
+                "rule": row.get("rule"),
+                "entity_overlap": int(row.get("entity_overlap") or 0),
+                "anchor_overlap": int(row.get("anchor_overlap") or 0),
+                "keyword_overlap": int(row.get("keyword_overlap") or 0),
+                "time_gap_hours": row.get("time_gap_hours"),
+                "final_score": float(row.get("final_score") or 0.0),
+                "payload": payload or {},
+                "computed_at": row.get("computed_at"),
+            }
+        )
+    return grouped
+
+
 def load_framing_signals_for_article_urls(article_urls: list[str]) -> dict[str, dict]:
     if not article_urls:
         return {}
