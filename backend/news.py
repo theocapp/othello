@@ -72,6 +72,10 @@ TOPIC_KEYWORDS = {
         "taiwan",
         "missile",
         "strike",
+        "elections",
+        "midterms",
+        "fighter jet",
+        "election interference",
     },
     "economics": {
         "cargo",
@@ -94,6 +98,13 @@ TOPIC_KEYWORDS = {
         "stocks",
         "oil",
         "gdp",
+        "gasoline",
+        "prices",
+        "loan",
+        "buyout",
+        "credit",
+        "debt",
+        "rupee",
     },
 }
 
