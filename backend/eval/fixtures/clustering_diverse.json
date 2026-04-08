@@ -1,0 +1,2458 @@
+{
+  "_comment": "Diverse fixture set generated via NewsAPI + Groq labeling.",
+  "cases": [
+    {
+      "id": "sudan_conflict_000",
+      "description": "The articles describe separate incidents of drone attacks in Sudan, with Article 1 focusing on a hospital strike and Article 2 reporting on a market attack, indicating they are not the same specific event.",
+      "topic_bucket": "sudan_conflict",
+      "articles": [
+        {
+          "url": "https://www.globalsecurity.org/military/library/news/2026/03/mil-260324-unnews02.htm",
+          "title": "Sudan: Hospital strike highlights surge in drone attacks on civilians",
+          "description": "The death toll from a horrific attack on a hospital in Sudan's Darfur has risen further, amid a \"sharp increase\" in drone attacks against civilians this year, UN agencies said on Tuesday.",
+          "published_at": "2026-03-25T10:57:11Z",
+          "source": "Globalsecurity.org",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.aljazeera.com/news/2026/3/13/drone-attack-on-market-in-sudan-kills-11-as-air-war-civilian-toll-mounts",
+          "title": "Drone attack on market in Sudan kills 11, as air war civilian toll mounts",
+          "description": "More than 200 civilians killed in recent days as drone strikes tear through markets, schools and hospitals.",
+          "published_at": "2026-03-13T20:50:49Z",
+          "source": "Al Jazeera English",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.386. The articles describe separate incidents of drone attacks in Sudan, with Article 1 focusing on a hospital strike and Article 2 reporting on a market attack, indicating they are not the same specific event."
+    },
+    {
+      "id": "sudan_conflict_001",
+      "description": "The articles are reporting on the same incident, a hospital strike in Sudan's Darfur, with the first article providing an update on the rising death toll and the second article reporting on the initial bombing.",
+      "topic_bucket": "sudan_conflict",
+      "articles": [
+        {
+          "url": "https://www.globalsecurity.org/military/library/news/2026/03/mil-260324-unnews02.htm",
+          "title": "Sudan: Hospital strike highlights surge in drone attacks on civilians",
+          "description": "The death toll from a horrific attack on a hospital in Sudan's Darfur has risen further, amid a \"sharp increase\" in drone attacks against civilians this year, UN agencies said on Tuesday.",
+          "published_at": "2026-03-25T10:57:11Z",
+          "source": "Globalsecurity.org",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.rt.com/africa/635889-dozens-killed-sudan-aldaein-hospital-bombing/",
+          "title": "Dozens killed in Sudan hospital bombing",
+          "description": "The WHO has reported that more than 60 people, including children and medical staff, were killed in a bomb attack on a Sudanese hospital Read Full Article at RT.com",
+          "published_at": "2026-03-23T09:25:07Z",
+          "source": "RT",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0,
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: SAME. score=0.519. The articles are reporting on the same incident, a hospital strike in Sudan's Darfur, with the first article providing an update on the rising death toll and the second article reporting on the initial bombing."
+    },
+    {
+      "id": "sudan_conflict_002",
+      "description": "The articles report on different incidents of drone attacks in Sudan, with one targeting a hospital and the other targeting a market, and occurring on different dates.",
+      "topic_bucket": "sudan_conflict",
+      "articles": [
+        {
+          "url": "https://japantoday.com/category/world/paramilitary-forces-in-sudan-kill-at-least-10-people-in-hospital-drone-attack-medical-group-says",
+          "title": "Paramilitary forces in Sudan kill at least 10 people in hospital drone attack, medical group says",
+          "description": "Sudan \u2019s paramilitary forces killed at least 10 people on Thursday in a drone attack that hit a hospital in the south-central part of the country, said a medical group. Doctors Without Borders, also known as MSF, said the Sudanese paramilitary Rapid Support F\u2026",
+          "published_at": "2026-04-03T20:46:02Z",
+          "source": "Japan Today",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.aljazeera.com/news/2026/3/13/drone-attack-on-market-in-sudan-kills-11-as-air-war-civilian-toll-mounts",
+          "title": "Drone attack on market in Sudan kills 11, as air war civilian toll mounts",
+          "description": "More than 200 civilians killed in recent days as drone strikes tear through markets, schools and hospitals.",
+          "published_at": "2026-03-13T20:50:49Z",
+          "source": "Al Jazeera English",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.38. The articles report on different incidents of drone attacks in Sudan, with one targeting a hospital and the other targeting a market, and occurring on different dates."
+    },
+    {
+      "id": "sudan_conflict_003",
+      "description": "The two articles discuss different aspects of the situation in Sudan, with one focusing on the long-term prospects of the Sudanese revolution and the other reporting on a specific incident of a drone attack on a hospital.",
+      "topic_bucket": "sudan_conflict",
+      "articles": [
+        {
+          "url": "https://theconversation.com/the-sudanese-revolution-seven-years-on-undone-but-not-defeated-278245",
+          "title": "The Sudanese revolution seven years on: undone but not defeated",
+          "description": "We look at Sudan\u2019s long history of civilian-led resistance, and how community networks and youth movements are laying the foundations for re-establishing peaceful rule in a country marked by deep political fragmentation.",
+          "published_at": "2026-03-26T14:41:58Z",
+          "source": "The Conversation Africa",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.globalsecurity.org/military/library/news/2026/03/mil-260324-unnews02.htm",
+          "title": "Sudan: Hospital strike highlights surge in drone attacks on civilians",
+          "description": "The death toll from a horrific attack on a hospital in Sudan's Darfur has risen further, amid a \"sharp increase\" in drone attacks against civilians this year, UN agencies said on Tuesday.",
+          "published_at": "2026-03-25T10:57:11Z",
+          "source": "Globalsecurity.org",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.367. The two articles discuss different aspects of the situation in Sudan, with one focusing on the long-term prospects of the Sudanese revolution and the other reporting on a specific incident of a drone attack on a hospital."
+    },
+    {
+      "id": "sudan_conflict_004",
+      "description": "The two articles report on different events, one being a bombing incident at a hospital and the other describing a celebration of Eid al-Fitr in Khartoum.",
+      "topic_bucket": "sudan_conflict",
+      "articles": [
+        {
+          "url": "https://www.rt.com/africa/635889-dozens-killed-sudan-aldaein-hospital-bombing/",
+          "title": "Dozens killed in Sudan hospital bombing",
+          "description": "The WHO has reported that more than 60 people, including children and medical staff, were killed in a bomb attack on a Sudanese hospital Read Full Article at RT.com",
+          "published_at": "2026-03-23T09:25:07Z",
+          "source": "RT",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.thestar.com.my/news/world/2026/03/22/feature-life-returns-to-khartoum-homes-on-eid-al-fitr-despite-war-constraints",
+          "title": "Feature: Life returns to Khartoum homes on Eid Al-Fitr despite war constraints",
+          "description": "KHARTOUM, March 21 (Xinhua) -- As dawn broke in Al-Droshab, north of Sudan's capital Khartoum, residents gathered to celebrate Eid al-Fitr, the end of the holy month of Ramadan, with prayers and chants, a tentative return to normalcy after years of displaceme\u2026",
+          "published_at": "2026-03-21T16:13:00Z",
+          "source": "The Star Online",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.257. The two articles report on different events, one being a bombing incident at a hospital and the other describing a celebration of Eid al-Fitr in Khartoum."
+    },
+    {
+      "id": "sudan_conflict_005",
+      "description": "The two articles discuss different events in Sudan, with one focusing on the broader context of the Sudanese revolution and the other reporting on a specific incident of a hospital bombing.",
+      "topic_bucket": "sudan_conflict",
+      "articles": [
+        {
+          "url": "https://theconversation.com/the-sudanese-revolution-seven-years-on-undone-but-not-defeated-278245",
+          "title": "The Sudanese revolution seven years on: undone but not defeated",
+          "description": "We look at Sudan\u2019s long history of civilian-led resistance, and how community networks and youth movements are laying the foundations for re-establishing peaceful rule in a country marked by deep political fragmentation.",
+          "published_at": "2026-03-26T14:41:58Z",
+          "source": "The Conversation Africa",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.rt.com/africa/635889-dozens-killed-sudan-aldaein-hospital-bombing/",
+          "title": "Dozens killed in Sudan hospital bombing",
+          "description": "The WHO has reported that more than 60 people, including children and medical staff, were killed in a bomb attack on a Sudanese hospital Read Full Article at RT.com",
+          "published_at": "2026-03-23T09:25:07Z",
+          "source": "RT",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.303. The two articles discuss different events in Sudan, with one focusing on the broader context of the Sudanese revolution and the other reporting on a specific incident of a hospital bombing."
+    },
+    {
+      "id": "sudan_conflict_006",
+      "description": "The two articles report on different events, one being a hospital strike in Darfur and the other being a celebration of Eid al-Fitr in Khartoum, indicating distinct incidents and locations within Sudan.",
+      "topic_bucket": "sudan_conflict",
+      "articles": [
+        {
+          "url": "https://www.globalsecurity.org/military/library/news/2026/03/mil-260324-unnews02.htm",
+          "title": "Sudan: Hospital strike highlights surge in drone attacks on civilians",
+          "description": "The death toll from a horrific attack on a hospital in Sudan's Darfur has risen further, amid a \"sharp increase\" in drone attacks against civilians this year, UN agencies said on Tuesday.",
+          "published_at": "2026-03-25T10:57:11Z",
+          "source": "Globalsecurity.org",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.thestar.com.my/news/world/2026/03/22/feature-life-returns-to-khartoum-homes-on-eid-al-fitr-despite-war-constraints",
+          "title": "Feature: Life returns to Khartoum homes on Eid Al-Fitr despite war constraints",
+          "description": "KHARTOUM, March 21 (Xinhua) -- As dawn broke in Al-Droshab, north of Sudan's capital Khartoum, residents gathered to celebrate Eid al-Fitr, the end of the holy month of Ramadan, with prayers and chants, a tentative return to normalcy after years of displaceme\u2026",
+          "published_at": "2026-03-21T16:13:00Z",
+          "source": "The Star Online",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.239. The two articles report on different events, one being a hospital strike in Darfur and the other being a celebration of Eid al-Fitr in Khartoum, indicating distinct incidents and locations within Sudan."
+    },
+    {
+      "id": "sudan_conflict_007",
+      "description": "The articles report on different events, one being a specific hospital bombing incident in Sudan and the other being a designation of the Sudanese Muslim Brotherhood as a terrorist organization by the Trump administration.",
+      "topic_bucket": "sudan_conflict",
+      "articles": [
+        {
+          "url": "https://www.rt.com/africa/635889-dozens-killed-sudan-aldaein-hospital-bombing/",
+          "title": "Dozens killed in Sudan hospital bombing",
+          "description": "The WHO has reported that more than 60 people, including children and medical staff, were killed in a bomb attack on a Sudanese hospital Read Full Article at RT.com",
+          "published_at": "2026-03-23T09:25:07Z",
+          "source": "RT",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.foxnews.com/world/iran-regime-cited-trump-admin-set-designate-sudans-muslim-brotherhood-terror-group",
+          "title": "Iran regime cited as Trump admin set to designate Sudan\u2019s Muslim Brotherhood a terror group",
+          "description": "Trump administration designates Sudanese Muslim Brotherhood as terrorist organization amid Sudan's civil war that has seen thousands of deaths and millions of displacements.",
+          "published_at": "2026-03-10T18:11:10Z",
+          "source": "Fox News",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.226. The articles report on different events, one being a specific hospital bombing incident in Sudan and the other being a designation of the Sudanese Muslim Brotherhood as a terrorist organization by the Trump administration."
+    },
+    {
+      "id": "sudan_conflict_008",
+      "description": "The articles report on different events, one being a specific drone attack on a hospital and the other being a designation of the Sudanese Muslim Brotherhood as a terrorist organization.",
+      "topic_bucket": "sudan_conflict",
+      "articles": [
+        {
+          "url": "https://japantoday.com/category/world/paramilitary-forces-in-sudan-kill-at-least-10-people-in-hospital-drone-attack-medical-group-says",
+          "title": "Paramilitary forces in Sudan kill at least 10 people in hospital drone attack, medical group says",
+          "description": "Sudan \u2019s paramilitary forces killed at least 10 people on Thursday in a drone attack that hit a hospital in the south-central part of the country, said a medical group. Doctors Without Borders, also known as MSF, said the Sudanese paramilitary Rapid Support F\u2026",
+          "published_at": "2026-04-03T20:46:02Z",
+          "source": "Japan Today",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.foxnews.com/world/iran-regime-cited-trump-admin-set-designate-sudans-muslim-brotherhood-terror-group",
+          "title": "Iran regime cited as Trump admin set to designate Sudan\u2019s Muslim Brotherhood a terror group",
+          "description": "Trump administration designates Sudanese Muslim Brotherhood as terrorist organization amid Sudan's civil war that has seen thousands of deaths and millions of displacements.",
+          "published_at": "2026-03-10T18:11:10Z",
+          "source": "Fox News",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.203. The articles report on different events, one being a specific drone attack on a hospital and the other being a designation of the Sudanese Muslim Brotherhood as a terrorist organization."
+    },
+    {
+      "id": "sudan_conflict_009",
+      "description": "The two articles discuss different aspects of life in Sudan, with one focusing on the country's history of civilian-led resistance and the other describing a specific celebration of Eid al-Fitr in Khartoum.",
+      "topic_bucket": "sudan_conflict",
+      "articles": [
+        {
+          "url": "https://theconversation.com/the-sudanese-revolution-seven-years-on-undone-but-not-defeated-278245",
+          "title": "The Sudanese revolution seven years on: undone but not defeated",
+          "description": "We look at Sudan\u2019s long history of civilian-led resistance, and how community networks and youth movements are laying the foundations for re-establishing peaceful rule in a country marked by deep political fragmentation.",
+          "published_at": "2026-03-26T14:41:58Z",
+          "source": "The Conversation Africa",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.thestar.com.my/news/world/2026/03/22/feature-life-returns-to-khartoum-homes-on-eid-al-fitr-despite-war-constraints",
+          "title": "Feature: Life returns to Khartoum homes on Eid Al-Fitr despite war constraints",
+          "description": "KHARTOUM, March 21 (Xinhua) -- As dawn broke in Al-Droshab, north of Sudan's capital Khartoum, residents gathered to celebrate Eid al-Fitr, the end of the holy month of Ramadan, with prayers and chants, a tentative return to normalcy after years of displaceme\u2026",
+          "published_at": "2026-03-21T16:13:00Z",
+          "source": "The Star Online",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.25. The two articles discuss different aspects of life in Sudan, with one focusing on the country's history of civilian-led resistance and the other describing a specific celebration of Eid al-Fitr in Khartoum."
+    },
+    {
+      "id": "sudan_conflict_010",
+      "description": "The articles discuss different aspects of the situation in Sudan, with one focusing on the long history of civilian-led resistance and the other highlighting the current humanitarian crisis and drone strikes in the Blue Nile state.",
+      "topic_bucket": "sudan_conflict",
+      "articles": [
+        {
+          "url": "https://theconversation.com/the-sudanese-revolution-seven-years-on-undone-but-not-defeated-278245",
+          "title": "The Sudanese revolution seven years on: undone but not defeated",
+          "description": "We look at Sudan\u2019s long history of civilian-led resistance, and how community networks and youth movements are laying the foundations for re-establishing peaceful rule in a country marked by deep political fragmentation.",
+          "published_at": "2026-03-26T14:41:58Z",
+          "source": "The Conversation Africa",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://news.sky.com/story/sudan-shows-how-the-nature-of-war-is-changing-and-its-a-death-trap-for-civilians-13518316",
+          "title": "The nature of war is changing - and it's a death trap for civilians",
+          "description": "A drone is circling in the skies above Zaki Ramadan when he takes my call. As a humanitarian worker in Sudan's southeastern Blue Nile state, he is helplessly watching aid dwindle and civilians be killed by the meteoric rise in drone strikes.",
+          "published_at": "2026-03-11T17:35:00Z",
+          "source": "Sky.com",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.104. The articles discuss different aspects of the situation in Sudan, with one focusing on the long history of civilian-led resistance and the other highlighting the current humanitarian crisis and drone strikes in the Blue Nile state."
+    },
+    {
+      "id": "sudan_conflict_011",
+      "description": "The two articles report on distinct events, one discussing the withdrawal from a port city and the other describing a bombing attack on a hospital in a different location.",
+      "topic_bucket": "sudan_conflict",
+      "articles": [
+        {
+          "url": "https://africasacountry.com/2026/03/after-the-subcontracting-state/",
+          "title": "After the subcontracting state",
+          "description": "The withdrawal from the port city of Berbera by regional powers distracted by war, marks the end of an external system that managed the Horn of Africa\u2014and the beginning of a deeper structural collapse.",
+          "published_at": "2026-03-26T11:52:22Z",
+          "source": "Africasacountry.com",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.rt.com/africa/635889-dozens-killed-sudan-aldaein-hospital-bombing/",
+          "title": "Dozens killed in Sudan hospital bombing",
+          "description": "The WHO has reported that more than 60 people, including children and medical staff, were killed in a bomb attack on a Sudanese hospital Read Full Article at RT.com",
+          "published_at": "2026-03-23T09:25:07Z",
+          "source": "RT",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.051. The two articles report on distinct events, one discussing the withdrawal from a port city and the other describing a bombing attack on a hospital in a different location."
+    },
+    {
+      "id": "sudan_conflict_012",
+      "description": "The two articles report on different incidents, one describing a celebration of Eid al-Fitr in Khartoum and the other reporting on a drone attack on a market in Sudan, indicating distinct events.",
+      "topic_bucket": "sudan_conflict",
+      "articles": [
+        {
+          "url": "https://www.thestar.com.my/news/world/2026/03/22/feature-life-returns-to-khartoum-homes-on-eid-al-fitr-despite-war-constraints",
+          "title": "Feature: Life returns to Khartoum homes on Eid Al-Fitr despite war constraints",
+          "description": "KHARTOUM, March 21 (Xinhua) -- As dawn broke in Al-Droshab, north of Sudan's capital Khartoum, residents gathered to celebrate Eid al-Fitr, the end of the holy month of Ramadan, with prayers and chants, a tentative return to normalcy after years of displaceme\u2026",
+          "published_at": "2026-03-21T16:13:00Z",
+          "source": "The Star Online",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.aljazeera.com/news/2026/3/13/drone-attack-on-market-in-sudan-kills-11-as-air-war-civilian-toll-mounts",
+          "title": "Drone attack on market in Sudan kills 11, as air war civilian toll mounts",
+          "description": "More than 200 civilians killed in recent days as drone strikes tear through markets, schools and hospitals.",
+          "published_at": "2026-03-13T20:50:49Z",
+          "source": "Al Jazeera English",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.155. The two articles report on different incidents, one describing a celebration of Eid al-Fitr in Khartoum and the other reporting on a drone attack on a market in Sudan, indicating distinct events."
+    },
+    {
+      "id": "sudan_conflict_013",
+      "description": "The articles discuss different locations and events, with Article 1 focusing on the withdrawal from the port city of Berbera and Article 2 discussing the impact of drone strikes on civilians in Sudan's Blue Nile state.",
+      "topic_bucket": "sudan_conflict",
+      "articles": [
+        {
+          "url": "https://africasacountry.com/2026/03/after-the-subcontracting-state/",
+          "title": "After the subcontracting state",
+          "description": "The withdrawal from the port city of Berbera by regional powers distracted by war, marks the end of an external system that managed the Horn of Africa\u2014and the beginning of a deeper structural collapse.",
+          "published_at": "2026-03-26T11:52:22Z",
+          "source": "Africasacountry.com",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://news.sky.com/story/sudan-shows-how-the-nature-of-war-is-changing-and-its-a-death-trap-for-civilians-13518316",
+          "title": "The nature of war is changing - and it's a death trap for civilians",
+          "description": "A drone is circling in the skies above Zaki Ramadan when he takes my call. As a humanitarian worker in Sudan's southeastern Blue Nile state, he is helplessly watching aid dwindle and civilians be killed by the meteoric rise in drone strikes.",
+          "published_at": "2026-03-11T17:35:00Z",
+          "source": "Sky.com",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.075. The articles discuss different locations and events, with Article 1 focusing on the withdrawal from the port city of Berbera and Article 2 discussing the impact of drone strikes on civilians in Sudan's Blue Nile state."
+    },
+    {
+      "id": "sudan_conflict_014",
+      "description": "The articles appear to be discussing different events and locations, with Article 1 focusing on the withdrawal from the port city of Berbera and Article 2 reporting on a drone attack in Sudan.",
+      "topic_bucket": "sudan_conflict",
+      "articles": [
+        {
+          "url": "https://africasacountry.com/2026/03/after-the-subcontracting-state/",
+          "title": "After the subcontracting state",
+          "description": "The withdrawal from the port city of Berbera by regional powers distracted by war, marks the end of an external system that managed the Horn of Africa\u2014and the beginning of a deeper structural collapse.",
+          "published_at": "2026-03-26T11:52:22Z",
+          "source": "Africasacountry.com",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.aljazeera.com/news/2026/3/13/drone-attack-on-market-in-sudan-kills-11-as-air-war-civilian-toll-mounts",
+          "title": "Drone attack on market in Sudan kills 11, as air war civilian toll mounts",
+          "description": "More than 200 civilians killed in recent days as drone strikes tear through markets, schools and hospitals.",
+          "published_at": "2026-03-13T20:50:49Z",
+          "source": "Al Jazeera English",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.071. The articles appear to be discussing different events and locations, with Article 1 focusing on the withdrawal from the port city of Berbera and Article 2 reporting on a drone attack in Sudan."
+    },
+    {
+      "id": "taiwan_strait_000",
+      "description": "Both articles appear to be discussing the same conflict, the Iran war, and its current state, with Article 1 focusing on the global implications of America's actions and Article 2 delving into the shift in momentum in favor of Iran.",
+      "topic_bucket": "taiwan_strait",
+      "articles": [
+        {
+          "url": "https://www.theatlantic.com/international/2026/03/trump-us-power-iran/686567/",
+          "title": "America Is Now a Rogue Superpower",
+          "description": "Washington\u2019s conduct in the Iran war is accelerating global chaos and deepening America\u2019s dangerous isolation.",
+          "published_at": "2026-03-30T11:00:00Z",
+          "source": "The Atlantic",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://intelnews.org/2026/03/30/01-3433/",
+          "title": "The Real War Is About To Begin: Iran Enters Full-Scale Insurgency",
+          "description": "The U.S. and Israel are no longer dictating the tempo of this war\u2014they are reacting to it. Their opening gambit failed to produce the desired results. Now a wounded but resilient Iranian regime has seized the initiative, and no external actor\u2014certainly not NA\u2026",
+          "published_at": "2026-03-30T04:05:00Z",
+          "source": "Intelnews.org",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0,
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: SAME. score=0.56. Both articles appear to be discussing the same conflict, the Iran war, and its current state, with Article 1 focusing on the global implications of America's actions and Article 2 delving into the shift in momentum in favor of Iran."
+    },
+    {
+      "id": "taiwan_strait_001",
+      "description": "The articles are reporting on the same conflict, the Iran war, and are dated the same day, indicating they are discussing the same ongoing event.",
+      "topic_bucket": "taiwan_strait",
+      "articles": [
+        {
+          "url": "https://intelnews.org/2026/03/30/01-3433/",
+          "title": "The Real War Is About To Begin: Iran Enters Full-Scale Insurgency",
+          "description": "The U.S. and Israel are no longer dictating the tempo of this war\u2014they are reacting to it. Their opening gambit failed to produce the desired results. Now a wounded but resilient Iranian regime has seized the initiative, and no external actor\u2014certainly not NA\u2026",
+          "published_at": "2026-03-30T04:05:00Z",
+          "source": "Intelnews.org",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.tradingview.com/news/invezz:ddce851e3094b:0-after-hormuz-is-taiwan-the-next-economic-shock-no-one-is-ready-for/",
+          "title": "After Hormuz, Is Taiwan The Next Economic Shock No One Is Ready For?",
+          "description": "The Iran war has been a brutal education in what happens when a geopolitical risk that everyone acknowledged but nobody fully priced suddenly materialises.Global GDP growth forecasts for 2026 have already been revised down by 0.7 percentage points, while Bren\u2026",
+          "published_at": "2026-03-30T00:00:00Z",
+          "source": "Tradingview.com",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0,
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: SAME. score=0.444. The articles are reporting on the same conflict, the Iran war, and are dated the same day, indicating they are discussing the same ongoing event."
+    },
+    {
+      "id": "taiwan_strait_002",
+      "description": "The articles describe the same incident of an Indian tanker carrying liquefied petroleum gas passing through the Strait of Hormuz, with identical details in both descriptions.",
+      "topic_bucket": "taiwan_strait",
+      "articles": [
+        {
+          "url": "https://oilprice.com/Energy/Energy-General/The-Critical-Commodities-Caught-in-the-Hormuz-Blockade.html",
+          "title": "The Critical Commodities Caught in the Hormuz Blockade",
+          "description": "When an Indian tanker carrying liquefied petroleum gas (LPG) passed through the Strait of Hormuz recently, its progress was followed by excited live TV news coverage. \u201cIts position was received eight minutes ago. It\u2019s currently at 12.5 knots and is moving at \u2026",
+          "published_at": "2026-04-02T14:00:00Z",
+          "source": "OilPrice.com",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.globalsecurity.org/wmd/library/news/iran/2026/04/iran-260401-rferl02.htm",
+          "title": "How Iran's Hormuz Blockade Chokes Global Trade Beyond Oil And Gas",
+          "description": "When an Indian tanker carrying liquefied petroleum gas (LPG) passed through the Strait of Hormuz recently, its progress was followed by excited live TV news coverage.",
+          "published_at": "2026-04-02T05:33:11Z",
+          "source": "Globalsecurity.org",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0,
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: SAME. score=0.874. The articles describe the same incident of an Indian tanker carrying liquefied petroleum gas passing through the Strait of Hormuz, with identical details in both descriptions."
+    },
+    {
+      "id": "taiwan_strait_003",
+      "description": "Both articles are discussing the same Iran war and its implications, with Article 1 focusing on America's role and global consequences, and Article 2 exploring the economic effects of the war.",
+      "topic_bucket": "taiwan_strait",
+      "articles": [
+        {
+          "url": "https://www.theatlantic.com/international/2026/03/trump-us-power-iran/686567/",
+          "title": "America Is Now a Rogue Superpower",
+          "description": "Washington\u2019s conduct in the Iran war is accelerating global chaos and deepening America\u2019s dangerous isolation.",
+          "published_at": "2026-03-30T11:00:00Z",
+          "source": "The Atlantic",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.salon.com/2026/03/30/why-the-iran-war-could-make-everything-more-expensive/",
+          "title": "Why the Iran war could make everything, not just oil, more expensive",
+          "description": "It's not just at the pump: supply shocks are being felt everywhere from doctor visits to birthday parties",
+          "published_at": "2026-03-30T10:30:54Z",
+          "source": "Salon",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0,
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: SAME. score=0.428. Both articles are discussing the same Iran war and its implications, with Article 1 focusing on America's role and global consequences, and Article 2 exploring the economic effects of the war."
+    },
+    {
+      "id": "taiwan_strait_004",
+      "description": "Both articles discuss the aftermath and effects of a US-Israel air campaign against Iran, specifically mentioning the closure of the Strait of Hormuz and its impact on global trade and energy prices.",
+      "topic_bucket": "taiwan_strait",
+      "articles": [
+        {
+          "url": "https://oilprice.com/Energy/Energy-General/What-Beijing-Is-Learning-From-Operation-Epic-Fury.html",
+          "title": "What Beijing Is Learning From Operation Epic Fury",
+          "description": "Five weeks into the US-Israel air campaign against Iran, the world is tallying the economic wreckage: Brent crude at $114 a barrel, the Strait of Hormuz effectively closed to commercial traffic, and the International Energy Agency calling it the largest suppl\u2026",
+          "published_at": "2026-04-04T23:00:00Z",
+          "source": "OilPrice.com",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.globalsecurity.org/wmd/library/news/iran/2026/04/iran-260401-rferl02.htm",
+          "title": "How Iran's Hormuz Blockade Chokes Global Trade Beyond Oil And Gas",
+          "description": "When an Indian tanker carrying liquefied petroleum gas (LPG) passed through the Strait of Hormuz recently, its progress was followed by excited live TV news coverage.",
+          "published_at": "2026-04-02T05:33:11Z",
+          "source": "Globalsecurity.org",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0,
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: SAME. score=0.409. Both articles discuss the aftermath and effects of a US-Israel air campaign against Iran, specifically mentioning the closure of the Strait of Hormuz and its impact on global trade and energy prices."
+    },
+    {
+      "id": "taiwan_strait_005",
+      "description": "The articles discuss the broader impact of a potential Iran conflict on global trade, but they do not appear to be reporting on the same specific incident or event.",
+      "topic_bucket": "taiwan_strait",
+      "articles": [
+        {
+          "url": "https://www.globalsecurity.org/wmd/library/news/iran/2026/04/iran-260401-rferl02.htm",
+          "title": "How Iran's Hormuz Blockade Chokes Global Trade Beyond Oil And Gas",
+          "description": "When an Indian tanker carrying liquefied petroleum gas (LPG) passed through the Strait of Hormuz recently, its progress was followed by excited live TV news coverage.",
+          "published_at": "2026-04-02T05:33:11Z",
+          "source": "Globalsecurity.org",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.salon.com/2026/03/30/why-the-iran-war-could-make-everything-more-expensive/",
+          "title": "Why the Iran war could make everything, not just oil, more expensive",
+          "description": "It's not just at the pump: supply shocks are being felt everywhere from doctor visits to birthday parties",
+          "published_at": "2026-03-30T10:30:54Z",
+          "source": "Salon",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.408. The articles discuss the broader impact of a potential Iran conflict on global trade, but they do not appear to be reporting on the same specific incident or event."
+    },
+    {
+      "id": "taiwan_strait_006",
+      "description": "The two articles are reporting on the same event, which is the upcoming meeting between Chinese President Xi Jinping and Kuomintang (KMT) Chairperson Cheng Li-wun, with both articles discussing the potential objectives and implications of this meeting.",
+      "topic_bucket": "taiwan_strait",
+      "articles": [
+        {
+          "url": "https://www.globalsecurity.org/wmd/library/news/taiwan/2026/taiwan-260402-cna03.htm",
+          "title": "Xi-Cheng meeting tied to efforts to block Taiwan arms bill: MAC",
+          "description": "Taiwan's Mainland Affairs Council (MAC) said Thursday that one of Chinese President Xi Jinping's (\u7fd2\u8fd1\u5e73) objectives in meeting Kuomintang (KMT) Chairperson Cheng Li-wun (\u912d\u9e97\u6587) next week is to \"cut off Taiwan's military procurement from the United States.\"",
+          "published_at": "2026-04-03T07:34:21Z",
+          "source": "Globalsecurity.org",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.globalsecurity.org/wmd/library/news/taiwan/2026/taiwan-260401-cna01.htm",
+          "title": "KMT leader eyes peace across Taiwan Strait with China visit",
+          "description": "The leader of Taiwan's main opposition party on Wednesday vowed to \"lay a foundation for peace\" across the Taiwan Strait and regional stability on her visit to China next week, during which she is expected to meet with Chinese President Xi Jinping (\u7fd2\u8fd1\u5e73).",
+          "published_at": "2026-04-02T06:44:29Z",
+          "source": "Globalsecurity.org",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0,
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: SAME. score=0.474. The two articles are reporting on the same event, which is the upcoming meeting between Chinese President Xi Jinping and Kuomintang (KMT) Chairperson Cheng Li-wun, with both articles discussing the potential objectives and implications of this meeting."
+    },
+    {
+      "id": "taiwan_strait_007",
+      "description": "Both articles are discussing the economic implications of the Iran war, suggesting they are reporting on the same specific real-world event.",
+      "topic_bucket": "taiwan_strait",
+      "articles": [
+        {
+          "url": "https://www.salon.com/2026/03/30/why-the-iran-war-could-make-everything-more-expensive/",
+          "title": "Why the Iran war could make everything, not just oil, more expensive",
+          "description": "It's not just at the pump: supply shocks are being felt everywhere from doctor visits to birthday parties",
+          "published_at": "2026-03-30T10:30:54Z",
+          "source": "Salon",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.tradingview.com/news/invezz:ddce851e3094b:0-after-hormuz-is-taiwan-the-next-economic-shock-no-one-is-ready-for/",
+          "title": "After Hormuz, Is Taiwan The Next Economic Shock No One Is Ready For?",
+          "description": "The Iran war has been a brutal education in what happens when a geopolitical risk that everyone acknowledged but nobody fully priced suddenly materialises.Global GDP growth forecasts for 2026 have already been revised down by 0.7 percentage points, while Bren\u2026",
+          "published_at": "2026-03-30T00:00:00Z",
+          "source": "Tradingview.com",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0,
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: SAME. score=0.495. Both articles are discussing the economic implications of the Iran war, suggesting they are reporting on the same specific real-world event."
+    },
+    {
+      "id": "taiwan_strait_008",
+      "description": "The articles discuss the same broader conflict (US-Iran) but focus on different aspects and implications, with Article 1 mentioning its economic impact and Article 2 discussing its geopolitical implications for China.",
+      "topic_bucket": "taiwan_strait",
+      "articles": [
+        {
+          "url": "https://www.tradingview.com/news/invezz:ddce851e3094b:0-after-hormuz-is-taiwan-the-next-economic-shock-no-one-is-ready-for/",
+          "title": "After Hormuz, Is Taiwan The Next Economic Shock No One Is Ready For?",
+          "description": "The Iran war has been a brutal education in what happens when a geopolitical risk that everyone acknowledged but nobody fully priced suddenly materialises.Global GDP growth forecasts for 2026 have already been revised down by 0.7 percentage points, while Bren\u2026",
+          "published_at": "2026-03-30T00:00:00Z",
+          "source": "Tradingview.com",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://abcnews.com/Politics/us-iran-conflict-hands-chinas-xi-upper-hand/story?id=131412478",
+          "title": "US-Iran conflict hands China's Xi upper hand ahead of Trump meeting: Experts",
+          "description": "Chinese President Xi has been watching the U.S.-Iran conflict from the sidelines, and experts told ABC News that's exactly where Beijing wants to be.",
+          "published_at": "2026-03-25T23:55:36Z",
+          "source": "Abcnews.com",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.251. The articles discuss the same broader conflict (US-Iran) but focus on different aspects and implications, with Article 1 mentioning its economic impact and Article 2 discussing its geopolitical implications for China."
+    },
+    {
+      "id": "taiwan_strait_009",
+      "description": "The articles appear to be discussing the same general topic of a potential US conflict with Iran, but they do not seem to be reporting on the same specific incident or event.",
+      "topic_bucket": "taiwan_strait",
+      "articles": [
+        {
+          "url": "https://sinocism.com/p/trumps-tiger-riding-predicament-sinification",
+          "title": "Trump's Tiger-Riding Predicament | Sinification: March 2026",
+          "description": "More than a month on, early scepticism about US regime-change prospects in Iran has hardened into a feeling somewhere between consternation and schadenfreude, with most analysts now framing the situation as a quagmire. The dominant motif is Trump\u2019s \u201ctiger-rid\u2026",
+          "published_at": "2026-04-06T09:02:20Z",
+          "source": "Sinocism.com",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://freerepublic.com/focus/f-news/4373685/posts",
+          "title": "Iran War Prognosis",
+          "description": "We had 550,000 troops and over 4,000 combat aircraft based right in South Vietnam in 1968. Ten minutes from takeoff to mission. 2 million Vietnamese and 58,000 Americans died. AND WE LOST THE WAR.So anybody who even suggests that invading Iran can work, is re\u2026",
+          "published_at": "2026-04-05T04:59:34Z",
+          "source": "Freerepublic.com",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.227. The articles appear to be discussing the same general topic of a potential US conflict with Iran, but they do not seem to be reporting on the same specific incident or event."
+    },
+    {
+      "id": "taiwan_strait_010",
+      "description": "The two articles discuss different topics, with the first focusing on a specific incident of a Chinese aircraft being intercepted, and the second discussing a broader trend of regional military build-up and tensions.",
+      "topic_bucket": "taiwan_strait",
+      "articles": [
+        {
+          "url": "https://theaviationist.com/2026/03/30/china-y-9fq-intercepted-first-time-east-china-sea/",
+          "title": "China\u2019s Y-9FQ Next Gen ASW Aircraft Intercepted for the First Time Over East China Sea",
+          "description": "The Y-9FQ \u2018High New 15\u2019 made its debut at the Sep. 3, 2025, Victory Day parade in Beijing, and has now been intercepted for the first time by Japan. A Chinese People\u2019s Liberation Army Naval Air Force (PLANAF) Y-9FQ maritime patrol and anti-submarine warfare a\u2026",
+          "published_at": "2026-03-30T19:43:39Z",
+          "source": "Theaviationist.com",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.naturalnews.com/2026-03-26-japan-south-korea-taiwan-expand-missile-capabilities.html",
+          "title": "Japan, South Korea and Taiwan Expand Missile Capabilities Amid Regional Tensions",
+          "description": "Introduction The prospect of a major conflict in East Asia is no longer confined to strategic forecasts, as military planning across the region increasingly reflects scenarios involving China and North Korea. In response, countries closely aligned with the Un\u2026",
+          "published_at": "2026-03-26T06:00:00Z",
+          "source": "Naturalnews.com",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.221. The two articles discuss different topics, with the first focusing on a specific incident of a Chinese aircraft being intercepted, and the second discussing a broader trend of regional military build-up and tensions."
+    },
+    {
+      "id": "taiwan_strait_011",
+      "description": "The two articles are reporting on different events and regions, with Article 1 discussing a potential war against Iran and Article 2 discussing regional tensions and missile capabilities in East Asia.",
+      "topic_bucket": "taiwan_strait",
+      "articles": [
+        {
+          "url": "https://www.globalresearch.ca/undeclared-goals-war-against-iran/5919995",
+          "title": "The Undeclared Goals of War Against Iran",
+          "description": "We need to expand our attention historically and globally to include the timing of this war within the graduated imperial global hegemonic scheme since WWI.\nThe post The Undeclared Goals of War Against Iran appeared first on Global Research.",
+          "published_at": "2026-03-26T10:42:04Z",
+          "source": "Globalresearch.ca",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.naturalnews.com/2026-03-26-japan-south-korea-taiwan-expand-missile-capabilities.html",
+          "title": "Japan, South Korea and Taiwan Expand Missile Capabilities Amid Regional Tensions",
+          "description": "Introduction The prospect of a major conflict in East Asia is no longer confined to strategic forecasts, as military planning across the region increasingly reflects scenarios involving China and North Korea. In response, countries closely aligned with the Un\u2026",
+          "published_at": "2026-03-26T06:00:00Z",
+          "source": "Naturalnews.com",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.285. The two articles are reporting on different events and regions, with Article 1 discussing a potential war against Iran and Article 2 discussing regional tensions and missile capabilities in East Asia."
+    },
+    {
+      "id": "taiwan_strait_012",
+      "description": "The two articles report on different incidents involving China's military, with one discussing the repositioning of military assets and the other describing the interception of a specific Chinese aircraft, the Y-9FQ, over the East China Sea.",
+      "topic_bucket": "taiwan_strait",
+      "articles": [
+        {
+          "url": "https://freerepublic.com/focus/f-bloggers/4373322/posts",
+          "title": "Bombshell report claims China is transforming old jets for new war",
+          "description": "Multiple sources have claimed that the Chinese government is suspiciously repositioning its military assets, signaling possible future activity around Taiwan. The reports come from the Mitchell Institute for Aerospace Studies, which tracks Chinese military mi\u2026",
+          "published_at": "2026-04-02T15:06:21Z",
+          "source": "Freerepublic.com",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://theaviationist.com/2026/03/30/china-y-9fq-intercepted-first-time-east-china-sea/",
+          "title": "China\u2019s Y-9FQ Next Gen ASW Aircraft Intercepted for the First Time Over East China Sea",
+          "description": "The Y-9FQ \u2018High New 15\u2019 made its debut at the Sep. 3, 2025, Victory Day parade in Beijing, and has now been intercepted for the first time by Japan. A Chinese People\u2019s Liberation Army Naval Air Force (PLANAF) Y-9FQ maritime patrol and anti-submarine warfare a\u2026",
+          "published_at": "2026-03-30T19:43:39Z",
+          "source": "Theaviationist.com",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.369. The two articles report on different incidents involving China's military, with one discussing the repositioning of military assets and the other describing the interception of a specific Chinese aircraft, the Y-9FQ, over the East China Sea."
+    },
+    {
+      "id": "taiwan_strait_013",
+      "description": "The articles discuss the US-Iran conflict but appear to focus on different aspects, with Article 1 reporting on a specific diplomatic effort and Article 2 providing a broader analysis of the conflict's implications.",
+      "topic_bucket": "taiwan_strait",
+      "articles": [
+        {
+          "url": "https://www.aljazeera.com/news/2026/3/31/will-china-join-pakistan-led-efforts-to-mediate-us-iran-peace",
+          "title": "Will China join Pakistan-led efforts to mediate US-Iran peace?",
+          "description": "Pakistan's Deputy PM Ishaq Dar visits China after Islamabad talks to broker negotiations between the US and Iran.",
+          "published_at": "2026-03-31T13:32:24Z",
+          "source": "Al Jazeera English",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.theatlantic.com/international/2026/03/trump-us-power-iran/686567/",
+          "title": "America Is Now a Rogue Superpower",
+          "description": "Washington\u2019s conduct in the Iran war is accelerating global chaos and deepening America\u2019s dangerous isolation.",
+          "published_at": "2026-03-30T11:00:00Z",
+          "source": "The Atlantic",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.349. The articles discuss the US-Iran conflict but appear to focus on different aspects, with Article 1 reporting on a specific diplomatic effort and Article 2 providing a broader analysis of the conflict's implications."
+    },
+    {
+      "id": "taiwan_strait_014",
+      "description": "The two articles discuss different geopolitical events, with Article 1 focusing on U.S.-South Korea relations in the context of the Iran war, and Article 2 reporting on China's potential military activities around Taiwan.",
+      "topic_bucket": "taiwan_strait",
+      "articles": [
+        {
+          "url": "http://foreignpolicy.com/2026/04/02/south-korea-iran-trump-war-james-laney-thaad/",
+          "title": "U.S.-South Korea Relations Are at Breaking Point",
+          "description": "he Iran war has confirmed how little Washington cares for its ally\u2019s welfare.",
+          "published_at": "2026-04-02T18:36:56Z",
+          "source": "Foreign Policy",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://freerepublic.com/focus/f-bloggers/4373322/posts",
+          "title": "Bombshell report claims China is transforming old jets for new war",
+          "description": "Multiple sources have claimed that the Chinese government is suspiciously repositioning its military assets, signaling possible future activity around Taiwan. The reports come from the Mitchell Institute for Aerospace Studies, which tracks Chinese military mi\u2026",
+          "published_at": "2026-04-02T15:06:21Z",
+          "source": "Freerepublic.com",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.229. The two articles discuss different geopolitical events, with Article 1 focusing on U.S.-South Korea relations in the context of the Iran war, and Article 2 reporting on China's potential military activities around Taiwan."
+    },
+    {
+      "id": "taiwan_strait_015",
+      "description": "The two articles appear to be discussing completely unrelated topics, with Article 1 focusing on a military incident involving Iran and the US, while Article 2 is about stock market updates and investment advice.",
+      "topic_bucket": "taiwan_strait",
+      "articles": [
+        {
+          "url": "https://freerepublic.com/focus/f-chat/4372599/posts",
+          "title": "Iran Studied the Wrong War Game, America's Triple-Layer Kill Chain Just Proved It - 120 Ships Destroyed, One Strait Still Closed. Until the A-10 Changed the Math at Hormuz.",
+          "description": "There is a particular species of institutional error that only becomes visible in hindsight, and only then at considerable cost. It is not the error of building the wrong weapon. It is the error of discarding the right one because it does not fit the threat y\u2026",
+          "published_at": "2026-03-28T15:40:39Z",
+          "source": "Freerepublic.com",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.thehindubusinessline.com/markets/stock-market-live-updates-march-27-2026/article70788281.ece",
+          "title": "Stock Market Live: Stock to buy today: Godawari Power & Ispat",
+          "description": "Sensex, Nifty live updates on 27 March 2026: The stock has been consolidating sideways since September last year. The 5 per cent rise on Wednesday gives an early sign of a bullish breakout. It also indicates that the broader uptrend could be resuming. Immedia\u2026",
+          "published_at": "2026-03-27T01:18:06Z",
+          "source": "BusinessLine",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.017. The two articles appear to be discussing completely unrelated topics, with Article 1 focusing on a military incident involving Iran and the US, while Article 2 is about stock market updates and investment advice."
+    },
+    {
+      "id": "taiwan_strait_016",
+      "description": "The articles discuss the same general conflict between the US and Iran, but Article 1 focuses on a specific incident involving an Indian tanker passing through the Strait of Hormuz, while Article 2 provides a broader analysis of the conflict's implications for China's position ahead of a meeting with Trump.",
+      "topic_bucket": "taiwan_strait",
+      "articles": [
+        {
+          "url": "https://www.globalsecurity.org/wmd/library/news/iran/2026/04/iran-260401-rferl02.htm",
+          "title": "How Iran's Hormuz Blockade Chokes Global Trade Beyond Oil And Gas",
+          "description": "When an Indian tanker carrying liquefied petroleum gas (LPG) passed through the Strait of Hormuz recently, its progress was followed by excited live TV news coverage.",
+          "published_at": "2026-04-02T05:33:11Z",
+          "source": "Globalsecurity.org",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://abcnews.com/Politics/us-iran-conflict-hands-chinas-xi-upper-hand/story?id=131412478",
+          "title": "US-Iran conflict hands China's Xi upper hand ahead of Trump meeting: Experts",
+          "description": "Chinese President Xi has been watching the U.S.-Iran conflict from the sidelines, and experts told ABC News that's exactly where Beijing wants to be.",
+          "published_at": "2026-03-25T23:55:36Z",
+          "source": "Abcnews.com",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.139. The articles discuss the same general conflict between the US and Iran, but Article 1 focuses on a specific incident involving an Indian tanker passing through the Strait of Hormuz, while Article 2 provides a broader analysis of the conflict's implications for China's position ahead of a meeting with Trump."
+    },
+    {
+      "id": "taiwan_strait_017",
+      "description": "The two articles are reporting on completely different topics, with Article 1 being a lighthearted blog post about the start of the week and Article 2 discussing geopolitical risks and economic forecasts.",
+      "topic_bucket": "taiwan_strait",
+      "articles": [
+        {
+          "url": "https://whyevolutionistrue.com/2026/04/01/wednesday-hili-dialogue-575/",
+          "title": "Wednesday: Hili dialogue",
+          "description": "Welcome to a Hump Day (\u201cHaftan\u0131n Ortas\u0131\u201d in Turkish): Wednesday, April 1. Don\u2019t worry, I\u2019m not going to fool you even though it\u2019s April Fools\u2019 Day. Instead, I\u2019ll show below the lovely April page from the fifteenth-century Tr\u00e8s Riches Heures du Duc de Berry, s\u2026",
+          "published_at": "2026-04-01T11:45:47Z",
+          "source": "Whyevolutionistrue.com",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.tradingview.com/news/invezz:ddce851e3094b:0-after-hormuz-is-taiwan-the-next-economic-shock-no-one-is-ready-for/",
+          "title": "After Hormuz, Is Taiwan The Next Economic Shock No One Is Ready For?",
+          "description": "The Iran war has been a brutal education in what happens when a geopolitical risk that everyone acknowledged but nobody fully priced suddenly materialises.Global GDP growth forecasts for 2026 have already been revised down by 0.7 percentage points, while Bren\u2026",
+          "published_at": "2026-03-30T00:00:00Z",
+          "source": "Tradingview.com",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.081. The two articles are reporting on completely different topics, with Article 1 being a lighthearted blog post about the start of the week and Article 2 discussing geopolitical risks and economic forecasts."
+    },
+    {
+      "id": "taiwan_strait_018",
+      "description": "The articles appear to be discussing the same Iran war, with Article 1 drawing a historical comparison to the Vietnam War and Article 2 discussing the economic implications of the conflict.",
+      "topic_bucket": "taiwan_strait",
+      "articles": [
+        {
+          "url": "https://freerepublic.com/focus/f-news/4373685/posts",
+          "title": "Iran War Prognosis",
+          "description": "We had 550,000 troops and over 4,000 combat aircraft based right in South Vietnam in 1968. Ten minutes from takeoff to mission. 2 million Vietnamese and 58,000 Americans died. AND WE LOST THE WAR.So anybody who even suggests that invading Iran can work, is re\u2026",
+          "published_at": "2026-04-05T04:59:34Z",
+          "source": "Freerepublic.com",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.tradingview.com/news/invezz:ddce851e3094b:0-after-hormuz-is-taiwan-the-next-economic-shock-no-one-is-ready-for/",
+          "title": "After Hormuz, Is Taiwan The Next Economic Shock No One Is Ready For?",
+          "description": "The Iran war has been a brutal education in what happens when a geopolitical risk that everyone acknowledged but nobody fully priced suddenly materialises.Global GDP growth forecasts for 2026 have already been revised down by 0.7 percentage points, while Bren\u2026",
+          "published_at": "2026-03-30T00:00:00Z",
+          "source": "Tradingview.com",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0,
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: SAME. score=0.113. The articles appear to be discussing the same Iran war, with Article 1 drawing a historical comparison to the Vietnam War and Article 2 discussing the economic implications of the conflict."
+    },
+    {
+      "id": "taiwan_strait_019",
+      "description": "The two articles appear to be discussing completely unrelated topics, with one focusing on U.S.-South Korea relations and the other on stock market updates.",
+      "topic_bucket": "taiwan_strait",
+      "articles": [
+        {
+          "url": "http://foreignpolicy.com/2026/04/02/south-korea-iran-trump-war-james-laney-thaad/",
+          "title": "U.S.-South Korea Relations Are at Breaking Point",
+          "description": "he Iran war has confirmed how little Washington cares for its ally\u2019s welfare.",
+          "published_at": "2026-04-02T18:36:56Z",
+          "source": "Foreign Policy",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.thehindubusinessline.com/markets/stock-market-live-updates-march-27-2026/article70788281.ece",
+          "title": "Stock Market Live: Stock to buy today: Godawari Power & Ispat",
+          "description": "Sensex, Nifty live updates on 27 March 2026: The stock has been consolidating sideways since September last year. The 5 per cent rise on Wednesday gives an early sign of a bullish breakout. It also indicates that the broader uptrend could be resuming. Immedia\u2026",
+          "published_at": "2026-03-27T01:18:06Z",
+          "source": "BusinessLine",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.012. The two articles appear to be discussing completely unrelated topics, with one focusing on U.S.-South Korea relations and the other on stock market updates."
+    },
+    {
+      "id": "kenya_politics_000",
+      "description": "The two articles are reporting on completely unrelated events, with one discussing Ugandan politics and the other discussing March Madness and celebrity alumni.",
+      "topic_bucket": "kenya_politics",
+      "articles": [
+        {
+          "url": "https://theconversation.com/bobi-wines-decision-to-flee-uganda-points-to-a-shrinking-landscape-for-opposition-politics-279475",
+          "title": "Bobi Wine\u2019s decision to flee Uganda points to a shrinking landscape for opposition politics",
+          "description": "Bobi Wine\u2019s escape from Uganda to the US reveals controlled tensions within both the Museveni regime and opposition.",
+          "published_at": "2026-04-01T14:06:21Z",
+          "source": "The Conversation Africa",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.usatoday.com/story/sports/ncaab/tourney/2026/03/17/march-madness-2026-schools-famous-alumni-bracket-ncaa-tournament-celebrity-grads-colleges/89074531007/",
+          "title": "Which March Madness school has most famous alumni? Check out our celebrity bracket",
+          "description": "There are many ways to fill out your March Madness bracket. Team color. Mascots. Maybe even basketball knowledge. Here's an alternative: famous alumni",
+          "published_at": "2026-03-17T10:03:03Z",
+          "source": "USA Today",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=-0.008. The two articles are reporting on completely unrelated events, with one discussing Ugandan politics and the other discussing March Madness and celebrity alumni."
+    },
+    {
+      "id": "kenya_politics_001",
+      "description": "The two articles are reporting on completely unrelated topics, one being about March Madness and famous alumni, and the other about the global politics of Kwame Nkrumah.",
+      "topic_bucket": "kenya_politics",
+      "articles": [
+        {
+          "url": "https://www.usatoday.com/story/sports/ncaab/tourney/2026/03/17/march-madness-2026-schools-famous-alumni-bracket-ncaa-tournament-celebrity-grads-colleges/89074531007/",
+          "title": "Which March Madness school has most famous alumni? Check out our celebrity bracket",
+          "description": "There are many ways to fill out your March Madness bracket. Team color. Mascots. Maybe even basketball knowledge. Here's an alternative: famous alumni",
+          "published_at": "2026-03-17T10:03:03Z",
+          "source": "USA Today",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.thenation.com/?post_type=article&p=588523",
+          "title": "The Global Politics of Kwame Nkrumah",
+          "description": "Adom Getachew\n\n\n\nThrough Nkrumah\u2019s story, Howard French charts the history of African decolonization and the American civil rights movement.\r\n\n\r\n\n\nThe post The Global Politics of Kwame Nkrumah appeared first on The Nation.",
+          "published_at": "2026-03-10T09:00:00Z",
+          "source": "Thenation.com",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.019. The two articles are reporting on completely unrelated topics, one being about March Madness and famous alumni, and the other about the global politics of Kwame Nkrumah."
+    },
+    {
+      "id": "kenya_politics_002",
+      "description": "The two articles are reporting on completely unrelated events, one discussing a movie and a space mission, and the other discussing a political situation in Uganda.",
+      "topic_bucket": "kenya_politics",
+      "articles": [
+        {
+          "url": "https://chinaarticles.substack.com/p/sign-of-the-times",
+          "title": "Sign Of The Times",
+          "description": "If you haven\u2019t seen the movie, Project Hail Mary, then you should\u2026 it is excellent. It is faithful to Andy Weir\u2019s 2021 book, hilarious and heart-warming, and with the Artemis II crew circling the moon, the film is just what we needed.",
+          "published_at": "2026-04-06T00:00:00Z",
+          "source": "Substack.com",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://theconversation.com/bobi-wines-decision-to-flee-uganda-points-to-a-shrinking-landscape-for-opposition-politics-279475",
+          "title": "Bobi Wine\u2019s decision to flee Uganda points to a shrinking landscape for opposition politics",
+          "description": "Bobi Wine\u2019s escape from Uganda to the US reveals controlled tensions within both the Museveni regime and opposition.",
+          "published_at": "2026-04-01T14:06:21Z",
+          "source": "The Conversation Africa",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.104. The two articles are reporting on completely unrelated events, one discussing a movie and a space mission, and the other discussing a political situation in Uganda."
+    },
+    {
+      "id": "kenya_politics_003",
+      "description": "The two articles appear to be discussing completely unrelated topics, with one focusing on a congressman's views on war and politics, and the other discussing March Madness and celebrity alumni.",
+      "topic_bucket": "kenya_politics",
+      "articles": [
+        {
+          "url": "https://reason.com/podcast/2026/04/06/ro-khanna-congress-has-surrendered-on-war/",
+          "title": "Ro Khanna: Congress Has Surrendered on War",
+          "description": "The California congressman discusses the Iran war, unchecked executive power, California\u2019s wealth tax debate, and the search for a shared American identity.",
+          "published_at": "2026-04-06T14:31:46Z",
+          "source": "Reason",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.usatoday.com/story/sports/ncaab/tourney/2026/03/17/march-madness-2026-schools-famous-alumni-bracket-ncaa-tournament-celebrity-grads-colleges/89074531007/",
+          "title": "Which March Madness school has most famous alumni? Check out our celebrity bracket",
+          "description": "There are many ways to fill out your March Madness bracket. Team color. Mascots. Maybe even basketball knowledge. Here's an alternative: famous alumni",
+          "published_at": "2026-03-17T10:03:03Z",
+          "source": "USA Today",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.02. The two articles appear to be discussing completely unrelated topics, with one focusing on a congressman's views on war and politics, and the other discussing March Madness and celebrity alumni."
+    },
+    {
+      "id": "kenya_politics_004",
+      "description": "The two articles discuss completely unrelated topics, with Article 1 focusing on a congressman's views on war and politics, and Article 2 reviewing a movie and mentioning a space mission.",
+      "topic_bucket": "kenya_politics",
+      "articles": [
+        {
+          "url": "https://reason.com/podcast/2026/04/06/ro-khanna-congress-has-surrendered-on-war/",
+          "title": "Ro Khanna: Congress Has Surrendered on War",
+          "description": "The California congressman discusses the Iran war, unchecked executive power, California\u2019s wealth tax debate, and the search for a shared American identity.",
+          "published_at": "2026-04-06T14:31:46Z",
+          "source": "Reason",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://chinaarticles.substack.com/p/sign-of-the-times",
+          "title": "Sign Of The Times",
+          "description": "If you haven\u2019t seen the movie, Project Hail Mary, then you should\u2026 it is excellent. It is faithful to Andy Weir\u2019s 2021 book, hilarious and heart-warming, and with the Artemis II crew circling the moon, the film is just what we needed.",
+          "published_at": "2026-04-06T00:00:00Z",
+          "source": "Substack.com",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.057. The two articles discuss completely unrelated topics, with Article 1 focusing on a congressman's views on war and politics, and Article 2 reviewing a movie and mentioning a space mission."
+    },
+    {
+      "id": "fed_economy_000",
+      "description": "The two articles are reporting on different financial news events, one about the gold rally and the other about the U.S. March jobs report and its impact on Bitcoin.",
+      "topic_bucket": "fed_economy",
+      "articles": [
+        {
+          "url": "https://www.cbsnews.com/news/is-gold-rally-over-april-2026/",
+          "title": "Is the gold rally over? 3 things to consider now",
+          "description": "Gold has fallen dramatically from its January peak. Here's what investors should consider before making a move.",
+          "published_at": "2026-04-03T16:13:44Z",
+          "source": "CBS News",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.coindesk.com/markets/2026/04/03/u-s-march-jobs-smash-expectations-with-178-000-added",
+          "title": "U.S. March jobs smash expectations, with 178,000 added",
+          "description": "Bitcoin continued to trade near the $67,000 level just following the strong report.",
+          "published_at": "2026-04-03T12:33:40Z",
+          "source": "CoinDesk",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.394. The two articles are reporting on different financial news events, one about the gold rally and the other about the U.S. March jobs report and its impact on Bitcoin."
+    },
+    {
+      "id": "fed_economy_001",
+      "description": "Both articles mention the impact of the Iran war on gold prices, indicating they are reporting on the same event.",
+      "topic_bucket": "fed_economy",
+      "articles": [
+        {
+          "url": "https://www.thehindubusinessline.com/markets/gold/gold-falls-as-iran-war-robust-us-jobs-data-dim-fed-rate-cut-hopes/article70829002.ece",
+          "title": "Gold falls as Iran war, robust US jobs data dim Fed rate-cut hopes",
+          "description": "Spot gold slipped 0.5% to $4,652.89 per ounce by 0452\nGMT, while US gold futures \u200cfor April delivery held\nsteady at $4,678.70 in thin \u200ctrade, \u2060with many markets in Asia and\nEurope closed for \u2060a holiday",
+          "published_at": "2026-04-06T05:09:53Z",
+          "source": "BusinessLine",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://economictimes.indiatimes.com/news/international/us/gold-price-today-why-is-gold-rate-down-check-latest-gold-price-prediction-for-2026/articleshow/130048847.cms",
+          "title": "Gold price today: Why is gold rate down? Check latest gold price prediction for 2026",
+          "description": "Gold rate today: Iran war against U.S. and Israel is having a deep impact on gold price.",
+          "published_at": "2026-04-06T01:35:42Z",
+          "source": "The Times of India",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0,
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: SAME. score=0.699. Both articles mention the impact of the Iran war on gold prices, indicating they are reporting on the same event."
+    },
+    {
+      "id": "fed_economy_002",
+      "description": "The articles discuss the gold market, but Article 1 focuses on a specific event (the impact of the Iran war and US jobs data on gold prices) while Article 2 provides a general analysis of the gold market and its recent trends.",
+      "topic_bucket": "fed_economy",
+      "articles": [
+        {
+          "url": "https://www.thehindubusinessline.com/markets/gold/gold-falls-as-iran-war-robust-us-jobs-data-dim-fed-rate-cut-hopes/article70829002.ece",
+          "title": "Gold falls as Iran war, robust US jobs data dim Fed rate-cut hopes",
+          "description": "Spot gold slipped 0.5% to $4,652.89 per ounce by 0452\nGMT, while US gold futures \u200cfor April delivery held\nsteady at $4,678.70 in thin \u200ctrade, \u2060with many markets in Asia and\nEurope closed for \u2060a holiday",
+          "published_at": "2026-04-06T05:09:53Z",
+          "source": "BusinessLine",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.cbsnews.com/news/is-gold-rally-over-april-2026/",
+          "title": "Is the gold rally over? 3 things to consider now",
+          "description": "Gold has fallen dramatically from its January peak. Here's what investors should consider before making a move.",
+          "published_at": "2026-04-03T16:13:44Z",
+          "source": "CBS News",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.435. The articles discuss the gold market, but Article 1 focuses on a specific event (the impact of the Iran war and US jobs data on gold prices) while Article 2 provides a general analysis of the gold market and its recent trends."
+    },
+    {
+      "id": "fed_economy_003",
+      "description": "The two articles are reporting on different financial topics, one about mortgage interest rates and the other about the upcoming week in cryptocurrency.",
+      "topic_bucket": "fed_economy",
+      "articles": [
+        {
+          "url": "https://www.cbsnews.com/news/mortgage-interest-rates-april-6-2026/",
+          "title": "What are today's mortgage interest rates: April 6, 2026?",
+          "description": "Mortgage rates are shifting in today's borrowing landscape. Here's what buyers and refinancers need to know now.",
+          "published_at": "2026-04-06T14:06:28Z",
+          "source": "CBS News",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.coindesk.com/markets/2026/04/06/inflation-takes-center-stage-crypto-week-ahead",
+          "title": "Inflation takes center stage: Crypto Week Ahead",
+          "description": "Your look at what's coming in the week starting April 6.",
+          "published_at": "2026-04-06T08:28:00Z",
+          "source": "CoinDesk",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.439. The two articles are reporting on different financial topics, one about mortgage interest rates and the other about the upcoming week in cryptocurrency."
+    },
+    {
+      "id": "fed_economy_004",
+      "description": "The two articles have the same title and discuss the same issue of the Indian rupee's decline, indicating they are reporting on the same specific economic event.",
+      "topic_bucket": "fed_economy",
+      "articles": [
+        {
+          "url": "https://economictimes.indiatimes.com/news/economy/finance/rupee-at-100-will-be-a-harsh-check-on-indias-ambitions/articleshow/130011662.cms",
+          "title": "View: Rupee at 100 will be a harsh check on India\u2019s ambitions",
+          "description": "Rupee fall: In a serious twist, India's currency is on a steep decline, echoing previous economic upheavals. A mix of global influences and local policies has resulted in a weakened rupee, affecting everyday expenses for citizens, the financial burden of educ\u2026",
+          "published_at": "2026-04-04T01:54:37Z",
+          "source": "The Times of India",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://economictimes.indiatimes.com/markets/forex/forex-news/rupee-at-100-will-be-a-harsh-check-on-indias-ambitions-andy-mukherjeeby/articleshow/129993097.cms",
+          "title": "Rupee at 100 will be a harsh check on India\u2019s ambitions",
+          "description": "India's rupee has hit record lows, exacerbated by Middle East conflict and domestic economic fragilities. The Reserve Bank of India's currency controls backfired, signaling a loss of confidence. A rupee at 100 threatens to increase living costs, strain govern\u2026",
+          "published_at": "2026-04-03T03:08:24Z",
+          "source": "The Times of India",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0,
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: SAME. score=0.824. The two articles have the same title and discuss the same issue of the Indian rupee's decline, indicating they are reporting on the same specific economic event."
+    },
+    {
+      "id": "fed_economy_005",
+      "description": "The articles are reporting on the same broader conflict (the Iran war) but are discussing its impact on different economies and financial institutions (Wells Fargo and India's GDP growth forecast).",
+      "topic_bucket": "fed_economy",
+      "articles": [
+        {
+          "url": "https://economictimes.indiatimes.com/markets/us-stocks/news/wells-fargo-no-longer-expects-fed-rate-cuts-in-2026-as-iran-war-drags-on/articleshow/130064197.cms",
+          "title": "Wells Fargo no longer expects Fed rate cuts in 2026 as Iran war drags on",
+          "description": "Wells \u200bFargo Investment Institute said on Monday it \u200bno longer expects the U.S. Federal Reserve to cut interest rates in 2026, citing uncertainty around inflation and heightened geopolitical \u200crisks tied \u2060to \u2060the Middle East war.",
+          "published_at": "2026-04-06T14:45:35Z",
+          "source": "The Times of India",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.rt.com/india/637456-moodys-cuts-india-gdp-growth/",
+          "title": "Moody\u2019s cuts India GDP growth forecast amid Iran conflict",
+          "description": "Moody\u2019s has said the Iran war will moderate India\u2019s growth and raise inflation risks, cutting its forecast to 6% from 6.8% Read Full Article at RT.com",
+          "published_at": "2026-04-06T12:55:53Z",
+          "source": "RT",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.513. The articles are reporting on the same broader conflict (the Iran war) but are discussing its impact on different economies and financial institutions (Wells Fargo and India's GDP growth forecast)."
+    },
+    {
+      "id": "fed_economy_006",
+      "description": "The two articles are reporting on the same type of event, which is an update on mortgage interest rates, and are sequential updates from the same source, CBS News, just a few days apart.",
+      "topic_bucket": "fed_economy",
+      "articles": [
+        {
+          "url": "https://www.cbsnews.com/news/mortgage-interest-rates-april-6-2026/",
+          "title": "What are today's mortgage interest rates: April 6, 2026?",
+          "description": "Mortgage rates are shifting in today's borrowing landscape. Here's what buyers and refinancers need to know now.",
+          "published_at": "2026-04-06T14:06:28Z",
+          "source": "CBS News",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.cbsnews.com/news/todays-mortgage-interest-rates-april-2-2026/",
+          "title": "What are today's mortgage interest rates: April 2, 2026?",
+          "description": "Mortgage interest rates have changed significantly in recent weeks. Here's what they are as of April 2, 2026.",
+          "published_at": "2026-04-02T13:47:28Z",
+          "source": "CBS News",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0,
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: SAME. score=0.656. The two articles are reporting on the same type of event, which is an update on mortgage interest rates, and are sequential updates from the same source, CBS News, just a few days apart."
+    },
+    {
+      "id": "fed_economy_007",
+      "description": "Both articles mention the \"Iran war\" as a factor influencing expectations of Fed rate cuts, indicating they are reporting on the same ongoing conflict and its economic implications.",
+      "topic_bucket": "fed_economy",
+      "articles": [
+        {
+          "url": "https://economictimes.indiatimes.com/markets/us-stocks/news/wells-fargo-no-longer-expects-fed-rate-cuts-in-2026-as-iran-war-drags-on/articleshow/130064197.cms",
+          "title": "Wells Fargo no longer expects Fed rate cuts in 2026 as Iran war drags on",
+          "description": "Wells \u200bFargo Investment Institute said on Monday it \u200bno longer expects the U.S. Federal Reserve to cut interest rates in 2026, citing uncertainty around inflation and heightened geopolitical \u200crisks tied \u2060to \u2060the Middle East war.",
+          "published_at": "2026-04-06T14:45:35Z",
+          "source": "The Times of India",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.thehindubusinessline.com/markets/gold/gold-falls-as-iran-war-robust-us-jobs-data-dim-fed-rate-cut-hopes/article70829002.ece",
+          "title": "Gold falls as Iran war, robust US jobs data dim Fed rate-cut hopes",
+          "description": "Spot gold slipped 0.5% to $4,652.89 per ounce by 0452\nGMT, while US gold futures \u200cfor April delivery held\nsteady at $4,678.70 in thin \u200ctrade, \u2060with many markets in Asia and\nEurope closed for \u2060a holiday",
+          "published_at": "2026-04-06T05:09:53Z",
+          "source": "BusinessLine",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0,
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: SAME. score=0.521. Both articles mention the \"Iran war\" as a factor influencing expectations of Fed rate cuts, indicating they are reporting on the same ongoing conflict and its economic implications."
+    },
+    {
+      "id": "fed_economy_008",
+      "description": "The articles discuss the potential economic impact of the Iran conflict and crude oil prices on India's GDP growth, but they do not report on the same specific incident, instead focusing on related but distinct economic forecasts.",
+      "topic_bucket": "fed_economy",
+      "articles": [
+        {
+          "url": "https://www.rt.com/india/637456-moodys-cuts-india-gdp-growth/",
+          "title": "Moody\u2019s cuts India GDP growth forecast amid Iran conflict",
+          "description": "Moody\u2019s has said the Iran war will moderate India\u2019s growth and raise inflation risks, cutting its forecast to 6% from 6.8% Read Full Article at RT.com",
+          "published_at": "2026-04-06T12:55:53Z",
+          "source": "RT",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://economictimes.indiatimes.com/industry/energy/oil-gas/iran-war-crude-at-70-in-2026-that-may-remain-a-distant-dream/articleshow/130054991.cms",
+          "title": "Crude at $70 in 2026? That may remain a distant dream",
+          "description": "Crude oil prices are unlikely to fall below USD 70 this year and may settle between USD 80-85 per barrel in 2026. This forecast suggests ongoing global uncertainties will keep prices elevated. For India, this could mean slower GDP growth and inflation above 4\u2026",
+          "published_at": "2026-04-06T08:04:22Z",
+          "source": "The Times of India",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.284. The articles discuss the potential economic impact of the Iran conflict and crude oil prices on India's GDP growth, but they do not report on the same specific incident, instead focusing on related but distinct economic forecasts."
+    },
+    {
+      "id": "fed_economy_009",
+      "description": "The two articles discuss different topics, one focusing on the gold market and the other on the economic implications of the Iran war.",
+      "topic_bucket": "fed_economy",
+      "articles": [
+        {
+          "url": "https://www.cbsnews.com/news/is-gold-rally-over-april-2026/",
+          "title": "Is the gold rally over? 3 things to consider now",
+          "description": "Gold has fallen dramatically from its January peak. Here's what investors should consider before making a move.",
+          "published_at": "2026-04-03T16:13:44Z",
+          "source": "CBS News",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.businessinsider.com/recession-stagflation-inflation-unemployment-economy-iran-war-trump-economist-global-2026-4",
+          "title": "KPMG's chief economist says the only clear way out of the Iran war for global economies is a 'deep recession'",
+          "description": "Stagflation risks have risen globally as Iran-war-driven inflation has mixed with sluggish economic growth.",
+          "published_at": "2026-04-02T17:50:32Z",
+          "source": "Business Insider",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.234. The two articles discuss different topics, one focusing on the gold market and the other on the economic implications of the Iran war."
+    },
+    {
+      "id": "fed_economy_010",
+      "description": "The two articles discuss different economic topics, with Article 1 focusing on a specific prediction about the Federal Reserve's interest rate cuts and Article 2 discussing the broader issue of government debt and its potential impact on the US currency.",
+      "topic_bucket": "fed_economy",
+      "articles": [
+        {
+          "url": "https://www.thestreet.com/fed/jpmorgan-has-a-stark-message-on-the-next-fed-rate-cut",
+          "title": "JPMorgan has a stark message on the next Fed rate cut",
+          "description": "If you were counting on the Federal Reserve to cut interest rates this year, JPMorgan's chief economist has a message you may not want to hear. Michael...",
+          "published_at": "2026-04-06T18:03:00Z",
+          "source": "TheStreet",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.activistpost.com/the-debt-spiral-that-ends-in-dollar-destruction-6-hard-truths-america-can-no-longer-ignore/",
+          "title": "The Debt Spiral That Ends in Dollar Destruction: 6 Hard Truths America Can No Longer Ignore",
+          "description": "\u201cWhenever governments are granted power to purchase their own debt, they never fail to do so, eventually destroying the value of the currency.\u201d \u2013\u00a0Ron Paul Let\u2019s take a step back and look at the big picture so we can assess the US government\u2019s financial situat\u2026",
+          "published_at": "2026-04-05T13:00:00Z",
+          "source": "Activistpost.com",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.203. The two articles discuss different economic topics, with Article 1 focusing on a specific prediction about the Federal Reserve's interest rate cuts and Article 2 discussing the broader issue of government debt and its potential impact on the US currency."
+    },
+    {
+      "id": "fed_economy_011",
+      "description": "The two articles discuss different economic issues in India, with one focusing on the Monetary Policy Committee's decision amidst global uncertainty and the other discussing the decline of the Indian rupee.",
+      "topic_bucket": "fed_economy",
+      "articles": [
+        {
+          "url": "https://www.livemint.com/opinion/online-views/mpc-uncertainty-rates-steady-rbi-monetary-policy-committee-banking-inflation-indian-economy-gulf-war-11775377016022.html",
+          "title": "It\u2019s hard to envy the MPC\u2019s task\u2014but under today\u2019s uncertainty, holding rates steady is its best option",
+          "description": "Amid an increasingly complex and uncertain macroeconomic scenario, India\u2019s Monetary Policy Committee may be best served by waiting and watching until the haze over its growth-inflation trade-off lifts. The Gulf war is a whole new imponderable.",
+          "published_at": "2026-04-06T02:00:55Z",
+          "source": "Livemint",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://economictimes.indiatimes.com/news/economy/finance/rupee-at-100-will-be-a-harsh-check-on-indias-ambitions/articleshow/130011662.cms",
+          "title": "View: Rupee at 100 will be a harsh check on India\u2019s ambitions",
+          "description": "Rupee fall: In a serious twist, India's currency is on a steep decline, echoing previous economic upheavals. A mix of global influences and local policies has resulted in a weakened rupee, affecting everyday expenses for citizens, the financial burden of educ\u2026",
+          "published_at": "2026-04-04T01:54:37Z",
+          "source": "The Times of India",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.343. The two articles discuss different economic issues in India, with one focusing on the Monetary Policy Committee's decision amidst global uncertainty and the other discussing the decline of the Indian rupee."
+    },
+    {
+      "id": "fed_economy_012",
+      "description": "The two articles are reporting on different topics, one focusing on the crypto market and the other on gold prices, with no indication that they are related to the same specific incident.",
+      "topic_bucket": "fed_economy",
+      "articles": [
+        {
+          "url": "https://www.coindesk.com/markets/2026/04/06/inflation-takes-center-stage-crypto-week-ahead",
+          "title": "Inflation takes center stage: Crypto Week Ahead",
+          "description": "Your look at what's coming in the week starting April 6.",
+          "published_at": "2026-04-06T08:28:00Z",
+          "source": "CoinDesk",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://economictimes.indiatimes.com/news/international/us/gold-price-today-why-is-gold-rate-down-check-latest-gold-price-prediction-for-2026/articleshow/130048847.cms",
+          "title": "Gold price today: Why is gold rate down? Check latest gold price prediction for 2026",
+          "description": "Gold rate today: Iran war against U.S. and Israel is having a deep impact on gold price.",
+          "published_at": "2026-04-06T01:35:42Z",
+          "source": "The Times of India",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.259. The two articles are reporting on different topics, one focusing on the crypto market and the other on gold prices, with no indication that they are related to the same specific incident."
+    },
+    {
+      "id": "fed_economy_013",
+      "description": "The articles discuss different economic topics, one related to the Iran war's impact on global economies and the other about BlackRock's bet on German bonds being affected by an inflation surge in Europe.",
+      "topic_bucket": "fed_economy",
+      "articles": [
+        {
+          "url": "https://www.businessinsider.com/recession-stagflation-inflation-unemployment-economy-iran-war-trump-economist-global-2026-4",
+          "title": "KPMG's chief economist says the only clear way out of the Iran war for global economies is a 'deep recession'",
+          "description": "Stagflation risks have risen globally as Iran-war-driven inflation has mixed with sluggish economic growth.",
+          "published_at": "2026-04-02T17:50:32Z",
+          "source": "Business Insider",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://financialpost.com/pmn/business-pmn/blackrock-bets-german-bonds-will-be-hammered-by-inflation-surge",
+          "title": "BlackRock Bets German Bonds Will Be Hammered by Inflation Surge",
+          "description": "BlackRock Inc. has added to bearish positions on German bonds, betting that a \u201cpretty large inflation uptick\u201d across Europe will push borrowing costs back above the 15-year highs reached last week.",
+          "published_at": "2026-04-02T09:54:34Z",
+          "source": "Financial Post",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.24. The articles discuss different economic topics, one related to the Iran war's impact on global economies and the other about BlackRock's bet on German bonds being affected by an inflation surge in Europe."
+    },
+    {
+      "id": "fed_economy_014",
+      "description": "The two articles discuss different topics, with Article 1 focusing on Wells Fargo's expectations for Fed rate cuts in relation to the Iran war, while Article 2 appears to be a general preview of the upcoming week in crypto, without mentioning the Iran war or Wells Fargo.",
+      "topic_bucket": "fed_economy",
+      "articles": [
+        {
+          "url": "https://economictimes.indiatimes.com/markets/us-stocks/news/wells-fargo-no-longer-expects-fed-rate-cuts-in-2026-as-iran-war-drags-on/articleshow/130064197.cms",
+          "title": "Wells Fargo no longer expects Fed rate cuts in 2026 as Iran war drags on",
+          "description": "Wells \u200bFargo Investment Institute said on Monday it \u200bno longer expects the U.S. Federal Reserve to cut interest rates in 2026, citing uncertainty around inflation and heightened geopolitical \u200crisks tied \u2060to \u2060the Middle East war.",
+          "published_at": "2026-04-06T14:45:35Z",
+          "source": "The Times of India",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.coindesk.com/markets/2026/04/06/inflation-takes-center-stage-crypto-week-ahead",
+          "title": "Inflation takes center stage: Crypto Week Ahead",
+          "description": "Your look at what's coming in the week starting April 6.",
+          "published_at": "2026-04-06T08:28:00Z",
+          "source": "CoinDesk",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.216. The two articles discuss different topics, with Article 1 focusing on Wells Fargo's expectations for Fed rate cuts in relation to the Iran war, while Article 2 appears to be a general preview of the upcoming week in crypto, without mentioning the Iran war or Wells Fargo."
+    },
+    {
+      "id": "fed_economy_015",
+      "description": "The two articles are reporting on different topics, with one discussing the economic impact of the Iran war and the other providing information on current mortgage interest rates.",
+      "topic_bucket": "fed_economy",
+      "articles": [
+        {
+          "url": "https://www.cbsnews.com/news/iran-war-financial-impact-travel-gasoline-mortgages/",
+          "title": "3 ways the Iran war is hitting Americans' pocketbooks",
+          "description": "U.S. consumers are starting to feel the financial impact of the Iran war. Here's how the conflict is seeping into the economy.",
+          "published_at": "2026-04-03T20:44:04Z",
+          "source": "CBS News",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.cbsnews.com/news/todays-mortgage-interest-rates-april-2-2026/",
+          "title": "What are today's mortgage interest rates: April 2, 2026?",
+          "description": "Mortgage interest rates have changed significantly in recent weeks. Here's what they are as of April 2, 2026.",
+          "published_at": "2026-04-02T13:47:28Z",
+          "source": "CBS News",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.096. The two articles are reporting on different topics, with one discussing the economic impact of the Iran war and the other providing information on current mortgage interest rates."
+    },
+    {
+      "id": "fed_economy_016",
+      "description": "The articles are reporting on the same event, which is the impact of the Iran war and US jobs data on the financial markets, with Article 1 providing an update on gold prices and Article 2 discussing the US stock market closure due to Good Friday amidst the same geopolitical tensions.",
+      "topic_bucket": "fed_economy",
+      "articles": [
+        {
+          "url": "https://www.thehindubusinessline.com/markets/gold/gold-falls-as-iran-war-robust-us-jobs-data-dim-fed-rate-cut-hopes/article70829002.ece",
+          "title": "Gold falls as Iran war, robust US jobs data dim Fed rate-cut hopes",
+          "description": "Spot gold slipped 0.5% to $4,652.89 per ounce by 0452\nGMT, while US gold futures \u200cfor April delivery held\nsteady at $4,678.70 in thin \u200ctrade, \u2060with many markets in Asia and\nEurope closed for \u2060a holiday",
+          "published_at": "2026-04-06T05:09:53Z",
+          "source": "BusinessLine",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.ibtimes.com.au/us-stock-market-closed-today-april-3-2026-good-friday-strong-march-jobs-data-looms-over-iran-war-1865321",
+          "title": "US Stock Market Closed Today April 3 2026 for Good Friday as Strong March Jobs Data Looms Over Iran War",
+          "description": "NEW YORK \u2014 U.S. stock markets were closed Friday, April 3, in observance of Good Friday, leaving investors to digest the latest economic signals without the ability to trade as geopolitical tensions from the ongoing conflict with Iran continued to cast a shad\u2026",
+          "published_at": "2026-04-03T13:40:17Z",
+          "source": "Ibtimes.com.au",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0,
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: SAME. score=0.175. The articles are reporting on the same event, which is the impact of the Iran war and US jobs data on the financial markets, with Article 1 providing an update on gold prices and Article 2 discussing the US stock market closure due to Good Friday amidst the same geopolitical tensions."
+    },
+    {
+      "id": "fed_economy_017",
+      "description": "The two articles discuss different topics, one focusing on India's Monetary Policy Committee and the other on mortgage interest rates in the context of a general economic update.",
+      "topic_bucket": "fed_economy",
+      "articles": [
+        {
+          "url": "https://www.livemint.com/opinion/online-views/mpc-uncertainty-rates-steady-rbi-monetary-policy-committee-banking-inflation-indian-economy-gulf-war-11775377016022.html",
+          "title": "It\u2019s hard to envy the MPC\u2019s task\u2014but under today\u2019s uncertainty, holding rates steady is its best option",
+          "description": "Amid an increasingly complex and uncertain macroeconomic scenario, India\u2019s Monetary Policy Committee may be best served by waiting and watching until the haze over its growth-inflation trade-off lifts. The Gulf war is a whole new imponderable.",
+          "published_at": "2026-04-06T02:00:55Z",
+          "source": "Livemint",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.cbsnews.com/news/todays-mortgage-interest-rates-april-2-2026/",
+          "title": "What are today's mortgage interest rates: April 2, 2026?",
+          "description": "Mortgage interest rates have changed significantly in recent weeks. Here's what they are as of April 2, 2026.",
+          "published_at": "2026-04-02T13:47:28Z",
+          "source": "CBS News",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.171. The two articles discuss different topics, one focusing on India's Monetary Policy Committee and the other on mortgage interest rates in the context of a general economic update."
+    },
+    {
+      "id": "fed_economy_018",
+      "description": "The two articles discuss different economic topics, one related to the Federal Reserve's interest rate cuts in the US and the other about the decline of the Indian rupee.",
+      "topic_bucket": "fed_economy",
+      "articles": [
+        {
+          "url": "https://www.thestreet.com/fed/jpmorgan-has-a-stark-message-on-the-next-fed-rate-cut",
+          "title": "JPMorgan has a stark message on the next Fed rate cut",
+          "description": "If you were counting on the Federal Reserve to cut interest rates this year, JPMorgan's chief economist has a message you may not want to hear. Michael...",
+          "published_at": "2026-04-06T18:03:00Z",
+          "source": "TheStreet",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://economictimes.indiatimes.com/news/economy/finance/rupee-at-100-will-be-a-harsh-check-on-indias-ambitions/articleshow/130011662.cms",
+          "title": "View: Rupee at 100 will be a harsh check on India\u2019s ambitions",
+          "description": "Rupee fall: In a serious twist, India's currency is on a steep decline, echoing previous economic upheavals. A mix of global influences and local policies has resulted in a weakened rupee, affecting everyday expenses for citizens, the financial burden of educ\u2026",
+          "published_at": "2026-04-04T01:54:37Z",
+          "source": "The Times of India",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.177. The two articles discuss different economic topics, one related to the Federal Reserve's interest rate cuts in the US and the other about the decline of the Indian rupee."
+    },
+    {
+      "id": "fed_economy_019",
+      "description": "Both articles mention a conflict in the same region, with Article 1 specifically referencing the \"Iran war\" and Article 2 referring to the \"West Asia conflict\", which is likely the same event given the geographical location and timing.",
+      "topic_bucket": "fed_economy",
+      "articles": [
+        {
+          "url": "https://economictimes.indiatimes.com/markets/us-stocks/news/wells-fargo-no-longer-expects-fed-rate-cuts-in-2026-as-iran-war-drags-on/articleshow/130064197.cms",
+          "title": "Wells Fargo no longer expects Fed rate cuts in 2026 as Iran war drags on",
+          "description": "Wells \u200bFargo Investment Institute said on Monday it \u200bno longer expects the U.S. Federal Reserve to cut interest rates in 2026, citing uncertainty around inflation and heightened geopolitical \u200crisks tied \u2060to \u2060the Middle East war.",
+          "published_at": "2026-04-06T14:45:35Z",
+          "source": "The Times of India",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.livemint.com/money/personal-finance/gold-flops-three-bears-unpredictable-havens-interest-rates-inflation-gold-west-asia-war-11775462497684.html",
+          "title": "Gold flops and the three bears: navigating unpredictable havens",
+          "description": "How gold, the traditional safe haven, struggled during the West Asia conflict and turned from 'hero' asset into a short-term flop.",
+          "published_at": "2026-04-06T11:37:41Z",
+          "source": "Livemint",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0,
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: SAME. score=0.114. Both articles mention a conflict in the same region, with Article 1 specifically referencing the \"Iran war\" and Article 2 referring to the \"West Asia conflict\", which is likely the same event given the geographical location and timing."
+    },
+    {
+      "id": "eu_politics_000",
+      "description": "The articles discuss the same general topic of Viktor Orb\u00e1n and Hungarian politics, but they appear to focus on different aspects and incidents, with one discussing Orb\u00e1n's campaign tactics and the other discussing the EU's plans to counter him.",
+      "topic_bucket": "eu_politics",
+      "articles": [
+        {
+          "url": "https://www.theatlantic.com/ideas/2026/03/hungary-first-post-reality-political-campaign/686565/",
+          "title": "The First Post-Reality Political Campaign",
+          "description": "Hungary\u2019s Viktor Orb\u00e1n is waging cognitive warfare on a new scale.",
+          "published_at": "2026-03-27T14:31:32Z",
+          "source": "The Atlantic",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.rt.com/news/635670-eu-hungary-election-interference/",
+          "title": "Battle for Hungary: How the EU plans to defeat Viktor Orban",
+          "description": "The EU is using the threat of \u2018disinformation\u2019 to impose a censorship regime against Prime Minister Viktor Orban before elections in Hungary Read Full Article at RT.com",
+          "published_at": "2026-03-20T19:46:51Z",
+          "source": "RT",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.38. The articles discuss the same general topic of Viktor Orb\u00e1n and Hungarian politics, but they appear to focus on different aspects and incidents, with one discussing Orb\u00e1n's campaign tactics and the other discussing the EU's plans to counter him."
+    },
+    {
+      "id": "eu_politics_001",
+      "description": "The articles discuss different topics, with Article 1 focusing on the EU's plans to counter Viktor Orban in Hungary, while Article 2 appears to be a more general analysis of Europe's approach to defending democracy.",
+      "topic_bucket": "eu_politics",
+      "articles": [
+        {
+          "url": "https://www.rt.com/news/635670-eu-hungary-election-interference/",
+          "title": "Battle for Hungary: How the EU plans to defeat Viktor Orban",
+          "description": "The EU is using the threat of \u2018disinformation\u2019 to impose a censorship regime against Prime Minister Viktor Orban before elections in Hungary Read Full Article at RT.com",
+          "published_at": "2026-03-20T19:46:51Z",
+          "source": "RT",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "http://foreignpolicy.com/2026/03/13/europe-democracy-strategy-failing-polarization-centrism/",
+          "title": "Why Europe\u2019s Approach to Defending Democracy Is Failing",
+          "description": "Bromides about the \u201ccenter holding\u201d miss the point.",
+          "published_at": "2026-03-13T04:01:21Z",
+          "source": "Foreign Policy",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.25. The articles discuss different topics, with Article 1 focusing on the EU's plans to counter Viktor Orban in Hungary, while Article 2 appears to be a more general analysis of Europe's approach to defending democracy."
+    },
+    {
+      "id": "eu_politics_002",
+      "description": "The two articles appear to be discussing different topics related to European politics, with Article 1 focusing on the defense of democracy and Article 2 discussing the rise of the Alternative f\u00fcr Deutschland party in Germany.",
+      "topic_bucket": "eu_politics",
+      "articles": [
+        {
+          "url": "http://foreignpolicy.com/2026/03/13/europe-democracy-strategy-failing-polarization-centrism/",
+          "title": "Why Europe\u2019s Approach to Defending Democracy Is Failing",
+          "description": "Bromides about the \u201ccenter holding\u201d miss the point.",
+          "published_at": "2026-03-13T04:01:21Z",
+          "source": "Foreign Policy",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://freerepublic.com/focus/f-chat/4370112/posts",
+          "title": "The Global Elites Lose Again",
+          "description": "Germany\u2019s Alternative f\u00fcr Deutschland keeps surging ahead. Border control and sane energy policy may be in Europe\u2019s future after all. To the despair of the European establishment, the Alternative f\u00fcr Deutschland (AfD), the most hated political force in German\u2026",
+          "published_at": "2026-03-10T14:04:15Z",
+          "source": "Freerepublic.com",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.297. The two articles appear to be discussing different topics related to European politics, with Article 1 focusing on the defense of democracy and Article 2 discussing the rise of the Alternative f\u00fcr Deutschland party in Germany."
+    },
+    {
+      "id": "eu_politics_003",
+      "description": "The two articles discuss different topics, with Article 1 focusing on Europe's approach to defending democracy and Article 2 discussing Europe's response to refugees from Iran, indicating they are reporting on different events.",
+      "topic_bucket": "eu_politics",
+      "articles": [
+        {
+          "url": "http://foreignpolicy.com/2026/03/13/europe-democracy-strategy-failing-polarization-centrism/",
+          "title": "Why Europe\u2019s Approach to Defending Democracy Is Failing",
+          "description": "Bromides about the \u201ccenter holding\u201d miss the point.",
+          "published_at": "2026-03-13T04:01:21Z",
+          "source": "Foreign Policy",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://truthout.org/articles/europe-offers-little-hope-for-people-in-iran-trying-to-flee-us-and-israeli-bombs/",
+          "title": "Europe Offers Little Hope for People in Iran Trying to Flee US and Israeli Bombs",
+          "description": "The growth of far right parties like Nigel Farage\u2019s Reform may further keep refugees from reaching European shores.",
+          "published_at": "2026-03-10T16:39:56Z",
+          "source": "Truthout",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.326. The two articles discuss different topics, with Article 1 focusing on Europe's approach to defending democracy and Article 2 discussing Europe's response to refugees from Iran, indicating they are reporting on different events."
+    },
+    {
+      "id": "eu_politics_004",
+      "description": "The two articles appear to be discussing different topics, with Article 1 focusing on Viktor Orb\u00e1n's political campaign in Hungary and Article 2 discussing Europe's approach to defending democracy in general.",
+      "topic_bucket": "eu_politics",
+      "articles": [
+        {
+          "url": "https://www.theatlantic.com/ideas/2026/03/hungary-first-post-reality-political-campaign/686565/",
+          "title": "The First Post-Reality Political Campaign",
+          "description": "Hungary\u2019s Viktor Orb\u00e1n is waging cognitive warfare on a new scale.",
+          "published_at": "2026-03-27T14:31:32Z",
+          "source": "The Atlantic",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "http://foreignpolicy.com/2026/03/13/europe-democracy-strategy-failing-polarization-centrism/",
+          "title": "Why Europe\u2019s Approach to Defending Democracy Is Failing",
+          "description": "Bromides about the \u201ccenter holding\u201d miss the point.",
+          "published_at": "2026-03-13T04:01:21Z",
+          "source": "Foreign Policy",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.234. The two articles appear to be discussing different topics, with Article 1 focusing on Viktor Orb\u00e1n's political campaign in Hungary and Article 2 discussing Europe's approach to defending democracy in general."
+    },
+    {
+      "id": "eu_politics_005",
+      "description": "The articles are reporting on the same US-Israeli war in Iran, with Article 1 discussing European support for the US and Article 2 discussing the impact of the war on refugees trying to flee to Europe.",
+      "topic_bucket": "eu_politics",
+      "articles": [
+        {
+          "url": "https://www.nybooks.com/online/2026/03/31/timid-europe-iran-war/",
+          "title": "Timid Europe",
+          "description": "On Sunday, March 22, three weeks into the US\u2013Israeli war in Iran, Donald Trump received an unlikely pledge of support. The previous Friday he had taken to Truth Social to lambast his fellow NATO members, calling them \u201cCOWARDS\u201d for refusing to send warships to\u2026",
+          "published_at": "2026-03-31T14:47:25Z",
+          "source": "The New York Review of Books",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://truthout.org/articles/europe-offers-little-hope-for-people-in-iran-trying-to-flee-us-and-israeli-bombs/",
+          "title": "Europe Offers Little Hope for People in Iran Trying to Flee US and Israeli Bombs",
+          "description": "The growth of far right parties like Nigel Farage\u2019s Reform may further keep refugees from reaching European shores.",
+          "published_at": "2026-03-10T16:39:56Z",
+          "source": "Truthout",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0,
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: SAME. score=0.215. The articles are reporting on the same US-Israeli war in Iran, with Article 1 discussing European support for the US and Article 2 discussing the impact of the war on refugees trying to flee to Europe."
+    },
+    {
+      "id": "eu_politics_006",
+      "description": "The two articles discuss different topics, with Article 1 focusing on refugees from Iran and Article 2 discussing the rise of a far-right party in Germany, indicating they are reporting on different events.",
+      "topic_bucket": "eu_politics",
+      "articles": [
+        {
+          "url": "https://truthout.org/articles/europe-offers-little-hope-for-people-in-iran-trying-to-flee-us-and-israeli-bombs/",
+          "title": "Europe Offers Little Hope for People in Iran Trying to Flee US and Israeli Bombs",
+          "description": "The growth of far right parties like Nigel Farage\u2019s Reform may further keep refugees from reaching European shores.",
+          "published_at": "2026-03-10T16:39:56Z",
+          "source": "Truthout",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://freerepublic.com/focus/f-chat/4370112/posts",
+          "title": "The Global Elites Lose Again",
+          "description": "Germany\u2019s Alternative f\u00fcr Deutschland keeps surging ahead. Border control and sane energy policy may be in Europe\u2019s future after all. To the despair of the European establishment, the Alternative f\u00fcr Deutschland (AfD), the most hated political force in German\u2026",
+          "published_at": "2026-03-10T14:04:15Z",
+          "source": "Freerepublic.com",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.169. The two articles discuss different topics, with Article 1 focusing on refugees from Iran and Article 2 discussing the rise of a far-right party in Germany, indicating they are reporting on different events."
+    },
+    {
+      "id": "eu_politics_007",
+      "description": "The two articles are reporting on different topics, one about the rise of the far right in France and the other about diplomatic tensions and a meeting of G7 finance ministers regarding the Iran conflict.",
+      "topic_bucket": "eu_politics",
+      "articles": [
+        {
+          "url": "https://blogs.lse.ac.uk/lsereviewofbooks/2026/03/31/book-review-far-right-france-le-pen-bardella-and-the-future-of-europe-victor-mallet/",
+          "title": "The rise of the far right in France",
+          "description": "Victor Mallet\u2019s Far-Right France examines the rise of the far right in France through the successful alliance between the National Rally\u2019s Marine Le Pen and Jordan Bardella. Blending vivid reportage \u2026 Continued\nThe post The rise of the far right in France fir\u2026",
+          "published_at": "2026-03-31T11:15:45Z",
+          "source": "Lse.ac.uk",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.cnbc.com/2026/03/08/global-week-ahead-diplomacy-in-ruins-as-g7-meets-on-iran.html",
+          "title": "Global week ahead: Diplomacy in ruins as G7 meets on Iran",
+          "description": "G7 finance ministers and central bank governors are set to convene for a key meeting as diplomatic tensions escalate over the Iran conflict.",
+          "published_at": "2026-03-08T11:12:45Z",
+          "source": "CNBC",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.06. The two articles are reporting on different topics, one about the rise of the far right in France and the other about diplomatic tensions and a meeting of G7 finance ministers regarding the Iran conflict."
+    },
+    {
+      "id": "eu_politics_008",
+      "description": "The two articles appear to be discussing different topics, with Article 1 focusing on the concept of multipolarity and BRICS, while Article 2 discusses Hungary's Viktor Orb\u00e1n and cognitive warfare.",
+      "topic_bucket": "eu_politics",
+      "articles": [
+        {
+          "url": "https://www.activistpost.com/multipolarity-as-world-government-3-0-its-pied-pipers/",
+          "title": "Multipolarity As World Government 3.0 & Its Pied Pipers",
+          "description": "\u201cBRICS\u201d has been around for over a decade. The term \u201cmultipolarity\u201d on the other hand, has been bandied about for at least over half a century. \u201cBRICS multipolarity\u201d is sold as a counter-weight and dialectical response or solution to Western imperial globalis\u2026",
+          "published_at": "2026-04-05T01:36:00Z",
+          "source": "Activistpost.com",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.theatlantic.com/ideas/2026/03/hungary-first-post-reality-political-campaign/686565/",
+          "title": "The First Post-Reality Political Campaign",
+          "description": "Hungary\u2019s Viktor Orb\u00e1n is waging cognitive warfare on a new scale.",
+          "published_at": "2026-03-27T14:31:32Z",
+          "source": "The Atlantic",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.09. The two articles appear to be discussing different topics, with Article 1 focusing on the concept of multipolarity and BRICS, while Article 2 discusses Hungary's Viktor Orb\u00e1n and cognitive warfare."
+    },
+    {
+      "id": "eu_politics_009",
+      "description": "The two articles appear to be discussing different events, with Article 1 focusing on the US-Israeli war in Iran and Article 2 discussing EU plans to defeat Viktor Orban in Hungary.",
+      "topic_bucket": "eu_politics",
+      "articles": [
+        {
+          "url": "https://www.nybooks.com/online/2026/03/31/timid-europe-iran-war/",
+          "title": "Timid Europe",
+          "description": "On Sunday, March 22, three weeks into the US\u2013Israeli war in Iran, Donald Trump received an unlikely pledge of support. The previous Friday he had taken to Truth Social to lambast his fellow NATO members, calling them \u201cCOWARDS\u201d for refusing to send warships to\u2026",
+          "published_at": "2026-03-31T14:47:25Z",
+          "source": "The New York Review of Books",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.rt.com/news/635670-eu-hungary-election-interference/",
+          "title": "Battle for Hungary: How the EU plans to defeat Viktor Orban",
+          "description": "The EU is using the threat of \u2018disinformation\u2019 to impose a censorship regime against Prime Minister Viktor Orban before elections in Hungary Read Full Article at RT.com",
+          "published_at": "2026-03-20T19:46:51Z",
+          "source": "RT",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.08. The two articles appear to be discussing different events, with Article 1 focusing on the US-Israeli war in Iran and Article 2 discussing EU plans to defeat Viktor Orban in Hungary."
+    },
+    {
+      "id": "eu_politics_010",
+      "description": "The two articles are reporting on different events, with Article 1 discussing the EU's plans regarding Hungary's Prime Minister Viktor Orban, and Article 2 discussing a G7 meeting related to the Iran conflict.",
+      "topic_bucket": "eu_politics",
+      "articles": [
+        {
+          "url": "https://www.rt.com/news/635670-eu-hungary-election-interference/",
+          "title": "Battle for Hungary: How the EU plans to defeat Viktor Orban",
+          "description": "The EU is using the threat of \u2018disinformation\u2019 to impose a censorship regime against Prime Minister Viktor Orban before elections in Hungary Read Full Article at RT.com",
+          "published_at": "2026-03-20T19:46:51Z",
+          "source": "RT",
+          "source_domain": "",
+          "language": "en"
+        },
+        {
+          "url": "https://www.cnbc.com/2026/03/08/global-week-ahead-diplomacy-in-ruins-as-g7-meets-on-iran.html",
+          "title": "Global week ahead: Diplomacy in ruins as G7 meets on Iran",
+          "description": "G7 finance ministers and central bank governors are set to convene for a key meeting as diplomatic tensions escalate over the Iran conflict.",
+          "published_at": "2026-03-08T11:12:45Z",
+          "source": "CNBC",
+          "source_domain": "",
+          "language": "en"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Groq label: DIFFERENT. score=0.101. The two articles are reporting on different events, with Article 1 discussing the EU's plans regarding Hungary's Prime Minister Viktor Orban, and Article 2 discussing a G7 meeting related to the Iran conflict."
+    }
+  ]
+}

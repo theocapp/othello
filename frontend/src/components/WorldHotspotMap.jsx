@@ -501,27 +501,6 @@ export default function WorldHotspotMap({ data, error, loading, selectedHotspotI
             {hoveredHotspot.sample_events?.[0] && <div style={{ fontFamily: "'Source Serif 4', serif", fontSize: '0.75rem', color: C.textSecondary, lineHeight: 1.5 }}>{truncateText(hotspotEventDescription(hoveredHotspot.sample_events[0]), 120)}</div>}
             <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.4rem', color: C.textMuted, letterSpacing: '0.08em', marginTop: '0.35rem' }}>{hoveredHotspot.event_count} events · click to select</div>
           </div>}
-          <div style={{ position: 'absolute', left: '1rem', top: '1rem', display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center', padding: '0.55rem 0.75rem', border: `1px solid ${C.border}`, background: panelOverlayBg, backdropFilter: 'blur(10px)', zIndex: 3 }}>
-            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.46rem', color: C.textMuted, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Filter</div>
-            {[['conflict', '#ef4444', 'Conflict'], ['political', '#60a5fa', 'Political'], ['economic', '#fbbf24', 'Economic'], ['default', C.silver, 'Other']].map(([key, color, label]) => {
-              const isActive = !activeAspects || activeAspects.has(key)
-              return <button key={key} onClick={() => setActiveAspects(prev => {
-                const all = new Set(['conflict', 'political', 'economic', 'default'])
-                const current = prev ?? new Set(all)
-                const next = new Set(current)
-                if (next.has(key) && next.size > 1) next.delete(key)
-                else if (!next.has(key)) {
-                  next.add(key)
-                  if (next.size === all.size) return null
-                }
-                return next.size === all.size ? null : next
-              })} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'none', border: 'none', cursor: 'pointer', padding: '0.1rem 0', opacity: isActive ? 1 : 0.35, transition: 'opacity 0.15s' }}>
-                <div style={{ width: 5, height: 5, borderRadius: '50%', background: color, flexShrink: 0 }} />
-                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.46rem', color: C.textMuted, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{label}</span>
-              </button>
-            })}
-            {activeAspects && <button onClick={() => setActiveAspects(null)} style={{ background: 'none', border: `1px solid ${C.borderMid}`, color: C.textMuted, fontFamily: "'JetBrains Mono', monospace", fontSize: '0.42rem', letterSpacing: '0.08em', padding: '0.2rem 0.4rem', cursor: 'pointer' }}>ALL</button>}
-          </div>
           <div style={{ position: 'absolute', right: '1rem', top: '1rem', display: 'flex', flexDirection: 'row', gap: '0.5rem', alignItems: 'center', padding: '0.25rem 0.5rem', zIndex: 3 }}>
             <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center' }}>
               {CONTINENTS.map(cont => {
@@ -664,11 +643,33 @@ export default function WorldHotspotMap({ data, error, loading, selectedHotspotI
               )}
             </div>
           </div>
-          <div style={{ position: 'absolute', left: '1rem', right: '1rem', bottom: '1rem', display: 'flex', gap: '0.45rem', flexWrap: 'wrap', alignItems: 'center', padding: '0.35rem 0.5rem', zIndex: 3 }}>
+          <div style={{ position: 'absolute', left: '1rem', bottom: '1rem', display: 'flex', gap: '0.45rem', flexWrap: 'wrap', alignItems: 'center', zIndex: 4 }}>
             {ATTENTION_WINDOWS.map(item => {
               const active = data?.window === item.id
               return <button key={item.id} onClick={() => onWindowChange(item.id)} style={{ background: active ? `${C.red}18` : C.bgRaised, border: `1px solid ${active ? C.red : C.borderMid}`, color: active ? C.textPrimary : C.textMuted, fontFamily: "'JetBrains Mono', monospace", fontSize: '0.49rem', letterSpacing: '0.08em', padding: '0.45rem 0.6rem', cursor: 'pointer', borderRadius: 999, transition: 'all 0.15s ease' }}>{item.label}</button>
             })}
+          </div>
+
+          <div style={{ position: 'absolute', right: '1rem', bottom: '1rem', display: 'flex', gap: '0.6rem', alignItems: 'center', zIndex: 4 }}>
+            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.46rem', color: C.textMuted, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Filter</div>
+            {[['conflict', '#ef4444', 'Conflict'], ['political', '#60a5fa', 'Political'], ['economic', '#fbbf24', 'Economic'], ['default', C.silver, 'Other']].map(([key, color, label]) => {
+              const isActive = !activeAspects || activeAspects.has(key)
+              return <button key={key} onClick={() => setActiveAspects(prev => {
+                const all = new Set(['conflict', 'political', 'economic', 'default'])
+                const current = prev ?? new Set(all)
+                const next = new Set(current)
+                if (next.has(key) && next.size > 1) next.delete(key)
+                else if (!next.has(key)) {
+                  next.add(key)
+                  if (next.size === all.size) return null
+                }
+                return next.size === all.size ? null : next
+              })} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'none', border: 'none', cursor: 'pointer', padding: '0.1rem 0', opacity: isActive ? 1 : 0.35, transition: 'opacity 0.15s' }}>
+                <div style={{ width: 5, height: 5, borderRadius: '50%', background: color, flexShrink: 0 }} />
+                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.46rem', color: C.textMuted, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{label}</span>
+              </button>
+            })}
+            {activeAspects && <button onClick={() => setActiveAspects(null)} style={{ background: 'none', border: `1px solid ${C.borderMid}`, color: C.textMuted, fontFamily: "'JetBrains Mono', monospace", fontSize: '0.42rem', letterSpacing: '0.08em', padding: '0.2rem 0.4rem', cursor: 'pointer' }}>ALL</button>}
           </div>
         </div>
       </div>

@@ -256,36 +256,6 @@
       "notes": "Claude label: DIFFERENT. System relatedness_score=0.32. because Article 1 discusses Trump's ultimatum to Iran and regional warnings of escalation, while Article 2 reports on a specific Houthi-Iranian joint military operation targeting Israeli sites\u2014these are separate incidents even though they occur in the same region during adjacent dates."
     },
     {
-      "id": "generated_0008",
-      "description": "both articles are reporting on the same ongoing conflict between the US and Iran, with sequential updates about US administration statements regarding the war and its resolution.",
-      "articles": [
-        {
-          "url": "https://www.aljazeera.com/news/2026/4/1/trump-tells-allies-get-your-own-oil-says-iran-war-could-end-in-2-3-weeks",
-          "title": "Trump tells allies \u2018get your own oil\u2019, says Iran war could end in 2-3 weeks",
-          "description": "Under pressure as domestic petrol prices soar, US president says no deal needed to end war on Iran.",
-          "source": "Al Jazeera English",
-          "source_domain": "www.aljazeera.com",
-          "published_at": "2026-04-01T00:14:19Z"
-        },
-        {
-          "url": "https://www.aljazeera.com/news/2026/3/30/rubio-tells-al-jazeera-strait-of-hormuz-will-reopen-one-way-or-another",
-          "title": "Rubio tells Al Jazeera Strait of Hormuz will reopen \u2018one way or another\u2019",
-          "description": "This is a breaking news story.",
-          "source": "Al Jazeera English",
-          "source_domain": "www.aljazeera.com",
-          "published_at": "2026-03-30T14:21:00Z"
-        }
-      ],
-      "expected_clusters": [
-        [
-          0,
-          1
-        ]
-      ],
-      "expected_behavior": "pass",
-      "notes": "Claude label: SAME. System relatedness_score=0.18. both articles are reporting on the same ongoing conflict between the US and Iran, with sequential updates about US administration statements regarding the war and its resolution."
-    },
-    {
       "id": "generated_0009",
       "description": "because Article 1 discusses Sudan's civil war beginning in April 2023 triggered by a conflict over the Merowe air base, while Article 2 discusses a U.S. government funding shutdown affecting Congress and airports in America.",
       "articles": [
@@ -1384,36 +1354,6 @@
       "notes": "Groq label: DIFFERENT. System relatedness_score=0.23. The two articles appear to be reporting on different aspects of a broader geopolitical situation, with Article 1 focusing on a specific incident involving the US and Iran, and Article 2 discussing a separate development involving Japan and Indonesia's response to the regional tensions."
     },
     {
-      "id": "generated_0044",
-      "description": "The articles are reporting on the same event, the Iran war, with Article 1 discussing a related diplomatic visit by Italy's Prime Minister Meloni to Qatar and Article 2 providing a live update on the conflict itself.",
-      "articles": [
-        {
-          "url": "https://www.aljazeera.com/news/2026/4/4/italys-meloni-meets-qatar-emir-to-discuss-energy-issues-amid-iran-war?traffic_source=rss",
-          "title": "Italy\u2019s Meloni meets Qatar emir to discuss energy issues amid Iran war",
-          "description": "Prime Minister Meloni is the first EU and NATO country leader to visit the region since the war began.",
-          "source": "Al Jazeera English",
-          "source_domain": "aljazeera.com",
-          "published_at": "2026-04-04T17:39:55+00:00"
-        },
-        {
-          "url": "https://www.aljazeera.com/news/liveblog/2026/4/2/iran-war-live-trump-to-address-nation-tehran-denies-seeking-ceasefire",
-          "title": "Iran war live: Trump to address nation; Tehran denies seeking ceasefire",
-          "description": "Iran denies seeking a truce and keeps up counterattacks, as US-Israeli raids cause deaths and damage across the country.",
-          "source": "Al Jazeera English",
-          "source_domain": "www.aljazeera.com",
-          "published_at": "2026-04-02T00:00:30Z"
-        }
-      ],
-      "expected_clusters": [
-        [
-          0,
-          1
-        ]
-      ],
-      "expected_behavior": "pass",
-      "notes": "Groq label: SAME. System relatedness_score=0.21. The articles are reporting on the same event, the Iran war, with Article 1 discussing a related diplomatic visit by Italy's Prime Minister Meloni to Qatar and Article 2 providing a live update on the conflict itself."
-    },
-    {
       "id": "generated_0045",
       "description": "The two articles appear to be reporting on different events, with one describing an attack in Beirut and the other describing an attack near Isfahan, which suggests they are separate incidents.",
       "articles": [
@@ -1446,36 +1386,6 @@
       "notes": "Groq label: DIFFERENT. System relatedness_score=0.49. The two articles appear to be reporting on different events, with one describing an attack in Beirut and the other describing an attack near Isfahan, which suggests they are separate incidents."
     },
     {
-      "id": "generated_0046",
-      "description": "The articles appear to be reporting on the same ongoing conflict between the US and Iran, with the first article providing an update on the situation and the second article discussing the broader implications and reactions to the conflict.",
-      "articles": [
-        {
-          "url": "https://www.bbc.com/news/articles/c5y90jl8veyo?at_medium=RSS&at_campaign=rss",
-          "title": "US and Iran trade threats to unleash 'hell' as search for missing US airman continues",
-          "description": "Iran rejected Donald Trump's ultimatum for a deal to re-open the Strait of Hormuz whose closure has led to a spike in oil prices.",
-          "source": "BBC News",
-          "source_domain": "bbc.co.uk",
-          "published_at": "2026-04-05T03:26:15+00:00"
-        },
-        {
-          "url": "https://www.aljazeera.com/news/2026/3/28/lawmakers-push-npt-exit-as-us-israel-hit-irans-nuclear-sites-steel-plants",
-          "title": "As war rages, Iranian politicians push for exit from nuclear weapons treaty",
-          "description": "While US-Israeli attacks hit key infrastructure, hardliners demand withdrawal from Nuclear Non-Proliferation Treaty.",
-          "source": "Al Jazeera English",
-          "source_domain": "www.aljazeera.com",
-          "published_at": "2026-03-28T17:48:55Z"
-        }
-      ],
-      "expected_clusters": [
-        [
-          0,
-          1
-        ]
-      ],
-      "expected_behavior": "pass",
-      "notes": "Groq label: SAME. System relatedness_score=0.27. The articles appear to be reporting on the same ongoing conflict between the US and Iran, with the first article providing an update on the situation and the second article discussing the broader implications and reactions to the conflict."
-    },
-    {
       "id": "generated_0047",
       "description": "The two articles are reporting on different events, one related to Israel's invasion of Lebanon and the other about a new Israeli law regarding the death penalty for Palestinians.",
       "articles": [
@@ -1506,36 +1416,6 @@
       ],
       "expected_behavior": "pass",
       "notes": "Groq label: DIFFERENT. System relatedness_score=0.21. The two articles are reporting on different events, one related to Israel's invasion of Lebanon and the other about a new Israeli law regarding the death penalty for Palestinians."
-    },
-    {
-      "id": "generated_0048",
-      "description": "The articles are reporting on the same conflict between the US and Iran, with one article discussing potential mediation efforts and the other discussing the market impact of the ongoing war.",
-      "articles": [
-        {
-          "url": "https://www.aljazeera.com/news/2026/3/31/will-china-join-pakistan-led-efforts-to-mediate-us-iran-peace",
-          "title": "Will China join Pakistan-led efforts to mediate US-Iran peace?",
-          "description": "Pakistan's Deputy PM Ishaq Dar visits China after Islamabad talks to broker negotiations between the US and Iran.",
-          "source": "Al Jazeera English",
-          "source_domain": "www.aljazeera.com",
-          "published_at": "2026-03-31T13:32:24Z"
-        },
-        {
-          "url": "https://apnews.com/article/stock-markets-trump-iran-oil-8118f58d75859b9fc74ab133fa9e8c3e",
-          "title": "Asian shares fall and oil climbs on Iran war uncertainties",
-          "description": "U.S. stocks had their worst day since the war with Iran started, as doubt took over again from hope on Wall Street about a possible end to the conflict. The S&P 500 fell 1.7% Thursday. The index is back on track for a fifth straight losing week, which would b\u2026",
-          "source": "Associated Press",
-          "source_domain": "apnews.com",
-          "published_at": "2026-03-26T09:01:55Z"
-        }
-      ],
-      "expected_clusters": [
-        [
-          0,
-          1
-        ]
-      ],
-      "expected_behavior": "pass",
-      "notes": "Groq label: SAME. System relatedness_score=0.14. The articles are reporting on the same conflict between the US and Iran, with one article discussing potential mediation efforts and the other discussing the market impact of the ongoing war."
     },
     {
       "id": "generated_0049",
@@ -1724,36 +1604,6 @@
       "notes": "Groq label: SAME. System relatedness_score=0.46. The articles are reporting on the same conflict between the US and Iran, with the difference in dates indicating a sequential update on the situation rather than a separate incident."
     },
     {
-      "id": "generated_0055",
-      "description": "The articles are reporting on the same conflict, with Article 1 discussing the US military deployment in response to the Iran war and Article 2 mentioning Iran's attacks on its neighbors, which is part of the same broader conflict.",
-      "articles": [
-        {
-          "url": "https://www.aljazeera.com/news/2026/4/1/iran-war-what-a-marine-expeditionary-unit-is-and-other-us-military-terms",
-          "title": "Iran War: What a Marine Expeditionary Unit is \u2013 and other US military terms",
-          "description": "The US has deployed thousands of additional Marines and airborne troops to the Middle East since the Iran war began.",
-          "source": "Al Jazeera English",
-          "source_domain": "www.aljazeera.com",
-          "published_at": "2026-04-01T15:13:13Z"
-        },
-        {
-          "url": "https://www.aljazeera.com/news/2026/3/31/qatar-warns-iranian-attacks-on-region-causing-catastrophic-effects",
-          "title": "Qatar says Iran\u2019s attacks on neighbours crossed \u2018many red lines\u2019",
-          "description": "Iranian attacks on Qatar are having a 'catastrophic effect on the relationship between the two countries', Doha says.",
-          "source": "Al Jazeera English",
-          "source_domain": "www.aljazeera.com",
-          "published_at": "2026-03-31T15:54:37Z"
-        }
-      ],
-      "expected_clusters": [
-        [
-          0,
-          1
-        ]
-      ],
-      "expected_behavior": "pass",
-      "notes": "Groq label: SAME. System relatedness_score=0.21. The articles are reporting on the same conflict, with Article 1 discussing the US military deployment in response to the Iran war and Article 2 mentioning Iran's attacks on its neighbors, which is part of the same broader conflict."
-    },
-    {
       "id": "generated_0056",
       "description": "The two articles are reporting on separate events, one related to the impact of a US oil blockade on Cuba's tourism industry and the other regarding Qatar's willingness to help with US-Iran negotiations.",
       "articles": [
@@ -1784,36 +1634,6 @@
       ],
       "expected_behavior": "pass",
       "notes": "Groq label: DIFFERENT. System relatedness_score=0.22. The two articles are reporting on separate events, one related to the impact of a US oil blockade on Cuba's tourism industry and the other regarding Qatar's willingness to help with US-Iran negotiations."
-    },
-    {
-      "id": "generated_0057",
-      "description": "The articles are reporting on the same conflict between the US, Israel, and Iran, with the first article providing an update on diplomatic efforts and the second article describing the escalation of the conflict.",
-      "articles": [
-        {
-          "url": "https://www.aljazeera.com/news/2026/4/1/war-on-iran-three-key-takeaways-from-araghchis-interview-with-al-jazeera",
-          "title": "War on Iran: Three key takeaways from Araghchi\u2019s interview with Al Jazeera",
-          "description": "Araghchi confirmed direct talks with Witkoff but denied that they constituted negotiations in an exclusive interview.",
-          "source": "Al Jazeera English",
-          "source_domain": "www.aljazeera.com",
-          "published_at": "2026-04-01T08:27:51Z"
-        },
-        {
-          "url": "https://www.aljazeera.com/news/2026/3/27/guns-in-the-streets-as-us-israel-intensify-month-long-attacks-across",
-          "title": "Guns in the streets as US, Israel intensify month-long attacks across Iran",
-          "description": "A senior IRGC official in Tehran told state television that children over 12 can join armed patrols and checkpoints.",
-          "source": "Al Jazeera English",
-          "source_domain": "www.aljazeera.com",
-          "published_at": "2026-03-27T21:22:49Z"
-        }
-      ],
-      "expected_clusters": [
-        [
-          0,
-          1
-        ]
-      ],
-      "expected_behavior": "pass",
-      "notes": "Groq label: SAME. System relatedness_score=0.21. The articles are reporting on the same conflict between the US, Israel, and Iran, with the first article providing an update on diplomatic efforts and the second article describing the escalation of the conflict."
     },
     {
       "id": "generated_0058",
@@ -1974,36 +1794,6 @@
       "notes": "Groq label: DIFFERENT. System relatedness_score=0.16. The two articles are reporting on different events, one related to the US-Israeli war on Iran and its economic impact, and the other about a strike and protest in the West Bank against an Israeli death penalty law."
     },
     {
-      "id": "generated_0063",
-      "description": "The articles are related to the same conflict, with Article 1 reporting on a specific incident involving a downed US F-15E fighter jet over Iran, and Article 2 discussing the broader economic implications of the same war.",
-      "articles": [
-        {
-          "url": "https://www.middleeasteye.net/live-blog/live-blog-update/al-jazeera-second-crew-member-downed-f15-recovered-after-firefight",
-          "title": "Al Jazeera: Second crew member of downed F15 located",
-          "description": "The second crew member from a downed US F-15E fighter jet was located on Sunday amid a \u201cheavy firefight,\u201d Al Jazeera reported, quoting US government officials. One crew member had been rescued earlier, while search operations continued for the second after the aircraft was shot down over Iran\u2019s Khuzestan province. US planes and helicopters had been searching for the crew, with videos showing low-flying aircraft and rescue efforts in the area, including unconfirmed footage of aircraft coming under fire. The two-seat jet carried a pilot and a weapons systems officer, though the exact circumstances of the downing remain unclear. Khuzestan, a key hub for Iran\u2019s oil, gas and steel production, has seen heavy bombardment in recent days, disrupting industrial output and raising concerns over economic impact.",
-          "source": "Middle East Eye",
-          "source_domain": "middleeasteye.net",
-          "published_at": "2026-04-05T03:21:19+00:00"
-        },
-        {
-          "url": "https://www.aljazeera.com/video/newsfeed/2026/3/31/eu-warns-oil-and-gas-prices-wont-quickly-return-to-normal-after-iran-war",
-          "title": "EU warns oil and gas prices won\u2019t quickly return to normal after Iran war",
-          "description": "The EU\u2019s energy commissioner has warned oil and gas prices will not return to normal any time soon.",
-          "source": "Al Jazeera English",
-          "source_domain": "www.aljazeera.com",
-          "published_at": "2026-03-31T22:56:54Z"
-        }
-      ],
-      "expected_clusters": [
-        [
-          0,
-          1
-        ]
-      ],
-      "expected_behavior": "pass",
-      "notes": "Groq label: SAME. System relatedness_score=0.12. The articles are related to the same conflict, with Article 1 reporting on a specific incident involving a downed US F-15E fighter jet over Iran, and Article 2 discussing the broader economic implications of the same war."
-    },
-    {
       "id": "generated_0064",
       "description": "The two articles report on the same incident of the US taking into custody relatives of Qassem Soleimani after revoking their residency status, with similar details and dates mentioned in both articles.",
       "articles": [
@@ -2066,36 +1856,6 @@
       "notes": "Groq label: DIFFERENT. System relatedness_score=0.08. The two articles are reporting on completely unrelated events, with Article 1 discussing a drone attack in Kuwait and Article 2 discussing energy bill support in the UK."
     },
     {
-      "id": "generated_0066",
-      "description": "The articles are reporting on the same event, a conflict between the US and Iran, with Article 1 providing an update on a US satellite firm's decision amid the war, and Article 2 explaining US military terms and deployments in the context of the same conflict.",
-      "articles": [
-        {
-          "url": "https://www.aljazeera.com/news/2026/4/5/us-satellite-firm-planet-labs-announces-blackout-on-war-on-iran-images?traffic_source=rss",
-          "title": "US satellite firm Planet Labs announces blackout on war on Iran images",
-          "description": "Company says move amid US-Israel war on Iran comes after a request from the US government.",
-          "source": "Al Jazeera English",
-          "source_domain": "www.aljazeera.com",
-          "published_at": "2026-04-05T01:13:40+00:00"
-        },
-        {
-          "url": "https://www.aljazeera.com/news/2026/4/1/iran-war-what-a-marine-expeditionary-unit-is-and-other-us-military-terms",
-          "title": "Iran War: What a Marine Expeditionary Unit is \u2013 and other US military terms",
-          "description": "The US has deployed thousands of additional Marines and airborne troops to the Middle East since the Iran war began.",
-          "source": "Al Jazeera English",
-          "source_domain": "www.aljazeera.com",
-          "published_at": "2026-04-01T15:13:13Z"
-        }
-      ],
-      "expected_clusters": [
-        [
-          0,
-          1
-        ]
-      ],
-      "expected_behavior": "pass",
-      "notes": "Groq label: SAME. System relatedness_score=0.23. The articles are reporting on the same event, a conflict between the US and Iran, with Article 1 providing an update on a US satellite firm's decision amid the war, and Article 2 explaining US military terms and deployments in the context of the same conflict."
-    },
-    {
       "id": "generated_0067",
       "description": "The two articles are reporting on separate events, one being an antiwar protest in Tel Aviv and the other being a potential doctors' strike in the NHS.",
       "articles": [
@@ -2126,36 +1886,6 @@
       ],
       "expected_behavior": "pass",
       "notes": "Groq label: DIFFERENT. System relatedness_score=0.02. The two articles are reporting on separate events, one being an antiwar protest in Tel Aviv and the other being a potential doctors' strike in the NHS."
-    },
-    {
-      "id": "generated_0068",
-      "description": "The two articles are reporting on the same event, the Iran war, and its effects on the US, with one article discussing the exemption of Gulf of Mexico oil drillers from endangered species protections and the other article discussing the rise in US gas prices, both of which are related to the ongoing conflict.",
-      "articles": [
-        {
-          "url": "https://www.aljazeera.com/news/2026/3/31/us-exempts-gulf-of-mexico-oil-drillers-from-endangered-species-protections",
-          "title": "US exempts Gulf of Mexico oil drillers from endangered species protections",
-          "description": "The Trump administration says protections would diminish US energy competitiveness amid the ongoing war on Iran.",
-          "source": "Al Jazeera English",
-          "source_domain": "www.aljazeera.com",
-          "published_at": "2026-03-31T23:02:56Z"
-        },
-        {
-          "url": "https://apnews.com/article/gas-prices-4-gallon-iran-war-de8b7ccea254a1585cab86f336db57a6",
-          "title": "Average price for a gallon of gas in the US eclipses $4",
-          "description": "U.S. gas prices have jumped past an average of $4 a gallon for the first time since 2022 as fuel prices continue to soar worldwide amid the Iran war. According to motor club AAA, the national average for a gallon of regular gasoline is now $4.02 \u2014 over a doll\u2026",
-          "source": "Associated Press",
-          "source_domain": "apnews.com",
-          "published_at": "2026-03-31T07:38:14Z"
-        }
-      ],
-      "expected_clusters": [
-        [
-          0,
-          1
-        ]
-      ],
-      "expected_behavior": "pass",
-      "notes": "Groq label: SAME. System relatedness_score=0.24. The two articles are reporting on the same event, the Iran war, and its effects on the US, with one article discussing the exemption of Gulf of Mexico oil drillers from endangered species protections and the other article discussing the rise in US gas prices, both of which are related to the ongoing conflict."
     },
     {
       "id": "generated_0069",
@@ -2412,36 +2142,6 @@
       "notes": "Groq label: DIFFERENT. System relatedness_score=0.07. The two articles are reporting on different events, one related to energy bill support in the UK and the other related to a US-Israel conflict with Iran."
     },
     {
-      "id": "generated_0077",
-      "description": "The articles are reporting on the same event, a conflict involving the US and Iran, with Article 1 providing a specific update on the situation and Article 2 discussing a secondary effect of the conflict on Kenya's tea industry.",
-      "articles": [
-        {
-          "url": "https://www.bbc.com/news/articles/c5y90jl8veyo?at_medium=RSS&at_campaign=rss",
-          "title": "US and Iran trade threats to unleash 'hell' as search for missing US airman continues",
-          "description": "Iran rejected Donald Trump's ultimatum for a deal to re-open the Strait of Hormuz whose closure has led to a spike in oil prices.",
-          "source": "BBC News",
-          "source_domain": "bbc.co.uk",
-          "published_at": "2026-04-05T03:26:15+00:00"
-        },
-        {
-          "url": "https://www.aljazeera.com/video/newsfeed/2026/4/1/kenyas-tea-industry-suffers-crisis-caused-by-the-us-israeli-war-on-iran",
-          "title": "Kenya\u2019s tea industry suffers crisis caused by the US-Israeli war on Iran",
-          "description": "Kenyan tea farmers are facing a crisis after the US-Israeli war on Iran disrupted key export routes to the Middle East.",
-          "source": "Al Jazeera English",
-          "source_domain": "www.aljazeera.com",
-          "published_at": "2026-04-01T16:25:47Z"
-        }
-      ],
-      "expected_clusters": [
-        [
-          0,
-          1
-        ]
-      ],
-      "expected_behavior": "pass",
-      "notes": "Groq label: SAME. System relatedness_score=0.25. The articles are reporting on the same event, a conflict involving the US and Iran, with Article 1 providing a specific update on the situation and Article 2 discussing a secondary effect of the conflict on Kenya's tea industry."
-    },
-    {
       "id": "generated_0078",
       "description": "The two articles are reporting on different events, one related to the pricing of Iranian petrol in Balochistan and the other related to Pakistan's efforts to mediate peace between the US and Iran.",
       "articles": [
@@ -2628,36 +2328,6 @@
       ],
       "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.71. The two articles report on the same escalating conflict between the US and Iran, with both mentioning the Strait of Hormuz, threats of retaliation, and specific actions taken by the involved parties."
-    },
-    {
-      "id": "generated_0084",
-      "description": "The articles are reporting on the same conflict between Israel and Hezbollah, with Article 1 providing a specific update on the conflict and Article 2 appearing to be an opinion piece related to the same broader issue.",
-      "articles": [
-        {
-          "url": "https://www.aljazeera.com/news/2026/4/1/israeli-strikes-on-beirut-kill-7-hezbollah-fights-back-in-southern-lebanon",
-          "title": "Israel kills 7 people in Beirut, Hezbollah fights invasion in south Lebanon",
-          "description": "The Israeli military says it aimed to kill a senior Hezbollah commander as it launched its latest attacks on Beirut.",
-          "source": "Al Jazeera English",
-          "source_domain": "www.aljazeera.com",
-          "published_at": "2026-04-01T10:05:17Z"
-        },
-        {
-          "url": "https://www.aljazeera.com/opinions/2026/3/30/green-and-yellow-two-lines-that-separate-me-from-my-land",
-          "title": "Green and Yellow: Two lines that separate me from my land",
-          "description": "Israel can draw as many lines as it wants, but we will not give up the right to our land.",
-          "source": "Al Jazeera English",
-          "source_domain": "www.aljazeera.com",
-          "published_at": "2026-03-30T10:53:40Z"
-        }
-      ],
-      "expected_clusters": [
-        [
-          0,
-          1
-        ]
-      ],
-      "expected_behavior": "pass",
-      "notes": "Groq label: SAME. System relatedness_score=0.22. The articles are reporting on the same conflict between Israel and Hezbollah, with Article 1 providing a specific update on the conflict and Article 2 appearing to be an opinion piece related to the same broader issue."
     },
     {
       "id": "generated_0085",
@@ -3158,36 +2828,6 @@
       "notes": "Groq label: DIFFERENT. System relatedness_score=0.44. The two articles appear to be reporting on separate events, one discussing the potential impact of Mojtaba Khamenei's rumoured injury or death on Iran's trajectory, and the other reporting on Iranian attacks causing damage and casualties in Kuwait, Bahrain, and the UAE."
     },
     {
-      "id": "generated_0101",
-      "description": "The articles are reporting on the same US-Israeli war on Iran, with Article 1 discussing the impact of the war on Kenya's tea industry and Article 2 providing an analysis of the war itself.",
-      "articles": [
-        {
-          "url": "https://www.aljazeera.com/video/newsfeed/2026/4/1/kenyas-tea-industry-suffers-crisis-caused-by-the-us-israeli-war-on-iran",
-          "title": "Kenya\u2019s tea industry suffers crisis caused by the US-Israeli war on Iran",
-          "description": "Kenyan tea farmers are facing a crisis after the US-Israeli war on Iran disrupted key export routes to the Middle East.",
-          "source": "Al Jazeera English",
-          "source_domain": "www.aljazeera.com",
-          "published_at": "2026-04-01T16:25:47Z"
-        },
-        {
-          "url": "https://apnews.com/article/iran-us-israel-war-analysis-23fb5978ef583308f0da4228a9a02c66",
-          "title": "Analysis: 1 month into the war, Iran is fighting Israel and the US with insurgent tactics",
-          "description": "One month into their war with Iran, the United States and Israel find themselves confronting an opponent that fights more like an insurgency than a nation. Iran is using increasingly limited resources to inflict maximum pain. Iran is being battered daily by a\u2026",
-          "source": "Associated Press",
-          "source_domain": "apnews.com",
-          "published_at": "2026-03-27T15:07:29Z"
-        }
-      ],
-      "expected_clusters": [
-        [
-          0,
-          1
-        ]
-      ],
-      "expected_behavior": "pass",
-      "notes": "Groq label: SAME. System relatedness_score=0.14. The articles are reporting on the same US-Israeli war on Iran, with Article 1 discussing the impact of the war on Kenya's tea industry and Article 2 providing an analysis of the war itself."
-    },
-    {
       "id": "generated_0102",
       "description": "The two articles report on separate incidents, one involving the closure of a border crossing between Syria and Lebanon due to an Israeli threat, and the other involving a claim by the Houthi group of a joint attack with Iran and Hezbollah targeting Israeli airports.",
       "articles": [
@@ -3534,36 +3174,6 @@
       "notes": "Groq label: DIFFERENT. System relatedness_score=0.4. The two articles are reporting on different aspects of the same broader conflict, with one focusing on protests in Syria and the other on the death toll in Gaza, indicating they are separate events."
     },
     {
-      "id": "generated_0113",
-      "description": "The articles are reporting on the same event, a conflict between the US and Iran, with Article 1 discussing the potential cabinet shake-up in response to the war, and Article 2 describing the impact of the war on Iran's infrastructure.",
-      "articles": [
-        {
-          "url": "https://www.dawn.com/news/1988668/us-president-weighs-broader-cabinet-shake-up",
-          "title": "US president weighs broader cabinet shake-up",
-          "description": "WASHINGTON: US President Donald Trump is considering a bro\u00adader cabinet shake-up in the wake of Attorney General Pam Bondi\u2019s removal this week, as he grows increasingly frustrated with the political fallout from the war with Iran, five people familiar with internal White House discussions said. Any potential reshuffling could serve as a reset for the White House as it confronts a politically challenging stretch: The five-week-old war has driven up gas prices, dragged down Trump\u2019s approval ratings and intensified anxiety about the consequences for Republicans heading into November\u2019s midterm elections. Some allies said his televised speech, which one senior White House official described as an attempt to project a sense of control and confidence about the direction of the war, fell flat, adding to the sense that changes in messaging or personnel were needed. National Intelligence Director Tulsi Gabbard, Commerce Secretary Howard Lutnick among those potentially on \u2018the chopping block\u2019 \u201cA shake-up to show action is not a bad thing, is it?\u201d another White House official said. Three White House officials and two other sources with knowledge of administration dynamics spoke to Reuters on condition of anonymity to discuss sensitive personnel matters. The sources did not consistently describe any single cabinet member as certain to lose their job in the near term, but multiple officials are in some degree of danger, they said. \u2018On the chopping block\u2019 Several of the sources said Tulsi Gabbard, Trump\u2019s director of nat\u00adional intelligence, and Com\u00admerce Secretary Howard Lutnick are among those potentially on the chopping block, after Trump ousted Bondi and Homeland Security Sec\u00adretary Kristi Noem in recent weeks. Trump has in recent months expressed displeasure with Gabbard, said one senior White House official. Another source with direct knowledge of the matter said Trump had asked allies about their thoughts on potential replacements for his intelligence chief. Some high-profile Trump allies, meanwhile, are privately pushing for the removal of Lutnick, a close personal friend of the president who has faced renewed scrutiny in recent months for his relationship with sex offender Jeffrey Epstein. New files released earlier in the year revealed that Lutnick had lunch with Epstein on his private island in the Caribbean in 2012. Lutnick has said he \u201cbarely had anything to do with\u201d Epstein and that the lunch took place only because he was on a boat near the island. However, White House spokesman Davis Ingle said Trump maintained \u201ctotal confidence\u201d in Gabbard and Lutnick. A spokesperson for the Office of the Director of National Intelligence pointed Reuters to a Thursday post by the White House on X in which White House communications director Steve Cheung is quoted as saying Trump has \u201ctotal confidence\u201d in Gabbard. Trump worked with his speechwriting team and top advisers on this week\u2019s prime-time address, one official said, after aides had urged him for weeks to speak directly to the nation about the US\u2019 role in Iran. \u201cVoters tolerate ideological messaging, but they feel fuel prices immediately,\u201d the official said. Just 36 per cent of Americans approve of Trump\u2019s overall job performance, according to the latest Reuters/Ipsos survey, the lowest figure of his current term. The war with Iran is particularly unpopular, with 60pc of respondents disapproving of the US-Israeli decision to start the conflict. Published in Dawn, April 5th, 2026",
-          "source": "Dawn",
-          "source_domain": "www.dawn.com",
-          "published_at": "2026-04-05T02:55:44+00:00"
-        },
-        {
-          "url": "https://www.aljazeera.com/news/2026/4/4/universities-hit-as-us-israel-ramp-up-attacks-on-irans-infrastructure?traffic_source=rss",
-          "title": "Universities hit as US, Israel ramp up attacks on Iran\u2019s infrastructure",
-          "description": "Authorities say at least 30 universities impacted by US and Israeli strikes since the start of the war.",
-          "source": "Al Jazeera English",
-          "source_domain": "aljazeera.com",
-          "published_at": "2026-04-04T19:17:24+00:00"
-        }
-      ],
-      "expected_clusters": [
-        [
-          0,
-          1
-        ]
-      ],
-      "expected_behavior": "pass",
-      "notes": "Groq label: SAME. System relatedness_score=0.17. The articles are reporting on the same event, a conflict between the US and Iran, with Article 1 discussing the potential cabinet shake-up in response to the war, and Article 2 describing the impact of the war on Iran's infrastructure."
-    },
-    {
       "id": "generated_0114",
       "description": "The two articles report on the same incident of air strikes targeting a petrochemical complex in Iran, with Article 1 providing specific details on the damage and casualties in the Mahshahr Special Petrochemical Economic Zone, and Article 2 mentioning the broader context and other related events.",
       "articles": [
@@ -3870,36 +3480,6 @@
       "notes": "Groq label: SAME. System relatedness_score=0.32. The articles appear to be discussing the same conflict, with Article 1 analyzing the interests of the parties involved and Article 2 providing an update on the actions of Iranian politicians in response to the ongoing war."
     },
     {
-      "id": "generated_0124",
-      "description": "The articles are reporting on the same event, a conflict involving the US and Iran, with Article 1 discussing Iran's stance and Article 2 touching on the global energy crisis and market volatility amid the same war.",
-      "articles": [
-        {
-          "url": "https://www.aljazeera.com/video/the-take-2/2026/3/31/aje-onl-tt_irn_whatcouldendthewar_av_v2-310326",
-          "title": "Why Iran believes it can outlast the US",
-          "description": "Iran is preparing for deeper US escalation while insisting it\u2019s winning. Can this war end before it widens?",
-          "source": "Al Jazeera English",
-          "source_domain": "www.aljazeera.com",
-          "published_at": "2026-03-31T17:04:51Z"
-        },
-        {
-          "url": "https://www.aljazeera.com/news/2026/3/27/what-is-the-taco-trade-and-are-investors-profiting-amid-war-on-iran",
-          "title": "What is the TACO trade and are investors profiting amid war on Iran?",
-          "description": "Global energy crisis continues to widen amid market volatility, while so-called 'TACO traders' attempt to capitalise.",
-          "source": "Al Jazeera English",
-          "source_domain": "www.aljazeera.com",
-          "published_at": "2026-03-27T22:06:38Z"
-        }
-      ],
-      "expected_clusters": [
-        [
-          0,
-          1
-        ]
-      ],
-      "expected_behavior": "pass",
-      "notes": "Groq label: SAME. System relatedness_score=0.26. The articles are reporting on the same event, a conflict involving the US and Iran, with Article 1 discussing Iran's stance and Article 2 touching on the global energy crisis and market volatility amid the same war."
-    },
-    {
       "id": "generated_0125",
       "description": "The two articles report on separate events, one being Iran's seizure of assets from individuals accused of supporting the enemy abroad, and the other being Israel's air strikes on targets in Iran and Lebanon.",
       "articles": [
@@ -4026,36 +3606,6 @@
       "notes": "Groq label: DIFFERENT. System relatedness_score=0.13. The two articles are reporting on different conflicts, with Article 1 discussing the Iran war and Article 2 discussing the war in Sudan."
     },
     {
-      "id": "generated_0129",
-      "description": "The articles are reporting on the same conflict, with Article 1 discussing the economic impact of the war on Pakistan and Article 2 providing updates on the military actions and diplomatic developments in the conflict.",
-      "articles": [
-        {
-          "url": "https://www.dawn.com/news/1988678/gulf-war-erodes-90pc-investment-in-t-bills",
-          "title": "Gulf war erodes 90pc investment in T-bills",
-          "description": "KARACHI: The Gulf War has begun to affect the Pakistani economy as hopes for an early recovery diminish with the conflict\u2019s increasing intensity each day. The latest data from the State Bank showed that 90 per cent of foreign investment in domestic bonds had been withdrawn. Local investments in treasury bills are increasing as returns have risen to 11.5 per cent compared to the SBP\u2019s policy rate of 10.5pc. This makes them very attractive to foreign investors, but a war ongoing for more than 35 days has undermined their confidence. The data showed total inflows in the first nine months of FY26 were Rs886.7 million, while the outflows were $794m (almost 90pc), leaving a meagre $93m invested. Analysts said that outflows from domestic bonds would have limited impact, but the withdrawal of deposits from the State Bank account by friendly countries could pose a serious threat to Pakistan\u2019s foreign exchange reserves. Reports indicate that the UAE government is hesitant to rollover $2 billion maturing this month. China and Saudi Arabia also contribute to the SBP\u2019s foreign exchange reserves. It is unclear what will happen to the loans other than those from the UAE. Low foreign exchange reserves of the State Bank could severely impact the exchange rate, which has been successfully maintained stable for over a year. Exports to the Middle East have declined, while importers are complaining about difficulties in obtaining dollars. \u201cThe war has created many economic challenges for Pakistan. It\u2019s not only the foreign exchange but the spiral effect of higher prices of petroleum products could hit the poor masses on a large scale,\u201d said an expert, adding that the industry has also come under serious threat from the high cost of production. The SBP data showed that $227m was withdrawn from T-bills in the first 27 days of March, compared to an inflow of $19m, indicating weak investor confidence. The highest outflow of investment from the T-bills was $281m, which returned to the UK. Likewise, the outflows for the UAE were $209m; Bahrain $170m, Singapore $77.6m, and the US $32m. Published in Dawn, April 5th, 2026",
-          "source": "Dawn",
-          "source_domain": "www.dawn.com",
-          "published_at": "2026-04-05T03:25:49+00:00"
-        },
-        {
-          "url": "https://apnews.com/article/iran-us-israel-trump-lebanon-april-1-2026-19cf516c2d2c614eb182dbad7a6592ef",
-          "title": "Iran hits tanker off coast of Qatar, Kuwait airport and Israel kills 5 in Beirut attack",
-          "description": "Iran hit a tanker off the coast of Qatar and Kuwait International Airport as Tehran acknowledged for the first time that Washington had been in direct contact about a possible ceasefire. Israel sounded warnings of incoming fire from both Yemen and Iran on Wed\u2026",
-          "source": "Associated Press",
-          "source_domain": "apnews.com",
-          "published_at": "2026-04-01T07:38:31Z"
-        }
-      ],
-      "expected_clusters": [
-        [
-          0,
-          1
-        ]
-      ],
-      "expected_behavior": "pass",
-      "notes": "Groq label: SAME. System relatedness_score=0.14. The articles are reporting on the same conflict, with Article 1 discussing the economic impact of the war on Pakistan and Article 2 providing updates on the military actions and diplomatic developments in the conflict."
-    },
-    {
       "id": "generated_0130",
       "description": "The two articles are reporting on separate events, one involving Iran seizing assets of individuals accused of supporting the enemy abroad, and the other involving a Russian attack on a Ukrainian market.",
       "articles": [
@@ -4118,36 +3668,6 @@
       ],
       "expected_behavior": "pass",
       "notes": "Groq label: DIFFERENT. System relatedness_score=0.41. The articles describe different incidents and locations, with Article 1 focusing on Israeli strikes in southern Lebanon and Article 2 mentioning an Iranian attack on a tanker off the coast of Qatar and an Israeli attack in Beirut."
-    },
-    {
-      "id": "generated_0132",
-      "description": "The articles appear to be reporting on the same conflict between Iran and Israel, with Article 1 providing a specific update on Iran's military targets and Article 2 discussing the broader economic implications of the conflict.",
-      "articles": [
-        {
-          "url": "https://www.middleeasteye.net/live-blog/live-blog-update/iran-adds-israeli-power-stations-target-list-report-says",
-          "title": "Iran adds Israeli power stations to target list, report says",
-          "description": "Iran\u2019s armed forces have decided to add two major power stations in Israel to their target bank, Tasnim news agency reported, citing military sources. The move follows a Reuters report which said Israel is preparing to target Iranian energy facilities. The report said the decision was part of a policy of reciprocity and signalled readiness to respond to any threat against Iranian infrastructure. The development reflects rising concerns over attacks on energy infrastructure on both sides, with threats and counter-threats escalating in recent days, according to Reuters.",
-          "source": "Middle East Eye",
-          "source_domain": "middleeasteye.net",
-          "published_at": "2026-04-05T00:50:47+00:00"
-        },
-        {
-          "url": "https://apnews.com/article/trump-economy-iran-war-stock-market-6424803f3e30c65d5924912e4facdcf6",
-          "title": "Trump's strategy to calm markets during Iran war is falling flat",
-          "description": "President Donald Trump has prioritized efforts to calm the financial markets during the Iran war, but his go-to moves are starting to fall flat. When the markets have flashed danger, Trump has been quick with a social media post or a remark to claim the war h\u2026",
-          "source": "Associated Press",
-          "source_domain": "apnews.com",
-          "published_at": "2026-03-31T10:23:23Z"
-        }
-      ],
-      "expected_clusters": [
-        [
-          0,
-          1
-        ]
-      ],
-      "expected_behavior": "pass",
-      "notes": "Groq label: SAME. System relatedness_score=0.14. The articles appear to be reporting on the same conflict between Iran and Israel, with Article 1 providing a specific update on Iran's military targets and Article 2 discussing the broader economic implications of the conflict."
     },
     {
       "id": "generated_0133",
@@ -4432,36 +3952,6 @@
       ],
       "expected_behavior": "pass",
       "notes": "Groq label: DIFFERENT. System relatedness_score=0.28. The articles appear to be discussing different aspects of the same broader conflict, with Article 1 focusing on Syria's stance and Article 2 discussing Qatar's relations with the US, but they are not reporting on the same specific event or incident."
-    },
-    {
-      "id": "generated_0142",
-      "description": "The articles are reporting on the same event, the US-Israeli war on Iran, as they both mention its impact on different countries, indicating a shared context and incident.",
-      "articles": [
-        {
-          "url": "https://www.aljazeera.com/video/newsfeed/2026/4/1/kenyas-tea-industry-suffers-crisis-caused-by-the-us-israeli-war-on-iran",
-          "title": "Kenya\u2019s tea industry suffers crisis caused by the US-Israeli war on Iran",
-          "description": "Kenyan tea farmers are facing a crisis after the US-Israeli war on Iran disrupted key export routes to the Middle East.",
-          "source": "Al Jazeera English",
-          "source_domain": "www.aljazeera.com",
-          "published_at": "2026-04-01T16:25:47Z"
-        },
-        {
-          "url": "https://www.aljazeera.com/video/newsfeed/2026/4/1/uk-pm-says-iran-war-will-impact-britains-future",
-          "title": "UK PM says war on Iran will impact Britain\u2019s future",
-          "description": "UK Prime Minister Keir Starmer says the war on Iran will shape Britain\u2019s future.",
-          "source": "Al Jazeera English",
-          "source_domain": "www.aljazeera.com",
-          "published_at": "2026-04-01T11:57:12Z"
-        }
-      ],
-      "expected_clusters": [
-        [
-          0,
-          1
-        ]
-      ],
-      "expected_behavior": "pass",
-      "notes": "Groq label: SAME. System relatedness_score=0.26. The articles are reporting on the same event, the US-Israeli war on Iran, as they both mention its impact on different countries, indicating a shared context and incident."
     },
     {
       "id": "generated_0143",
@@ -4932,36 +4422,6 @@
       "notes": "Groq label: DIFFERENT. System relatedness_score=0.26. The two articles are reporting on separate incidents of drone attacks, one in Kuwait and the other in Ukraine, involving different countries and locations."
     },
     {
-      "id": "generated_0158",
-      "description": "The articles are reporting on the same event, the Iran war, with Article 1 discussing its impact on Australia's fuel supply and Article 2 providing an update on the war itself.",
-      "articles": [
-        {
-          "url": "https://www.bbc.com/news/articles/c62l084kgk6o?at_medium=RSS&at_campaign=rss",
-          "title": "Australians told to continue Easter travel plans despite fuel shortages",
-          "description": "Hundreds of petrol stations across Australia have run out of fuel as the Iran war disrupts global oil shipments and pushes up prices.",
-          "source": "BBC News",
-          "source_domain": "bbc.co.uk",
-          "published_at": "2026-04-04T12:10:10+00:00"
-        },
-        {
-          "url": "https://www.aljazeera.com/news/2026/3/31/iran-war-what-is-happening-on-day-32-of-us-israel-attacks",
-          "title": "Iran war: What is happening on day 32 of US-Israel attacks?",
-          "description": "In an exclusive interview with Al Jazeera, Secretary of State Rubio said US war objectives would be achieved in 'weeks'.",
-          "source": "Al Jazeera English",
-          "source_domain": "www.aljazeera.com",
-          "published_at": "2026-03-31T07:49:45Z"
-        }
-      ],
-      "expected_clusters": [
-        [
-          0,
-          1
-        ]
-      ],
-      "expected_behavior": "pass",
-      "notes": "Groq label: SAME. System relatedness_score=0.17. The articles are reporting on the same event, the Iran war, with Article 1 discussing its impact on Australia's fuel supply and Article 2 providing an update on the war itself."
-    },
-    {
       "id": "generated_0159",
       "description": "The articles appear to be reporting on different events, with Article 1 focusing on a specific Israeli military operation in Lebanon, and Article 2 discussing a broader conflict involving the US and Israel, possibly related to Iran.",
       "articles": [
@@ -5084,36 +4544,6 @@
       ],
       "expected_behavior": "pass",
       "notes": "Groq label: DIFFERENT. System relatedness_score=0.3. The two articles appear to be discussing different conflicts, with Article 1 focusing on the war in Sudan and Article 2 discussing a Middle East war involving various countries including Iran, Saudi Arabia, and Israel."
-    },
-    {
-      "id": "generated_0163",
-      "description": "The articles are reporting on the same event, the US-Israel war on Iran, with Article 1 discussing its economic impact and Article 2 mentioning a related development in negotiations.",
-      "articles": [
-        {
-          "url": "https://www.dawn.com/news/1988532/shahid-khaqan-urges-govt-to-deregulate-fuel-prices-promote-electric-vehicles",
-          "title": "Shahid Khaqan urges govt to deregulate fuel prices, promote electric vehicles",
-          "description": "Awaam Pakistan President Shahid Khaqan Abbasi on Saturday called on the government to deregulate petroleum prices and promote electric vehicles (EVs) to absorb the economic impact of rising oil prices amid the US-Israel war on Iran. Since the February 28 strikes by the US and Israel on Iran triggered the war and pushed up global oil prices, fuel prices in Pakistan have reached record highs. In two major hikes , petrol prices have risen from Rs266.17 to Rs378 \u2014 after a partial reduction in a recent hike \u2014 while those of high-speed diesel have surged from Rs280.86 to Rs520.35. Addressing a press conference in Islamabad, Abbasi said: \u201cI would like to say two things: deregulate the petroleum prices \u2014 the government is not capable of handling it \u2014 and pay attention to electric vehicles (EVs), especially on motorcycles.\u201d \u201cThis amount keeps on increasing [\u2026] your system will function only if you incentivise EVs,\u201d he added, citing China as an example of having policies to promote EVs. The former prime minister also raised questions about some provinces\u2019 decisions to make public transport free and distribute funds among certain groups. He contended that \u201cnot even Rs20 billion out of the Rs200bn announced would reach\u201d the public due to the high levels of corruption prevalent in government departments. The Awaam Pakistan chief claimed the government adopted \u201cfive different policies\u201d over the past month to determine oil prices, adding that it was better to deregulate the prices and leave them dependent on the market. \u201cThis is the path Pakistan should take. There is no other way,\u201d he said, recalling that the government had decided in 2018 that petroleum products in Pakistan would be deregulated. \u201cYou are the government. You can counter hoarding; it is your responsibility. It does not mean hiking the prices in an untimely manner,\u201d the former premier said. He emphasised that there was a need to \u201cexpress these faults and understand the issues facing the country today\u201d, adding that it was the government\u2019s job to formulate policies while keeping in mind the lasting impacts of the ongoing war. Abbasi further pointed out that Pakistan had witnessed a \u201csolar revolution\u201d without the government\u2019s interference. \u201cWe always try to find whose fault it is,\u201d Abbasi remarked, recalling that first, independent power producers (IPPs) were blamed for the electricity crisis, then the policy of net-metering was identified as the issue. \u201cThe government changed the policy four times; they ended net-metering, then it was reintroduced . Why can\u2019t you formulate a permanent policy? This is called elite capture,\u201d he said. On Thursday, the government announced an unprecedented increase of 43 per cent and 55pc in the prices of petrol and HSD, respectively, to cushion the impact of global oil price shocks amid the Middle East conflict. The move was met with considerable backlash from the opposition PTI, with the Jamaat-i-Islami (JI) warning of a nationwide protest movement if the hikes were not withdrawn. On Friday night, Prime Minister Shehbaz Sharif announced that the government was reducing the petrol levy by Rs80 per litre, after which the commodity would be available to end consumers for Rs378 per litre instead of Rs458 per litre.",
-          "source": "Dawn",
-          "source_domain": "dawn.com",
-          "published_at": "2026-04-04T13:31:44+00:00"
-        },
-        {
-          "url": "https://www.aljazeera.com/video/newsfeed/2026/3/31/qatar-says-ready-to-help-with-us-iran-negotiations",
-          "title": "Qatar says \u2018ready to help\u2019 with US-Iran negotiations",
-          "description": "Qatari Foreign Ministry spokesperson Majed al-Ansari says Qatar is \u201cready to help\u201d with US-Iran negotiations.",
-          "source": "Al Jazeera English",
-          "source_domain": "www.aljazeera.com",
-          "published_at": "2026-03-31T17:00:24Z"
-        }
-      ],
-      "expected_clusters": [
-        [
-          0,
-          1
-        ]
-      ],
-      "expected_behavior": "pass",
-      "notes": "Groq label: SAME. System relatedness_score=0.13. The articles are reporting on the same event, the US-Israel war on Iran, with Article 1 discussing its economic impact and Article 2 mentioning a related development in negotiations."
     },
     {
       "id": "generated_0164",
@@ -5580,36 +5010,6 @@
       "notes": "Groq label: SAME. System relatedness_score=0.4. The two articles are reporting on the same war between Iran, the US, and Israel, with Article 1 providing an analysis of the conflict and Article 2 discussing the economic impact of the war."
     },
     {
-      "id": "generated_0179",
-      "description": "The articles are reporting on the same event, a conflict involving Iran, as indicated by the mention of a war in West Asia in Article 1 and the \"Iran war\" in Article 2.",
-      "articles": [
-        {
-          "url": "https://thediplomat.com/2026/04/why-india-should-leverage-brics-to-call-for-ceasefire-in-west-asia/",
-          "title": "Why India Should Leverage BRICS to Call for Ceasefire in West Asia",
-          "description": "What makes BRICS silence on the war in West Asia particularly deplorable is that two fellow BRICS members -- Iran and the UAE -- are directly caught in the war.",
-          "source": "The Diplomat",
-          "source_domain": "thediplomat.com",
-          "published_at": "2026-04-02T18:05:00+00:00"
-        },
-        {
-          "url": "https://apnews.com/article/stock-markets-war-oil-trump-iran-80a8391c0729872ae2a486526dbc8abd",
-          "title": "Asian stocks jump after Wall Street soars on renewed hopes of Iran war end",
-          "description": "Asian shares are sharply higher after U.S. stocks soared to their best day in almost a year over renewed hopes that the Iran war could soon end. South Korea's Kospi was up 6.4% and Tokyo's Nikkei 225 rose 4% in early trading Wednesday. Oil prices have steadie\u2026",
-          "source": "Associated Press",
-          "source_domain": "apnews.com",
-          "published_at": "2026-04-01T03:11:24Z"
-        }
-      ],
-      "expected_clusters": [
-        [
-          0,
-          1
-        ]
-      ],
-      "expected_behavior": "pass",
-      "notes": "Groq label: SAME. System relatedness_score=0.21. The articles are reporting on the same event, a conflict involving Iran, as indicated by the mention of a war in West Asia in Article 1 and the \"Iran war\" in Article 2."
-    },
-    {
       "id": "generated_0180",
       "description": "The articles are reporting on the same conflict between the US, Israel, and Iran, with Article 1 discussing a US satellite firm's decision to blackout images of the war and Article 2 describing Iran's response to the attacks on its nuclear facilities.",
       "articles": [
@@ -5700,36 +5100,6 @@
       ],
       "expected_behavior": "pass",
       "notes": "Groq label: SAME. System relatedness_score=0.6. The two articles appear to be reporting on the same event, a heightened state of tension between Iran, the US, and Israel, with both articles referencing recent warnings and threats exchanged between these parties."
-    },
-    {
-      "id": "generated_0183",
-      "description": "The articles are discussing the same conflict in West Asia, with Article 1 mentioning the war's impact on BRICS members including Iran and the UAE, and Article 2 focusing on an interview related to the war on Iran.",
-      "articles": [
-        {
-          "url": "https://thediplomat.com/2026/04/why-india-should-leverage-brics-to-call-for-ceasefire-in-west-asia/",
-          "title": "Why India Should Leverage BRICS to Call for Ceasefire in West Asia",
-          "description": "What makes BRICS silence on the war in West Asia particularly deplorable is that two fellow BRICS members -- Iran and the UAE -- are directly caught in the war.",
-          "source": "The Diplomat",
-          "source_domain": "thediplomat.com",
-          "published_at": "2026-04-02T18:05:00+00:00"
-        },
-        {
-          "url": "https://www.aljazeera.com/news/2026/4/1/war-on-iran-three-key-takeaways-from-araghchis-interview-with-al-jazeera",
-          "title": "War on Iran: Three key takeaways from Araghchi\u2019s interview with Al Jazeera",
-          "description": "Araghchi confirmed direct talks with Witkoff but denied that they constituted negotiations in an exclusive interview.",
-          "source": "Al Jazeera English",
-          "source_domain": "www.aljazeera.com",
-          "published_at": "2026-04-01T08:27:51Z"
-        }
-      ],
-      "expected_clusters": [
-        [
-          0,
-          1
-        ]
-      ],
-      "expected_behavior": "pass",
-      "notes": "Groq label: SAME. System relatedness_score=0.26. The articles are discussing the same conflict in West Asia, with Article 1 mentioning the war's impact on BRICS members including Iran and the UAE, and Article 2 focusing on an interview related to the war on Iran."
     },
     {
       "id": "generated_0184",
@@ -5884,36 +5254,6 @@
       ],
       "expected_behavior": "pass",
       "notes": "Groq label: DIFFERENT. System relatedness_score=-0.03. The two articles are reporting on separate events, one being a US-Israeli strike on a psychiatric hospital in Tehran and the other being the induction of a warship into the Pakistan Navy."
-    },
-    {
-      "id": "generated_0189",
-      "description": "The articles are reporting on the same conflict in the Middle East involving the US, Iran, and other regional actors, with Article 1 discussing potential US actions against Iran and Article 2 describing the intensification of the war and diplomatic efforts to end it.",
-      "articles": [
-        {
-          "url": "https://www.aljazeera.com/news/2026/3/30/is-the-us-ready-to-invade-iran-what-trumps-moves-tell-us-so-far",
-          "title": "Is the US ready to invade Iran? What Trump\u2019s moves tell us so far",
-          "description": "Seizing strategic islands and destroying Iran's stock of enriched uranium are options the US is considering.",
-          "source": "Al Jazeera English",
-          "source_domain": "www.aljazeera.com",
-          "published_at": "2026-03-30T15:46:04Z"
-        },
-        {
-          "url": "https://apnews.com/article/iran-us-israel-trump-lebanon-march-29-2026-26caaef651be1cb4d482b29adaa2d600",
-          "title": "Middle East war intensifies with first strikes by Houthis",
-          "description": "A top Iranian official has warned the U.S. against any ground invasion as regional diplomats meet in Pakistan in a push to end the war. Foreign ministers from Saudi Arabia, Turkey and Egypt are expected to meet again Monday in Islamabad. Meanwhile, Israeli Pr\u2026",
-          "source": "Associated Press",
-          "source_domain": "apnews.com",
-          "published_at": "2026-03-29T05:15:40Z"
-        }
-      ],
-      "expected_clusters": [
-        [
-          0,
-          1
-        ]
-      ],
-      "expected_behavior": "pass",
-      "notes": "Groq label: SAME. System relatedness_score=0.23. The articles are reporting on the same conflict in the Middle East involving the US, Iran, and other regional actors, with Article 1 discussing potential US actions against Iran and Article 2 describing the intensification of the war and diplomatic efforts to end it."
     },
     {
       "id": "generated_0190",
@@ -6314,36 +5654,6 @@
       "notes": "Groq label: DIFFERENT. System relatedness_score=0.41. The two articles are reporting on separate events, one related to financial deposits from the UAE and the other about the induction of a warship into the Pakistan Navy fleet."
     },
     {
-      "id": "generated_0203",
-      "description": "The articles are reporting on the same event, the Iran war and its effects, with Article 1 discussing the impact on US gas prices and Article 2 providing information on the Trump administration's actions and plans related to the conflict.",
-      "articles": [
-        {
-          "url": "https://apnews.com/article/gas-prices-4-gallon-iran-war-de8b7ccea254a1585cab86f336db57a6",
-          "title": "Average price for a gallon of gas in the US eclipses $4",
-          "description": "U.S. gas prices have jumped past an average of $4 a gallon for the first time since 2022 as fuel prices continue to soar worldwide amid the Iran war. According to motor club AAA, the national average for a gallon of regular gasoline is now $4.02 \u2014 over a doll\u2026",
-          "source": "Associated Press",
-          "source_domain": "apnews.com",
-          "published_at": "2026-03-31T07:38:14Z"
-        },
-        {
-          "url": "https://www.aljazeera.com/news/2026/3/30/trump-wants-to-invade-iran-to-seize-oil-calls-us-objectors-stupid",
-          "title": "Trump wants to invade Iran to seize oil, calls US objectors \u2018stupid people\u2019",
-          "description": "The Trump administration has deployed US Marines in preparation for the possible takeover of Iran's key oil export hub.",
-          "source": "Al Jazeera English",
-          "source_domain": "www.aljazeera.com",
-          "published_at": "2026-03-30T09:00:44Z"
-        }
-      ],
-      "expected_clusters": [
-        [
-          0,
-          1
-        ]
-      ],
-      "expected_behavior": "pass",
-      "notes": "Groq label: SAME. System relatedness_score=0.22. The articles are reporting on the same event, the Iran war and its effects, with Article 1 discussing the impact on US gas prices and Article 2 providing information on the Trump administration's actions and plans related to the conflict."
-    },
-    {
       "id": "generated_0204",
       "description": "The articles are reporting on the same event, a conflict between the US and Iran, with Article 1 providing a live update on the war and Article 2 mentioning the ongoing war as context for a related policy decision.",
       "articles": [
@@ -6658,36 +5968,6 @@
       ],
       "expected_behavior": "pass",
       "notes": "Groq label: DIFFERENT. System relatedness_score=0.31. The two articles report on separate incidents, one involving the closure of a border crossing due to an Israeli threat and the other involving an incident of vandalism at the UAE embassy in Damascus."
-    },
-    {
-      "id": "generated_0214",
-      "description": "The articles are reporting on the same event, the US-Israeli war on Iran, with Article 1 focusing on the impact of the war on Kenya's tea industry and Article 2 providing a general update on the war.",
-      "articles": [
-        {
-          "url": "https://www.aljazeera.com/video/newsfeed/2026/4/1/kenyas-tea-industry-suffers-crisis-caused-by-the-us-israeli-war-on-iran",
-          "title": "Kenya\u2019s tea industry suffers crisis caused by the US-Israeli war on Iran",
-          "description": "Kenyan tea farmers are facing a crisis after the US-Israeli war on Iran disrupted key export routes to the Middle East.",
-          "source": "Al Jazeera English",
-          "source_domain": "www.aljazeera.com",
-          "published_at": "2026-04-01T16:25:47Z"
-        },
-        {
-          "url": "https://www.aljazeera.com/news/2026/4/1/iran-war-what-is-happening-on-day-33-of-us-israel-attacks",
-          "title": "Iran war: What is happening on day 33 of US-Israel attacks?",
-          "description": "Trump says US could leave Iran war in 2-3 weeks without a deal; Iran\u2019s FM Araghchi says he has no faith in talks.",
-          "source": "Al Jazeera English",
-          "source_domain": "www.aljazeera.com",
-          "published_at": "2026-04-01T07:01:14Z"
-        }
-      ],
-      "expected_clusters": [
-        [
-          0,
-          1
-        ]
-      ],
-      "expected_behavior": "pass",
-      "notes": "Groq label: SAME. System relatedness_score=0.25. The articles are reporting on the same event, the US-Israeli war on Iran, with Article 1 focusing on the impact of the war on Kenya's tea industry and Article 2 providing a general update on the war."
     },
     {
       "id": "generated_0215",
@@ -7308,36 +6588,6 @@
       "notes": "Groq label: SAME. System relatedness_score=0.42. The articles are reporting on the same conflict, with Article 1 mentioning the first strikes by Houthis and Article 2 discussing the potential involvement of Houthis in the US-Iran conflict, indicating a sequential update on the same event."
     },
     {
-      "id": "generated_0235",
-      "description": "The articles are reporting on the same conflict, the US-Israel war on Iran, with Article 1 discussing its broader humanitarian impact on Asia and Article 2 focusing on a specific development related to the war, namely a US satellite firm's decision to withhold images of the conflict.",
-      "articles": [
-        {
-          "url": "https://www.dawn.com/news/1988666/me-war-compounds-asia-humanitarian-crises",
-          "title": "\u2018ME war compounds Asia humanitarian crises\u2019",
-          "description": "\u2022 UN says import-dependent countries facing higher fuel, power and farm input costs \u2022 UNOCHA seeks $151m for Pakistan flood response targeting 1.9m people ISLAMABAD: The escalation in the Middle East since February is generating spillover effects across Asia and the Pacific, compounding humanitarian crises, according to the United Nations. Higher fuel prices are increasing transport, electricity and agricultural input costs in import-dependent countries such as Pakistan, Sri Lanka, Bangladesh and the Philippines. The main impact stems from rising oil prices following reduced traffic through the Strait of Hormuz, which carries 20 per cent of the world\u2019s oil supply, much of it destined for Asia. In its latest bulletin, the UN Office for the Coordination of Humanitarian Affairs (UNOCHA) says it needs $151 million for humanitarian assistance in Pakistan to implement the floods support plan, under which 1.9m people have been targeted to be assisted out of 2.8m people in need. Fuel and wheat price shocks are feeding rapidly into inflation and wider food price pressures in Pakistan, with fuel and wheat flour prices rising. With 77 per cent of the country\u2019s energy imported, higher oil prices are rising transport, fertiliser and milling costs. Higher freight, insurance and border-related disruptions are adding further strain to supply chains and the broader economy. Maritime war-risk insurance has risen by 25 to 50pc, reducing vessel traffic and further disrupting regional supply chains, including for landlocked countries such as Afghanistan. The crisis is also heightening food security risks in import-reliant countries, with price increases reported for wheat and agricultural fertilisers. Up to one-third of global trade in fertiliser raw materials passes through the Strait of Hormuz, UNOCHA says. Disruptions to ammonia and nitrogen shipments are threatening food production systems dependent on fertiliser imports. Sustained increases in fuel, transport and food prices are also likely to raise the cost of humanitarian operations in Afghanistan, Bangladesh and Myanmar amid shrinking funding. Maritime uncertainty and airspace restrictions are affecting humanitarian logistics. The World Food Programme (WFP) estimates that, if the crisis persists until mid-2026 and oil remains above $100 per barrel, nearly 45m additional people could face acute food insecurity globally, including 9.1m in Asia. The WFP has warned that the total number of people around the world facing acute levels of hunger could reach record numbers in 2026 if the escalation in the Middle East continues to destabilise the world\u2019s economy. New analysis by the WFP estimates that almost 45m more people could fall into acute food insecurity or worse if the conflict does not end by the middle of the year, and if oil prices remain above $100 a barrel. These would add to the 318m people around the world who are already food insecure. Although the conflict is centred on a global energy hub rather than a major food-producing region, its potential impact is similar due to the close link between energy and food markets. In many parts of the world, vulnerable families currently managing to secure basic food may soon struggle to afford even minimal sustenance, the WFP says. \u201cIf this conflict continues, it will send shockwaves across the globe, and families who already cannot afford their next meal will be hit the hardest,\u201d said WFP Deputy Executive Director and Chief Operating Officer Carl Skau. \u201cWithout an adequately funded humanitarian response, it could spell catastrophe for millions already on the edge.\u201d Published in Dawn, April 5th, 2026",
-          "source": "Dawn",
-          "source_domain": "dawn.com",
-          "published_at": "2026-04-05T03:08:02+00:00"
-        },
-        {
-          "url": "https://www.aljazeera.com/news/2026/4/5/us-satellite-firm-planet-labs-announces-blackout-on-war-on-iran-images?traffic_source=rss",
-          "title": "US satellite firm Planet Labs announces blackout on war on Iran images",
-          "description": "Company says move amid US-Israel war on Iran comes after a request from the US government.",
-          "source": "Al Jazeera English",
-          "source_domain": "www.aljazeera.com",
-          "published_at": "2026-04-05T01:13:40+00:00"
-        }
-      ],
-      "expected_clusters": [
-        [
-          0,
-          1
-        ]
-      ],
-      "expected_behavior": "pass",
-      "notes": "Groq label: SAME. System relatedness_score=0.18. The articles are reporting on the same conflict, the US-Israel war on Iran, with Article 1 discussing its broader humanitarian impact on Asia and Article 2 focusing on a specific development related to the war, namely a US satellite firm's decision to withhold images of the conflict."
-    },
-    {
       "id": "generated_0236",
       "description": "The articles appear to be discussing different aspects of a broader conflict, with Article 1 focusing on a specific incident of US-Israeli strikes on Iranian nuclear facilities and Article 2 discussing a broader geopolitical situation involving the Strait of Hormuz and NATO.",
       "articles": [
@@ -7464,36 +6714,6 @@
       "notes": "Groq label: SAME. System relatedness_score=0.37. The two articles are reporting on the same event, specifically the economic crisis in Pakistan triggered by the US-Israeli war on Iran, with both articles discussing the fallout and its impact on the country."
     },
     {
-      "id": "generated_0240",
-      "description": "The articles are discussing the same conflict between the US and Iran, with one article speculating about potential US actions and the other discussing the economic impact of the ongoing war.",
-      "articles": [
-        {
-          "url": "https://www.aljazeera.com/news/2026/3/30/is-the-us-ready-to-invade-iran-what-trumps-moves-tell-us-so-far",
-          "title": "Is the US ready to invade Iran? What Trump\u2019s moves tell us so far",
-          "description": "Seizing strategic islands and destroying Iran's stock of enriched uranium are options the US is considering.",
-          "source": "Al Jazeera English",
-          "source_domain": "www.aljazeera.com",
-          "published_at": "2026-03-30T15:46:04Z"
-        },
-        {
-          "url": "https://apnews.com/article/stock-markets-trump-iran-oil-8118f58d75859b9fc74ab133fa9e8c3e",
-          "title": "Asian shares fall and oil climbs on Iran war uncertainties",
-          "description": "U.S. stocks had their worst day since the war with Iran started, as doubt took over again from hope on Wall Street about a possible end to the conflict. The S&P 500 fell 1.7% Thursday. The index is back on track for a fifth straight losing week, which would b\u2026",
-          "source": "Associated Press",
-          "source_domain": "apnews.com",
-          "published_at": "2026-03-26T09:01:55Z"
-        }
-      ],
-      "expected_clusters": [
-        [
-          0,
-          1
-        ]
-      ],
-      "expected_behavior": "pass",
-      "notes": "Groq label: SAME. System relatedness_score=0.27. The articles are discussing the same conflict between the US and Iran, with one article speculating about potential US actions and the other discussing the economic impact of the ongoing war."
-    },
-    {
       "id": "generated_0241",
       "description": "The two articles are reporting on different events, with Article 1 discussing fuel shortages in Australia due to the Iran war, and Article 2 discussing a King's state visit to the US and its relation to Trump.",
       "articles": [
@@ -7556,36 +6776,6 @@
       ],
       "expected_behavior": "pass",
       "notes": "Groq label: DIFFERENT. System relatedness_score=-0.02. The two articles are reporting on different events, one being a strike by resident doctors in the NHS and the other being about global energy market volatility and trading amid a war on Iran."
-    },
-    {
-      "id": "generated_0243",
-      "description": "The articles are reporting on the same conflict, with Article 1 providing a specific incident update on the strikes in southwestern Iran, and Article 2 discussing the broader conflict and its developments, indicating they are part of the same event.",
-      "articles": [
-        {
-          "url": "https://www.middleeasteye.net/live-blog/live-blog-update/iranian-media-strike-petrochemical-hub-kills-5-wounds-170",
-          "title": "IRNA: Strike on petrochemical hub kills 5, wounds 170",
-          "description": "At least five people were killed and around 170 others wounded in air strikes targeting a major petrochemical complex in southwestern Iran, according to Iranian state media. The strikes hit the Mahshahr Special Petrochemical Economic Zone in Khuzestan province, a key industrial hub near the Persian Gulf. A provincial security official confirmed the casualty figures, the state news agency IRNA reported. The facility is a central part of Iran\u2019s petrochemical sector, accounting for a significant share of national production. Smoke rises after strikes on the Mahshahr Petrochemical Zone in Bandar Mahshahr County, Khuzestan Province, Iran, inpicture released 4 April 2026. SOCIAL MEDIA/via REUTERS",
-          "source": "Middle East Eye",
-          "source_domain": "www.middleeasteye.net",
-          "published_at": "2026-04-05T03:44:14+00:00"
-        },
-        {
-          "url": "https://www.aljazeera.com/news/2026/4/1/iran-war-what-is-happening-on-day-33-of-us-israel-attacks",
-          "title": "Iran war: What is happening on day 33 of US-Israel attacks?",
-          "description": "Trump says US could leave Iran war in 2-3 weeks without a deal; Iran\u2019s FM Araghchi says he has no faith in talks.",
-          "source": "Al Jazeera English",
-          "source_domain": "www.aljazeera.com",
-          "published_at": "2026-04-01T07:01:14Z"
-        }
-      ],
-      "expected_clusters": [
-        [
-          0,
-          1
-        ]
-      ],
-      "expected_behavior": "pass",
-      "notes": "Groq label: SAME. System relatedness_score=0.25. The articles are reporting on the same conflict, with Article 1 providing a specific incident update on the strikes in southwestern Iran, and Article 2 discussing the broader conflict and its developments, indicating they are part of the same event."
     },
     {
       "id": "generated_0244",
@@ -8638,36 +7828,6 @@
       "notes": "Groq label: DIFFERENT. System relatedness_score=0.53. The two articles appear to be discussing different events, one about the Trump administration considering targeting Iranian energy sites and the other about a specific attack on the Mahshahr Petrochemical Zone and the rescue of a missing US officer."
     },
     {
-      "id": "generated_0278",
-      "description": "The articles are reporting on the same conflict, the US-Israel war on Iran, with Article 1 discussing a specific incident related to a US satellite firm's response to the war and Article 2 discussing the broader economic impact of the war.",
-      "articles": [
-        {
-          "url": "https://www.aljazeera.com/news/2026/4/5/us-satellite-firm-planet-labs-announces-blackout-on-war-on-iran-images?traffic_source=rss",
-          "title": "US satellite firm Planet Labs announces blackout on war on Iran images",
-          "description": "Company says move amid US-Israel war on Iran comes after a request from the US government.",
-          "source": "Al Jazeera English",
-          "source_domain": "www.aljazeera.com",
-          "published_at": "2026-04-05T01:13:40+00:00"
-        },
-        {
-          "url": "https://apnews.com/article/stock-markets-trump-iran-oil-8118f58d75859b9fc74ab133fa9e8c3e",
-          "title": "Asian shares fall and oil climbs on Iran war uncertainties",
-          "description": "U.S. stocks had their worst day since the war with Iran started, as doubt took over again from hope on Wall Street about a possible end to the conflict. The S&P 500 fell 1.7% Thursday. The index is back on track for a fifth straight losing week, which would b\u2026",
-          "source": "Associated Press",
-          "source_domain": "apnews.com",
-          "published_at": "2026-03-26T09:01:55Z"
-        }
-      ],
-      "expected_clusters": [
-        [
-          0,
-          1
-        ]
-      ],
-      "expected_behavior": "pass",
-      "notes": "Groq label: SAME. System relatedness_score=0.21. The articles are reporting on the same conflict, the US-Israel war on Iran, with Article 1 discussing a specific incident related to a US satellite firm's response to the war and Article 2 discussing the broader economic impact of the war."
-    },
-    {
       "id": "generated_0279",
       "description": "The two articles are reporting on different events, with Article 1 discussing Israeli airstrikes on Iran and Lebanon, and Article 2 discussing a new Israeli law regarding the death penalty for Palestinians.",
       "articles": [
@@ -9520,36 +8680,6 @@
       "notes": "Groq label: DIFFERENT. System relatedness_score=0.45. The articles report on different incidents, with Article 1 describing Israeli strikes in Lebanon and Article 2 discussing a claimed joint operation by the Houthis, Iran, and Hezbollah targeting sites in Israel."
     },
     {
-      "id": "generated_0306",
-      "description": "The articles are discussing the same conflict, the Iran war, and are providing analysis and updates on the US military's involvement and the interests of the parties involved in the war.",
-      "articles": [
-        {
-          "url": "https://www.aljazeera.com/news/2026/4/1/iran-war-what-a-marine-expeditionary-unit-is-and-other-us-military-terms",
-          "title": "Iran War: What a Marine Expeditionary Unit is \u2013 and other US military terms",
-          "description": "The US has deployed thousands of additional Marines and airborne troops to the Middle East since the Iran war began.",
-          "source": "Al Jazeera English",
-          "source_domain": "www.aljazeera.com",
-          "published_at": "2026-04-01T15:13:13Z"
-        },
-        {
-          "url": "https://www.aljazeera.com/video/quotable/2026/3/29/analyst-says-that-irans-interest-is-in-an-extended-war",
-          "title": "Analyst says that Iran\u2019s interest is in an extended war",
-          "description": "Rob Geist-Pinfold, says that the United States has an interest in ending the war while Tehran is likely to prolong it.",
-          "source": "Al Jazeera English",
-          "source_domain": "www.aljazeera.com",
-          "published_at": "2026-03-29T08:44:59Z"
-        }
-      ],
-      "expected_clusters": [
-        [
-          0,
-          1
-        ]
-      ],
-      "expected_behavior": "pass",
-      "notes": "Groq label: SAME. System relatedness_score=0.26. The articles are discussing the same conflict, the Iran war, and are providing analysis and updates on the US military's involvement and the interests of the parties involved in the war."
-    },
-    {
       "id": "generated_0307",
       "description": "The two articles are reporting on different aspects of the Iran war, with one focusing on the impact of fuel shortages on travel plans in Australia and the other discussing the use of social media by Iran's parliamentary speaker to influence market sentiment.",
       "articles": [
@@ -9832,36 +8962,6 @@
       ],
       "expected_behavior": "pass",
       "notes": "Groq label: DIFFERENT. System relatedness_score=0.49. The two articles are reporting on different events, one being a friendly fire incident in southern Lebanon and the other being protests and arrests in Tel Aviv related to the war on Iran."
-    },
-    {
-      "id": "generated_0316",
-      "description": "The articles are reporting on the same conflict between Iran and the US-Israeli alliance, with Article 1 providing updates on the war and Article 2 discussing the economic impact of the war, indicating they are related to the same overall event.",
-      "articles": [
-        {
-          "url": "https://www.aljazeera.com/news/liveblog/2026/4/2/iran-war-live-trump-to-address-nation-tehran-denies-seeking-ceasefire",
-          "title": "Iran war live: Trump to address nation; Tehran denies seeking ceasefire",
-          "description": "Iran denies seeking a truce and keeps up counterattacks, as US-Israeli raids cause deaths and damage across the country.",
-          "source": "Al Jazeera English",
-          "source_domain": "www.aljazeera.com",
-          "published_at": "2026-04-02T00:00:30Z"
-        },
-        {
-          "url": "https://apnews.com/article/stock-markets-trump-iran-oil-8118f58d75859b9fc74ab133fa9e8c3e",
-          "title": "Asian shares fall and oil climbs on Iran war uncertainties",
-          "description": "U.S. stocks had their worst day since the war with Iran started, as doubt took over again from hope on Wall Street about a possible end to the conflict. The S&P 500 fell 1.7% Thursday. The index is back on track for a fifth straight losing week, which would b\u2026",
-          "source": "Associated Press",
-          "source_domain": "apnews.com",
-          "published_at": "2026-03-26T09:01:55Z"
-        }
-      ],
-      "expected_clusters": [
-        [
-          0,
-          1
-        ]
-      ],
-      "expected_behavior": "pass",
-      "notes": "Groq label: SAME. System relatedness_score=0.21. The articles are reporting on the same conflict between Iran and the US-Israeli alliance, with Article 1 providing updates on the war and Article 2 discussing the economic impact of the war, indicating they are related to the same overall event."
     },
     {
       "id": "generated_0317",
@@ -10530,6 +9630,38 @@
       ],
       "expected_behavior": "pass",
       "notes": "Anthropic label: DIFFERENT. System relatedness_score=0.48. because Article 1 is macro-level analysis about strategic interests while Article 2 is a retrospective summary of specific military/political/economic incidents\u2014they are different article types covering the same conflict rather than the same specific incident."
+    },
+    {
+      "id": "generated_0338",
+      "description": "because Article 1 discusses economic impacts of an Iran conflict while Article 2 addresses parental medical decision-making for infants\u2014these are completely unrelated topics with different actors and no shared incident.",
+      "articles": [
+        {
+          "url": "https://www.bbc.com/news/articles/c2e4ygndjpwo?at_medium=RSS&at_campaign=rss",
+          "title": "How the Iran war affects your money and bills",
+          "description": "The conflict in the Middle East has increased pressure on the cost of petrol, household energy bills and even food.",
+          "source": "BBC News",
+          "source_domain": "bbc.co.uk",
+          "published_at": "2026-04-07T10:43:34+00:00"
+        },
+        {
+          "url": "https://apnews.com/article/babies-newborns-pediatricians-vitamin-k-hepatitis-b-erythromycin-9126463f0cb38b9778fb77bc0d071776",
+          "title": "New parents are shunning proven preventive care for their infants in effort to be 'natural'",
+          "description": "Doctors across the nation are alarmed that skepticism fueled by rising anti-science sentiment and medical mistrust is increasingly reaching beyond vaccines to other safe and routine care for babies. A recent study in the Journal of the American Medical Associ\u2026",
+          "source": "Associated Press",
+          "source_domain": "apnews.com",
+          "published_at": "2026-03-21T11:20:42Z"
+        }
+      ],
+      "expected_clusters": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "expected_behavior": "pass",
+      "notes": "Anthropic label: DIFFERENT. System relatedness_score=0.01. because Article 1 discusses economic impacts of an Iran conflict while Article 2 addresses parental medical decision-making for infants\u2014these are completely unrelated topics with different actors and no shared incident."
     }
   ]
 }

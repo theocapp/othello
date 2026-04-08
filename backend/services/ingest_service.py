@@ -7,6 +7,7 @@ from pathlib import Path
 from fastapi import HTTPException
 
 from analyst import translate_article
+from apply_corrections import apply_corrections
 from cache import clear_headlines
 from chroma import store_articles
 from corpus import (
@@ -975,11 +976,16 @@ def run_scheduled_historical_queue_fetch():
 
 def run_scheduled_story_materialization():
     def _job():
-        return rebuild_materialized_story_clusters(
+        result = rebuild_materialized_story_clusters(
             topics=TOPICS,
             window_hours=CORPUS_WINDOW_HOURS,
             articles_limit=120,
         )
+        # Apply analyst corrections at the end of clustering cycle
+        corrections_result = apply_corrections()
+        if corrections_result.get("processed"):
+            print(f"Applied analyst corrections: {corrections_result}")
+        return result
 
     return run_exclusive_or_skip(
         STORY_MATERIALIZATION_JOB_LOCK, "story materialization", _job

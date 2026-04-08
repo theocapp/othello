@@ -19,17 +19,20 @@ What "passing" means per module:
 import sys
 
 from eval.eval_clustering import run as run_clustering
+from eval.eval_contradictions import run as run_contradictions
 from eval.eval_identity import run as run_identity
 from eval.eval_importance import run as run_importance
 
 
 def main():
     clustering_results = run_clustering(verbose=True)
+    contradiction_results = run_contradictions(verbose=True)
     identity_results = run_identity(verbose=True)
     importance_results = run_importance(verbose=True)
 
     # Hard failures are any clustering cases that did not pass.
     clustering_failures = [r for r in clustering_results if not r.get("passed")]
+    contradiction_failures = [r for r in contradiction_results if not r.get("passed")]
     identity_failures = [r for r in identity_results if not r.get("passed")]
     importance_failures = [r for r in importance_results if not r.get("passed")]
 
@@ -41,7 +44,12 @@ def main():
 
     print("=== SUMMARY ===\n")
 
-    total_hard = len(clustering_failures) + len(identity_failures) + len(importance_failures)
+    total_hard = (
+        len(clustering_failures)
+        + len(contradiction_failures)
+        + len(identity_failures)
+        + len(importance_failures)
+    )
     if total_hard == 0:
         print("  All pass-expected cases: OK")
     else:
@@ -49,6 +57,13 @@ def main():
             print(f"  Clustering failures ({len(clustering_failures)}):")
             for r in clustering_failures:
                 print(f"    - {r['id']}: P={r['metrics']['precision']} R={r['metrics']['recall']} F1={r['metrics']['f1']}")
+        if contradiction_failures:
+            print(f"  Contradiction failures ({len(contradiction_failures)}):")
+            for r in contradiction_failures:
+                if r.get("error"):
+                    print(f"    - {r['id']}: {r['error']}")
+                else:
+                    print(f"    - {r['id']}: expected {r.get('expected')} got {r.get('actual')}")
         if identity_failures:
             print(f"  Identity failures ({len(identity_failures)}):")
             for r in identity_failures:

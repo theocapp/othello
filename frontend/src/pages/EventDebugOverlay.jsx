@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { fetchCanonicalEventDebug, fetchEvaluationScorecard } from '../api'
+import EventCorrectionPanel from '../components/EventCorrectionPanel'
 import { C } from '../constants/theme'
 import { formatDateTime, friendlyErrorMessage } from '../lib/formatters'
 
@@ -379,6 +380,8 @@ export default function EventDebugOverlay({ eventId, onClose }) {
                     </a>
                   ))}
                 </Section>
+
+                <EventCorrectionPanel eventId={eventId} payload={payload} />
               </aside>
             </div>
           </>

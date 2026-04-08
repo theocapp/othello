@@ -167,18 +167,11 @@ GEO_MISMATCH_PENALTY = 0.500
 TOPICAL_BASE_PENALTY = 0.780
 TOPICAL_LOW_OVERLAP_MULTIPLIER = 0.92
 CONTEXT_PENALTY_FLOOR = 0.95
-CONSEQUENCE_CONTEXT_PENALTY = 0.78
-CONSEQUENCE_IRAN_ONLY_PENALTY = 0.420
-LABOR_MILITARY_PENALTY = 0.600
-ACTOR_STRIKE_DIFF_GPE_PENALTY = 0.720
 ANALYSIS_ABSTRACTION_PENALTY = 0.450
 MULTI_THEATER_STRIKE_PENALTY = 0.350
 
-BASE_CONTEXT_BOOST = 0.200
 HORMUZ_BRIDGE_BOOST = 0.24
 LONG_CONFLICT_CONTINUITY_BOOST = 0.06
-SHORT_ACTOR_CONTINUITY_BOOST = 0.120
-LONG_ACTOR_ANCHOR_BOOST = 0.120
 LONG_ACTOR_ANCHOR_STRONG_KW_BOOST = 0.24
 LONG_WAR_CONTEXT_BOOST = 0.080
 
@@ -276,7 +269,7 @@ def get_semantic_model():
     """Load the sentence transformer model for semantic similarity."""
     global _semantic_model
     if _semantic_model is None:
-        _semantic_model = SentenceTransformer("all-MiniLM-L6-v2")
+        _semantic_model = SentenceTransformer("all-mpnet-base-v2")
     return _semantic_model
 
 
@@ -393,8 +386,8 @@ def _article_framing_labels(text: str) -> set[str]:
 def _article_signature(article: dict) -> dict:
     title = _normalize_text(article.get('title', ''))
     description = _normalize_text(article.get('description', ''))
-    lead = description.split('.')[0].strip()
-    text = _normalize_text(f"{title}. {lead}" if lead else title)
+    lead = (description or "").split(".")[0].strip()
+    text = f"{title}. {lead}" if lead else title
     entities = _article_entities(text)
     gpe_entities, actor_entities = _article_entity_breakdown(text)
     keywords = _token_keywords(text)
@@ -784,7 +777,7 @@ def relatedness_score(left: dict, right: dict) -> float:
         and not anchor_overlap
         and len(keyword_overlap) <= 8
     ):
-        ongoing_context_boost = BASE_CONTEXT_BOOST
+        pass  # BASE_CONTEXT_BOOST removed
 
     # When strong shared context exists, reduce topical-bleed penalty severity.
     if hours_apart is not None and hours_apart <= 96 and len(context_overlap) >= 2:
@@ -797,7 +790,7 @@ def relatedness_score(left: dict, right: dict) -> float:
         and not anchor_overlap
         and ({"iran", "war"} <= context_overlap or {"iran", "oil"} <= context_overlap)
     ):
-        topical_bleed_penalty *= CONSEQUENCE_CONTEXT_PENALTY
+        pass  # CONSEQUENCE_CONTEXT_PENALTY removed
 
     # Separate broad downstream consequence stories across different countries.
     # Rule is conflict-agnostic: any single shared GPE with different spillover locations
@@ -820,7 +813,7 @@ def relatedness_score(left: dict, right: dict) -> float:
             and right_extra_gpes
             and len(keyword_overlap) <= 3
         ):
-            topical_bleed_penalty *= CONSEQUENCE_IRAN_ONLY_PENALTY
+            pass  # CONSEQUENCE_IRAN_ONLY_PENALTY removed
 
     left_labor = _term_overlap(left_text, left_text, _LABOR_TERMS)
     right_labor = _term_overlap(right_text, right_text, _LABOR_TERMS)
@@ -829,12 +822,12 @@ def relatedness_score(left: dict, right: dict) -> float:
 
     # Separate labor strike coverage from military strike coverage.
     if (left_labor and right_military) or (right_labor and left_military):
-        topical_bleed_penalty *= LABOR_MILITARY_PENALTY
+        pass  # LABOR_MILITARY_PENALTY removed
 
     gpe_overlap = left_gpes & right_gpes
     # Same actor + strike language in different locations is often separate incidents.
     if anchor_overlap and actor_overlap and not gpe_overlap:
-        topical_bleed_penalty *= ACTOR_STRIKE_DIFF_GPE_PENALTY
+        pass  # ACTOR_STRIKE_DIFF_GPE_PENALTY removed
 
     # Distinct strike incidents across different theaters should not merge
     # just because they share broad conflict entities.
@@ -891,14 +884,14 @@ def relatedness_score(left: dict, right: dict) -> float:
 
     # Recover same-situation updates when shared actor/entity continuity is present.
     if hours_apart is not None and hours_apart <= 72 and actor_overlap:
-        ongoing_context_boost = max(ongoing_context_boost, SHORT_ACTOR_CONTINUITY_BOOST)
+        pass  # SHORT_ACTOR_CONTINUITY_BOOST removed
     if (
         hours_apart is not None
         and hours_apart <= 192
         and actor_overlap
         and anchor_overlap
     ):
-        ongoing_context_boost = max(ongoing_context_boost, LONG_ACTOR_ANCHOR_BOOST)
+        pass  # LONG_ACTOR_ANCHOR_BOOST removed
     if (
         hours_apart is not None
         and hours_apart <= 192

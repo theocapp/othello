@@ -1,0 +1,85 @@
+{
+  "cases": [
+    {
+      "id": "tier_wins_over_volume",
+      "description": "Tier-1 source should win adjudication over tier-3 source even if both describe same dispute.",
+      "event": {
+        "event_id": "evt_tier_wins",
+        "label": "Riverton checkpoint blast",
+        "articles": [
+          {
+            "source": "Reuters",
+            "source_domain": "reuters.com",
+            "title": "Riverton checkpoint blast kills 12, officials say",
+            "description": "Authorities in Riverton said 12 people were killed in the checkpoint blast.",
+            "published_at": "2026-04-07T08:00:00Z",
+            "url": "https://reuters.com/world/riverton-blast"
+          },
+          {
+            "source": "Local War Blog",
+            "source_domain": "blog.example",
+            "title": "Riverton explosion death toll reported at 21",
+            "description": "A local blog post says 21 died in the same Riverton checkpoint explosion.",
+            "published_at": "2026-04-07T10:00:00Z",
+            "url": "https://blog.example/riverton-explosion"
+          }
+        ]
+      },
+      "expected_most_credible_source": "Reuters"
+    },
+    {
+      "id": "recency_wins_same_tier",
+      "description": "When trust tiers are equal, the newer article should win adjudication.",
+      "event": {
+        "event_id": "evt_recency_wins",
+        "label": "Port district casualty dispute",
+        "articles": [
+          {
+            "source": "Metro Times",
+            "source_domain": "metrotimes.example",
+            "title": "Port district clash leaves 19 injured",
+            "description": "Metro Times reports 19 injuries in the port district clash in Lydon City.",
+            "published_at": "2026-04-07T12:00:00Z",
+            "url": "https://metrotimes.example/lydon-clash"
+          },
+          {
+            "source": "Global Ledger",
+            "source_domain": "globalledger.example",
+            "title": "Lydon port clash injures 11, local responders say",
+            "description": "Global Ledger says 11 were injured in the same Lydon City port district incident.",
+            "published_at": "2026-04-07T06:00:00Z",
+            "url": "https://globalledger.example/lydon-port"
+          }
+        ]
+      },
+      "expected_most_credible_source": "Metro Times"
+    },
+    {
+      "id": "genuinely_unresolved",
+      "description": "Equal tier and equal timestamp should remain unresolved.",
+      "event": {
+        "event_id": "evt_unresolved",
+        "label": "Northern crossing explosion",
+        "articles": [
+          {
+            "source": "Reuters",
+            "source_domain": "reuters.com",
+            "title": "Northern crossing blast kills 8",
+            "description": "Reuters reports 8 fatalities in the northern crossing explosion in Belmar.",
+            "published_at": "2026-04-07T09:30:00Z",
+            "url": "https://reuters.com/world/northern-crossing"
+          },
+          {
+            "source": "Associated Press",
+            "source_domain": "apnews.com",
+            "title": "Belmar crossing explosion leaves 10 dead",
+            "description": "Associated Press reports 10 deaths in the same Belmar northern crossing blast.",
+            "published_at": "2026-04-07T09:30:00Z",
+            "url": "https://apnews.com/world/belmar-crossing"
+          }
+        ]
+      },
+      "expected_most_credible_source": "unresolved"
+    }
+  ]
+}

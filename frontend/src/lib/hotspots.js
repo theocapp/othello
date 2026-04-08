@@ -1,5 +1,6 @@
 export const ATTENTION_WINDOWS = [
   { id: '24h', label: '1 Day' },
+  { id: '7d', label: '7 Days' },
   { id: '30d', label: '30 Days' },
   { id: '90d', label: '90 Days' },
   { id: '365d', label: '365 Days' },

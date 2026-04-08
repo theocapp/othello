@@ -202,6 +202,20 @@ export default function App() {
       })
     }
 
+    if (headlineSort === 'most_covered') {
+      return [...filtered].sort((left, right) => {
+        const sourceDelta = Number(right?.source_count || 0) - Number(left?.source_count || 0)
+        if (sourceDelta !== 0) return sourceDelta
+        const articleDelta = Number(right?.article_count || 0) - Number(left?.article_count || 0)
+        if (articleDelta !== 0) return articleDelta
+        return String(right?.latest_update || '').localeCompare(String(left?.latest_update || ''))
+      })
+    }
+
+    if (headlineSort === 'recent') {
+      return [...filtered].sort((left, right) => String(right?.latest_update || '').localeCompare(String(left?.latest_update || '')))
+    }
+
     return [...filtered].sort((left, right) => {
       const importanceDelta = Number(right?.importance_score || 0) - Number(left?.importance_score || 0)
       if (importanceDelta !== 0) return importanceDelta

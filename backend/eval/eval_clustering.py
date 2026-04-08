@@ -18,6 +18,7 @@ from unittest.mock import patch
 FIXTURE_PATHS = [
     Path(__file__).parent / "fixtures" / "clustering.json",
     Path(__file__).parent / "fixtures" / "clustering_generated.json",
+    Path(__file__).parent / "fixtures" / "clustering_diverse.json",
 ]
 
 
@@ -79,9 +80,13 @@ def run(verbose: bool = True) -> list[dict]:
                 and fail_reason == "known_architectural_limit"
             )
 
-            # Guardrail: generated fixtures are ground-truth labels and must not
-            # be exempted as known architectural limits.
-            if case.get("id", "").startswith("generated_") and fail_reason:
+            # Guardrail: auto-labeled fixtures (generated_ prefix or topic_bucket field)
+            # are ground-truth labels and must not be exempted as known architectural limits.
+            is_auto_labeled = (
+                case.get("id", "").startswith("generated_")
+                or "topic_bucket" in case
+            )
+            if is_auto_labeled and fail_reason:
                 results.append({
                     "id": case["id"],
                     "description": case.get("description", ""),

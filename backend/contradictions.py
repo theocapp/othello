@@ -392,6 +392,40 @@ def _resolve_article_record(article: dict) -> dict:
     }
 
 
+def _tier_rank(trust_tier: str | None) -> int:
+    return {
+        "tier_1": 3,
+        "tier_2": 2,
+        "tier_3": 1,
+    }.get((trust_tier or "").strip().lower(), 0)
+
+
+def _adjudicate_most_credible_source(
+    left_article: dict, right_article: dict, topic: str | None = None
+) -> tuple[str, dict | None]:
+    left_profile = _source_profile(left_article, topic=topic)
+    right_profile = _source_profile(right_article, topic=topic)
+    left_rank = _tier_rank(left_profile.get("trust_tier"))
+    right_rank = _tier_rank(right_profile.get("trust_tier"))
+
+    if left_rank != right_rank:
+        winner = left_article if left_rank > right_rank else right_article
+        winner_source = winner.get("source") or winner.get("source_domain")
+        if winner_source:
+            return winner_source, _resolve_article_record(winner)
+        return "unresolved", None
+
+    left_dt = _parse_published_at(left_article.get("published_at"))
+    right_dt = _parse_published_at(right_article.get("published_at"))
+    if left_dt and right_dt and left_dt != right_dt:
+        winner = left_article if left_dt > right_dt else right_article
+        winner_source = winner.get("source") or winner.get("source_domain")
+        if winner_source:
+            return winner_source, _resolve_article_record(winner)
+
+    return "unresolved", None
+
+
 def _dedupe_contradictions(items: list[dict]) -> list[dict]:
     seen = set()
     deduped = []
@@ -427,6 +461,9 @@ def heuristic_contradictions(event: dict, max_items: int = 6) -> list[dict]:
         for right_index in range(left_index + 1, len(articles)):
             left = articles[left_index]
             right = articles[right_index]
+            most_credible_source, most_credible_record = (
+                _adjudicate_most_credible_source(left, right)
+            )
             left_features = feature_cache[left_index]
             right_features = feature_cache[right_index]
             if not _claims_share_context(left_features, right_features):
@@ -466,8 +503,8 @@ def heuristic_contradictions(event: dict, max_items: int = 6) -> list[dict]:
                         "claim_a": f"{left.get('source')}: {left_features['snippet']}",
                         "claim_b": f"{right.get('source')}: {right_features['snippet']}",
                         "confidence": 0.78,
-                        "most_credible_source": "unresolved",
-                        "most_credible_record": None,
+                        "most_credible_source": most_credible_source,
+                        "most_credible_record": most_credible_record,
                         "reasoning": f"These reports describe {focus} with different key numerical details.",
                     }
                 )
@@ -499,8 +536,8 @@ def heuristic_contradictions(event: dict, max_items: int = 6) -> list[dict]:
                         "claim_a": f"{left.get('source')}: {left.get('title')}",
                         "claim_b": f"{right.get('source')}: {right.get('title')}",
                         "confidence": 0.77,
-                        "most_credible_source": "unresolved",
-                        "most_credible_record": None,
+                        "most_credible_source": most_credible_source,
+                        "most_credible_record": most_credible_record,
                         "reasoning": f"These reports frame {focus} with opposite {dimension} status signals.",
                     }
                 )
@@ -528,8 +565,8 @@ def heuristic_contradictions(event: dict, max_items: int = 6) -> list[dict]:
                         "claim_a": f"{left.get('source')}: {left.get('title')}",
                         "claim_b": f"{right.get('source')}: {right.get('title')}",
                         "confidence": 0.65,
-                        "most_credible_source": "unresolved",
-                        "most_credible_record": None,
+                        "most_credible_source": most_credible_source,
+                        "most_credible_record": most_credible_record,
                         "reasoning": f"These sources use different framing labels for {focus}, suggesting a narrative fracture rather than consensus language.",
                     }
                 )
@@ -1263,8 +1300,18 @@ def detect_contradictions(event: dict) -> list[dict]:
                 )
 
             most_credible_source = _replace_article_refs(
-                contradiction.get("most_credible_source", "unresolved"), catalog
+                contradiction.get("most_credible_source", ""), catalog
             )
+            if (
+                (not most_credible_source or most_credible_source == "unresolved")
+                and len(source_labels) >= 2
+            ):
+                left_article = _resolve_source_record(source_labels[0], catalog)
+                right_article = _resolve_source_record(source_labels[1], catalog)
+                if left_article and right_article:
+                    most_credible_source, _ = _adjudicate_most_credible_source(
+                        left_article, right_article
+                    )
             most_credible_article = _resolve_source_record(
                 most_credible_source, catalog
             )

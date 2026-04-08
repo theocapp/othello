@@ -1,6 +1,30 @@
 import { C } from '../constants/theme'
 import { formatDateTime, formatRegionLabel, truncateText } from '../lib/formatters'
 
+// Themed select/button base styles for the Recent Analysis controls
+function _svgArrowDataUri(color) {
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M7 10l5 5 5-5z' fill='${color}'/></svg>`
+  return `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`
+}
+
+function getSelectBase() {
+  return {
+    background: C.bg,
+    border: `1px solid ${C.borderMid}`,
+    color: C.textSecondary,
+    fontFamily: "'JetBrains Mono', monospace",
+    fontSize: '0.5rem',
+    letterSpacing: '0.08em',
+    padding: '0.5rem 0.6rem',
+    borderRadius: 6,
+    appearance: 'none',
+    WebkitAppearance: 'none',
+    MozAppearance: 'none',
+    // arrow is rendered as a separate overlay element to avoid tiling issues
+    paddingRight: '1.2rem',
+  }
+}
+
 export default function NewsColumn({
   headlines,
   headlinesLoading,
@@ -23,15 +47,34 @@ export default function NewsColumn({
           <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.52rem', color: C.silver, letterSpacing: '0.18em', textTransform: 'uppercase' }}>Recent Analysis</div>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <select value={headlineSort} onChange={event => onChangeSort(event.target.value)} style={{ flex: 1, minWidth: 150, background: C.bg, border: `1px solid ${C.borderMid}`, color: C.textSecondary, fontFamily: "'JetBrains Mono', monospace", fontSize: '0.5rem', letterSpacing: '0.08em', padding: '0.5rem 0.6rem', borderRadius: 2 }}>
-            <option value="relevance">Sort: Most Covered + Recent</option>
-            <option value="region">Sort: Region</option>
-          </select>
-          <select value={headlineRegion} onChange={event => onChangeRegion(event.target.value)} style={{ flex: 1, minWidth: 120, background: C.bg, border: `1px solid ${C.borderMid}`, color: C.textSecondary, fontFamily: "'JetBrains Mono', monospace", fontSize: '0.5rem', letterSpacing: '0.08em', padding: '0.5rem 0.6rem', borderRadius: 2 }}>
-            <option value="all">Region: All</option>
-            {headlineRegions.map(region => <option key={region} value={region}>{`Region: ${formatRegionLabel(region)}`}</option>)}
-          </select>
-          {headlinesLoaded && <button onClick={onRefresh} style={{ background: 'none', border: `1px solid ${C.borderMid}`, color: C.textMuted, fontFamily: "'JetBrains Mono', monospace", fontSize: '0.5rem', letterSpacing: '0.1em', cursor: 'pointer', padding: '0.5rem 0.7rem', borderRadius: 2 }}>REFRESH</button>}
+          <div style={{ position: 'relative', flex: 1, minWidth: 150 }}>
+            <select
+              value={headlineSort}
+              onChange={event => onChangeSort(event.target.value)}
+              style={{ ...getSelectBase(), width: '100%', borderRadius: 999, padding: '0.42rem 0.9rem' }}
+            >
+              <option value="most_covered">Most Covered</option>
+              <option value="relevance">Relevant</option>
+              <option value="recent">Recent</option>
+            </select>
+            <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', display: 'inline-flex', alignItems: 'center' }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5" stroke="#000" strokeOpacity="0.35" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </span>
+          </div>
+
+          <div style={{ position: 'relative', flex: 1, minWidth: 120 }}>
+            <select
+              value={headlineRegion}
+              onChange={event => onChangeRegion(event.target.value)}
+              style={{ ...getSelectBase(), width: '100%', borderRadius: 999, padding: '0.42rem 0.9rem' }}
+            >
+              <option value="all">Region: All</option>
+              {headlineRegions.map(region => <option key={region} value={region}>{`Region: ${formatRegionLabel(region)}`}</option>)}
+            </select>
+            <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', display: 'inline-flex', alignItems: 'center' }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5" stroke="#000" strokeOpacity="0.35" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </span>
+          </div>
         </div>
       </div>
 
@@ -55,14 +98,14 @@ export default function NewsColumn({
                   onOpenEventDebug?.(story)
                 }}
                 style={{
-                  background: 'none',
+                  background: C.bgRaised,
                   border: `1px solid ${C.borderMid}`,
                   color: C.silver,
                   fontFamily: "'JetBrains Mono', monospace",
                   fontSize: '0.46rem',
                   letterSpacing: '0.11em',
-                  padding: '0.35rem 0.52rem',
-                  borderRadius: 2,
+                  padding: '0.35rem 0.6rem',
+                  borderRadius: 6,
                   cursor: 'pointer',
                   textTransform: 'uppercase',
                 }}

@@ -634,6 +634,25 @@ def init_db():
             "CREATE INDEX IF NOT EXISTS idx_event_identity_events_obs ON event_identity_events (observation_key, created_at DESC)"
         )
 
+        # ── analyst corrections feedback loop ─────────────────────────
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS analyst_corrections (
+                id BIGSERIAL PRIMARY KEY,
+                correction_type TEXT NOT NULL,
+                event_a_id TEXT NOT NULL REFERENCES canonical_events(event_id) ON DELETE CASCADE,
+                event_b_id TEXT REFERENCES canonical_events(event_id) ON DELETE CASCADE,
+                article_url TEXT,
+                created_at DOUBLE PRECISION NOT NULL,
+                applied BOOLEAN NOT NULL DEFAULT FALSE
+            )
+            """)
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_analyst_corrections_event_a ON analyst_corrections (event_a_id, applied DESC)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_analyst_corrections_applied ON analyst_corrections (applied, created_at DESC)"
+        )
+
         # ── v2 tables (typed timestamps, Postgres-only) ──────────────
         conn.execute("""
             CREATE TABLE IF NOT EXISTS articles_v2 (

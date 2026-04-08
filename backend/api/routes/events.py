@@ -1,5 +1,8 @@
+import time
 from fastapi import APIRouter
+from pydantic import BaseModel
 
+from db.common import _connect
 from services.analytics_service import (
     get_correlations_payload,
     get_instability_detail_payload,
@@ -21,6 +24,37 @@ from services.map_service import (
 )
 
 router = APIRouter()
+
+
+# ── Request models for analyst corrections ────────────────────────
+class MergeEventRequest(BaseModel):
+    merge_with_event_id: str
+
+
+class SplitArticleRequest(BaseModel):
+    article_url: str
+
+
+@router.post("/events/{event_id}/merge")
+def merge_events(event_id: str, body: MergeEventRequest):
+    """Queue a merge correction: combine event_id and body.merge_with_event_id."""
+    with _connect() as conn:
+        conn.execute("""
+            INSERT INTO analyst_corrections (correction_type, event_a_id, event_b_id, created_at, applied)
+            VALUES (%s, %s, %s, %s, %s)
+        """, ("merge", event_id, body.merge_with_event_id, time.time(), False))
+    return {"status": "correction_queued"}
+
+
+@router.post("/events/{event_id}/split-article")
+def split_article(event_id: str, body: SplitArticleRequest):
+    """Queue a split correction: remove article_url from event and create standalone event."""
+    with _connect() as conn:
+        conn.execute("""
+            INSERT INTO analyst_corrections (correction_type, event_a_id, article_url, created_at, applied)
+            VALUES (%s, %s, %s, %s, %s)
+        """, ("split", event_id, body.article_url, time.time(), False))
+    return {"status": "correction_queued"}
 
 
 @router.get("/events")

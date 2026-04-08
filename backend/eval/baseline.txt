@@ -1,0 +1,889 @@
+
+=== CLUSTERING EVAL ===
+
+  [PASS] clear_same_event
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] clear_different_events
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] same_event_across_5_days
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] different_cities_same_country
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] anchor_confusion_labor_vs_military_strike
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] ceasefire_then_violation
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] same_conflict_different_incident_bucket3
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] analysis_vs_incident_same_conflict
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] multi_theater_strike_distinct_incidents
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] cross_theater_consequence_spillover
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0000
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0001
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0002
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0003
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0004
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0005
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0006
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0007
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0008
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0009
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0010
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0011
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0012
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0013
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Claude label: SAME. System relatedness_score=0.51. both articles are reporting on the same ongoing conflict between Iran and the United States, with Article 2 from March 29 representing an earlier update and Article 1 from March 31 representing a sequential development of the same event.
+  [FAIL] generated_0014
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Claude label: SAME. System relatedness_score=0.44. both articles report on the same ongoing conflict between the Trump administration and Iran over the Strait of Hormuz, with Article 2 being an earlier update (April 1) and Article 1 being a later development (April 5) in the same incident.
+  [PASS] generated_0015
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0016
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0017
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0018
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0019
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0020
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0021
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0022
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0023
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0024
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0025
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0026
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0027
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0028
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0029
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0030
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0031
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0032
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0033
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0034
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0035
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0036
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.28. The articles appear to be reporting on the same ongoing conflict in the Middle East, with both mentioning Iran, the US, and Israel, and discussing warnings and potential actions related to the conflict.
+  [PASS] generated_0037
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0038
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0039
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0040
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0041
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0042
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0043
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0044
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.21. The articles are reporting on the same event, the Iran war, with Article 1 discussing a related diplomatic visit by Italy's Prime Minister Meloni to Qatar and Article 2 providing a live update on the conflict itself.
+  [PASS] generated_0045
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0046
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.27. The articles appear to be reporting on the same ongoing conflict between the US and Iran, with the first article providing an update on the situation and the second article discussing the broader implications and reactions to the conflict.
+  [PASS] generated_0047
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0048
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.14. The articles are reporting on the same conflict between the US and Iran, with one article discussing potential mediation efforts and the other discussing the market impact of the ongoing war.
+  [PASS] generated_0049
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0050
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0051
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.36. The articles are discussing the same Iran war and its implications, with Article 1 focusing on the economic impact on Pakistan and Article 2 discussing the US's approach to financing the war.
+  [FAIL] generated_0052
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.44. The articles are reporting on the same event, a war between Iran and the US/Israel, with Article 1 focusing on the tactics used by Iran and Article 2 discussing diplomatic meetings related to the same conflict.
+  [PASS] generated_0053
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0054
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [FAIL] generated_0055
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.21. The articles are reporting on the same conflict, with Article 1 discussing the US military deployment in response to the Iran war and Article 2 mentioning Iran's attacks on its neighbors, which is part of the same broader conflict.
+  [PASS] generated_0056
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0057
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.21. The articles are reporting on the same conflict between the US, Israel, and Iran, with the first article providing an update on diplomatic efforts and the second article describing the escalation of the conflict.
+  [PASS] generated_0058
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0059
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.51. The articles are reporting on the same event, which is related to the impact of the US oil blockade on Cuba, with one article discussing the effects on the tourism industry and the other article providing an update on a Russian oil shipment arriving in Cuba.
+  [PASS] generated_0060
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0061
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0062
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0063
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.12. The articles are related to the same conflict, with Article 1 reporting on a specific incident involving a downed US F-15E fighter jet over Iran, and Article 2 discussing the broader economic implications of the same war.
+  [PASS] generated_0064
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0065
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0066
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.23. The articles are reporting on the same event, a conflict between the US and Iran, with Article 1 providing an update on a US satellite firm's decision amid the war, and Article 2 explaining US military terms and deployments in the context of the same conflict.
+  [PASS] generated_0067
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0068
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.24. The two articles are reporting on the same event, the Iran war, and its effects on the US, with one article discussing the exemption of Gulf of Mexico oil drillers from endangered species protections and the other article discussing the rise in US gas prices, both of which are related to the ongoing conflict.
+  [PASS] generated_0069
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0070
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0071
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0072
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0073
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0074
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0075
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0076
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0077
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.25. The articles are reporting on the same event, a conflict involving the US and Iran, with Article 1 providing a specific update on the situation and Article 2 discussing a secondary effect of the conflict on Kenya's tea industry.
+  [PASS] generated_0078
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0079
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0080
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0081
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0082
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0083
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [FAIL] generated_0084
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.22. The articles are reporting on the same conflict between Israel and Hezbollah, with Article 1 providing a specific update on the conflict and Article 2 appearing to be an opinion piece related to the same broader issue.
+  [PASS] generated_0085
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0086
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.41. The articles are reporting on the same US-Israel war on Iran, with Article 1 providing an update on day 31 of the attacks and Article 2 discussing developments on day 29, indicating a sequential update on the same conflict.
+  [PASS] generated_0087
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0088
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0089
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.4. The articles are reporting on the same conflict between the US, Israel, and Iran, with the first article discussing the potential withdrawal from the Nuclear Non-Proliferation Treaty as a result of the ongoing attacks.
+  [PASS] generated_0090
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0091
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0092
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0093
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0094
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.41. The articles are reporting on the same event, a conflict between the US (and possibly Israel) and Iran, with Article 1 discussing Iran's perspective and Article 2 focusing on the global economic impact of the ongoing war.
+  [FAIL] generated_0095
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.47. The articles are discussing the same conflict between the US and Iran, with one article speculating on potential US actions and the other reporting on the economic consequences of the ongoing war.
+  [PASS] generated_0096
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0097
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.44. The articles are reporting on the same event, a conflict involving Iran that is affecting global oil and gas prices, with the first article providing an update on the expected duration of the price increases.
+  [PASS] generated_0098
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0099
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0100
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0101
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.14. The articles are reporting on the same US-Israeli war on Iran, with Article 1 discussing the impact of the war on Kenya's tea industry and Article 2 providing an analysis of the war itself.
+  [PASS] generated_0102
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0103
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0104
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0105
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0106
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0107
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0108
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0109
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0110
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0111
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0112
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0113
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [FAIL] generated_0114
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.41. The two articles report on the same incident of air strikes targeting a petrochemical complex in Iran, with Article 1 providing specific details on the damage and casualties in the Mahshahr Special Petrochemical Economic Zone, and Article 2 mentioning the broader context and other related events.
+  [PASS] generated_0115
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [FAIL] generated_0116
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.28. The two articles are reporting on the same conflict between the US and Iran, with one article describing a military attack and the other discussing diplomatic efforts to mediate peace.
+  [PASS] generated_0117
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0118
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [FAIL] generated_0119
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.4. The articles are reporting on the same event, a war with Iran, as indicated by the mention of the conflict and its economic implications in both articles, with Article 1 focusing on the cost to Arab countries and Article 2 discussing the impact on global markets.
+  [PASS] generated_0120
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0121
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0122
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [FAIL] generated_0123
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.32. The articles appear to be discussing the same conflict, with Article 1 analyzing the interests of the parties involved and Article 2 providing an update on the actions of Iranian politicians in response to the ongoing war.
+  [FAIL] generated_0124
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.26. The articles are reporting on the same event, a conflict involving the US and Iran, with Article 1 discussing Iran's stance and Article 2 touching on the global energy crisis and market volatility amid the same war.
+  [PASS] generated_0125
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0126
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0127
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0128
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0129
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.14. The articles are reporting on the same conflict, with Article 1 discussing the economic impact of the war on Pakistan and Article 2 providing updates on the military actions and diplomatic developments in the conflict.
+  [PASS] generated_0130
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0131
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0132
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.14. The articles appear to be reporting on the same conflict between Iran and Israel, with Article 1 providing a specific update on Iran's military targets and Article 2 discussing the broader economic implications of the conflict.
+  [PASS] generated_0133
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0134
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0135
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0136
+         P=0.0 R=1.0 F1=0.0  clusters=[2]
+         note: Groq label: DIFFERENT. System relatedness_score=0.21. The articles appear to be discussing different aspects of international relations, with one focusing on the impact of a war on Kenya's tea industry and the other discussing Trump's criticism of NATO allies, without a clear connection between the two.
+  [FAIL] generated_0137
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.52. The articles are reporting on the same conflict, with Article 1 providing a specific update on the aftermath of an air strike in southwestern Iran, which is part of the larger series of strikes mentioned in Article 2.
+  [PASS] generated_0138
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0139
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0140
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0141
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0142
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.26. The articles are reporting on the same event, the US-Israeli war on Iran, as they both mention its impact on different countries, indicating a shared context and incident.
+  [FAIL] generated_0143
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.34. The two articles are reporting on the same event, which is the ongoing situation related to the Iran war and its impact on the global economy and oil prices.
+  [PASS] generated_0144
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0145
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0146
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0147
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [FAIL] generated_0148
+         P=0.0 R=1.0 F1=0.0  clusters=[2]
+         note: Groq label: DIFFERENT. System relatedness_score=0.43. The two articles appear to be discussing different topics, with Article 1 focusing on a conflict between the US, Israel, and Iran, while Article 2 mentions Trump considering leaving Nato and a separate issue related to Iran, but not the same conflict.
+  [FAIL] generated_0149
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.4. The articles are reporting on the same conflict between Iran and the US-Israeli alliance, with Article 1 focusing on Iran's response to attacks on its nuclear facilities and Article 2 discussing Iran's position on potential peace talks to end the conflict.
+  [PASS] generated_0150
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0151
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.29. The articles are reporting on the same conflict, with Article 1 discussing the impact of US and Israeli strikes on Iran's universities and Article 2 describing Iranian attacks on other countries in the region, indicating a sequential update on the same ongoing event.
+  [PASS] generated_0152
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0153
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0154
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0155
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0156
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0157
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0158
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.17. The articles are reporting on the same event, the Iran war, with Article 1 discussing its impact on Australia's fuel supply and Article 2 providing an update on the war itself.
+  [PASS] generated_0159
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0160
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.45. The articles are reporting on the same conflict between Israel, the US, and Iran, with the first article providing an update on the situation and the second article discussing the economic impact of the war on the UAE's financial markets.
+  [PASS] generated_0161
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0162
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0163
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.13. The articles are reporting on the same event, the US-Israel war on Iran, with Article 1 discussing its economic impact and Article 2 mentioning a related development in negotiations.
+  [PASS] generated_0164
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0165
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0166
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0167
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0168
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0169
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0170
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0171
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0172
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0173
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0174
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0175
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.52. The articles are reporting on the same event, a conflict between the US/Israel and Iran, as indicated by the mention of the Iran war and US/Iranian tensions in both articles, with the only difference being the date and the focus of the reporting.
+  [FAIL] generated_0176
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.34. The articles are discussing the same event, the Iran war, and its effects on the region, with Article 1 focusing on Pakistan's economic crisis and Article 2 discussing Iran's parliamentary speaker's actions during the war.
+  [PASS] generated_0177
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0178
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0179
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [FAIL] generated_0180
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.37. The articles are reporting on the same conflict between the US, Israel, and Iran, with Article 1 discussing a US satellite firm's decision to blackout images of the war and Article 2 describing Iran's response to the attacks on its nuclear facilities.
+  [PASS] generated_0181
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0182
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.6. The two articles appear to be reporting on the same event, a heightened state of tension between Iran, the US, and Israel, with both articles referencing recent warnings and threats exchanged between these parties.
+  [PASS] generated_0183
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0184
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0185
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.41. The two articles are reporting on the same conflict, with Article 1 discussing the UK Prime Minister's perspective on the war's impact on Britain and Article 2 providing an update on the ongoing US-Israel attacks on Iran.
+  [PASS] generated_0186
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [FAIL] generated_0187
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.29. The articles are reporting on the same conflict between Arab countries and Iran, with the first article discussing the economic costs of the war and the second article discussing potential US involvement in the conflict.
+  [PASS] generated_0188
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0189
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.23. The articles are reporting on the same conflict in the Middle East involving the US, Iran, and other regional actors, with Article 1 discussing potential US actions against Iran and Article 2 describing the intensification of the war and diplomatic efforts to end it.
+  [PASS] generated_0190
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0191
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [FAIL] generated_0192
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.36. The articles are reporting on the same conflict, with Article 1 focusing on specific incidents and consequences of the Iran war, and Article 2 providing a broader update on the status of the conflict.
+  [PASS] generated_0193
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0194
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [FAIL] generated_0195
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.29. The articles are reporting on the same conflict between the US, Israel, and Iran, with the first article providing a specific update on the rescue of a missing US officer and the second article discussing the broader context and progression of the conflict.
+  [PASS] generated_0196
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0197
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0198
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.29. The articles are reporting on the same conflict between Israel and Iran, with Article 1 discussing the broader implications and Article 2 describing a specific incident within that conflict.
+  [PASS] generated_0199
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0200
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0201
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0202
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0203
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.22. The articles are reporting on the same event, the Iran war and its effects, with Article 1 discussing the impact on US gas prices and Article 2 providing information on the Trump administration's actions and plans related to the conflict.
+  [PASS] generated_0204
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0205
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0206
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0207
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0208
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0209
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0210
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0211
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0212
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0213
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0214
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [FAIL] generated_0215
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.44. The articles are reporting on the same conflict between Iran and other entities, with both mentioning the Strait of Hormuz and tensions involving Iran, and the time difference between the two articles suggests a sequential update on the same event.
+  [PASS] generated_0216
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0217
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0218
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0219
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0220
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0221
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0222
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0223
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0224
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0225
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.45. The articles are reporting on the same conflict, the US-Israel attacks on Iran, with Article 1 providing a day-to-day update and Article 2 discussing the broader economic impact of the conflict on Arab countries.
+  [PASS] generated_0226
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0227
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0228
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0229
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0230
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0231
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [FAIL] generated_0232
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.39. The articles are reporting on the same conflict between the US, Israel, and Iran, with the first article providing an update on the ongoing war and the second article discussing the impact of Iranian attacks on neighboring countries, including Qatar.
+  [PASS] generated_0233
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0234
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [FAIL] generated_0235
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.18. The articles are reporting on the same conflict, the US-Israel war on Iran, with Article 1 discussing its broader humanitarian impact on Asia and Article 2 focusing on a specific development related to the war, namely a US satellite firm's decision to withhold images of the conflict.
+  [PASS] generated_0236
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0237
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0238
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0239
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.37. The two articles are reporting on the same event, specifically the economic crisis in Pakistan triggered by the US-Israeli war on Iran, with both articles discussing the fallout and its impact on the country.
+  [FAIL] generated_0240
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.27. The articles are discussing the same conflict between the US and Iran, with one article speculating about potential US actions and the other discussing the economic impact of the ongoing war.
+  [PASS] generated_0241
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0242
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0243
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.25. The articles are reporting on the same conflict, with Article 1 providing a specific incident update on the strikes in southwestern Iran, and Article 2 discussing the broader conflict and its developments, indicating they are part of the same event.
+  [PASS] generated_0244
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0245
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0246
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0247
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0248
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0249
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.28. The two articles are reporting on the same conflict, with Article 1 describing specific incidents and attacks, and Article 2 discussing the potential end of the war and its impact on the stock market, indicating a sequential update on the same event.
+  [PASS] generated_0250
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0251
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0252
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [FAIL] generated_0253
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.4. The two articles are reporting on the same conflict, with Article 1 discussing the economic impact of the war on Arab countries and Article 2 focusing on the rising oil prices and escalating tensions, both of which are related to the same ongoing event.
+  [PASS] generated_0254
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [FAIL] generated_0255
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.31. The articles are reporting on the same conflict between the US and Iran, with the first article providing a specific update on the situation and the second article discussing the broader impact of the conflict on oil and gas prices.
+  [FAIL] generated_0256
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.41. The articles are reporting on the same conflict between Israel and Hezbollah, with Article 1 describing Israeli attacks on Beirut and Article 2 describing a retaliatory missile strike on Tel Aviv, indicating a sequential update on the same event.
+  [PASS] generated_0257
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [FAIL] generated_0258
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.32. The articles are reporting on the same conflict between Iran and its neighbors, with Article 1 focusing on the specific impact of Iranian attacks on Qatar and Article 2 providing analysis on Iran's interests in the broader conflict.
+  [PASS] generated_0259
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0260
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [FAIL] generated_0261
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.33. The articles are reporting on the same conflict between Israel and Iran, with Article 1 discussing the global market implications and diplomatic efforts, and Article 2 exploring the potential energy supply strain caused by the war on a specific country, India.
+  [FAIL] generated_0262
+         P=0.0 R=1.0 F1=0.0  clusters=[2]
+         note: Groq label: DIFFERENT. System relatedness_score=0.46. The two articles are reporting on different events, with Article 1 focusing on Israeli airstrikes on Iran and Lebanon, while Article 2 is about the ongoing conflict and death toll in the Gaza Strip.
+  [FAIL] generated_0263
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.28. The articles are reporting on the same event, the Iran war, with one article discussing its impact on energy supplies in India and the other providing an update on the conflict itself.
+  [PASS] generated_0264
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0265
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0266
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [FAIL] generated_0267
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.33. The articles are reporting on the same event, a US-Israeli strike on Iranian nuclear facilities, with the first article providing an update on Iran's response to the attack, specifically their accusation against the IAEA head and plans for legal action.
+  [PASS] generated_0268
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0269
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0270
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0271
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0272
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0273
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0274
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0275
+         P=0.0 R=1.0 F1=0.0  clusters=[2]
+         note: Groq label: DIFFERENT. System relatedness_score=0.5. The two articles are reporting on different events, one being a specific Israeli drone strike in Gaza and the other being pro-Palestine rallies in Syria in response to the Israeli occupation and genocide in Gaza.
+  [PASS] generated_0276
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0277
+         P=0.0 R=1.0 F1=0.0  clusters=[2]
+         note: Groq label: DIFFERENT. System relatedness_score=0.53. The two articles appear to be discussing different events, one about the Trump administration considering targeting Iranian energy sites and the other about a specific attack on the Mahshahr Petrochemical Zone and the rescue of a missing US officer.
+  [FAIL] generated_0278
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.21. The articles are reporting on the same conflict, the US-Israel war on Iran, with Article 1 discussing a specific incident related to a US satellite firm's response to the war and Article 2 discussing the broader economic impact of the war.
+  [PASS] generated_0279
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0280
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0281
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.46. The articles are reporting on the same conflict between the US and Iran, with Article 1 providing analysis on Iran's stance and Article 2 providing an update on the ongoing situation, both within a short timeframe of each other.
+  [PASS] generated_0282
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0283
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0284
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0285
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0286
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0287
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0288
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0289
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0290
+         P=0.0 R=1.0 F1=0.0  clusters=[2]
+         note: Groq label: DIFFERENT. System relatedness_score=0.26. The two articles are discussing different topics, one focusing on the global economic impact of Trump's tariffs and the other on a potential US action against Iran's oil exports in the context of a war.
+  [PASS] generated_0291
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0292
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0293
+         P=0.0 R=1.0 F1=0.0  clusters=[2]
+         note: Groq label: DIFFERENT. System relatedness_score=0.44. The articles are reporting on different aspects of the conflict, with one focusing on the damage to cultural heritage sites and the other discussing the economic and investment implications of the war.
+  [PASS] generated_0294
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0295
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0296
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0297
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.44. The articles are reporting on the same US-Israel attacks on Iran, with Article 1 providing an update on the conflict and Article 2 offering analysis on the interests of the parties involved, both within the context of the same ongoing conflict.
+  [PASS] generated_0298
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0299
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0300
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0301
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0302
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0303
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0304
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0305
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0306
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.26. The articles are discussing the same conflict, the Iran war, and are providing analysis and updates on the US military's involvement and the interests of the parties involved in the war.
+  [PASS] generated_0307
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0308
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0309
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0310
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0311
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0312
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0313
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0314
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0315
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0316
+         P=1.0 R=0.0 F1=0.0  clusters=[1, 1]
+         note: Groq label: SAME. System relatedness_score=0.21. The articles are reporting on the same conflict between Iran and the US-Israeli alliance, with Article 1 providing updates on the war and Article 2 discussing the economic impact of the war, indicating they are related to the same overall event.
+  [PASS] generated_0317
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0318
+         P=1.0 R=1.0 F1=1.0  clusters=[2]
+  [PASS] generated_0319
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0320
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0321
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0322
+         P=0.0 R=1.0 F1=0.0  clusters=[2]
+         note: Anthropic label: DIFFERENT. System relatedness_score=0.58. because these articles describe distinct military actions by different actors: Article 1 reports Houthi/Iran/Hezbollah claims of coordinated attacks on Israeli airports, while Article 2 reports Israeli retaliatory strikes against Iranian and Hezbollah targets—these are separate incidents occurring on consecutive days with opposite actor roles.
+  [PASS] generated_0323
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0324
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0325
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0326
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0327
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0328
+         P=0.0 R=1.0 F1=0.0  clusters=[2]
+         note: Anthropic label: DIFFERENT. System relatedness_score=0.32. because Article 1 reports a specific incident (arrests of Soleimani's relatives in the US) while Article 2 reports a diplomatic statement/reaction (Iranian officials responding to Trump's ceasefire claim), which are different actors, actions, and types of events.
+  [PASS] generated_0329
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0330
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0331
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0332
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0333
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0334
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0335
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [PASS] generated_0336
+         P=1.0 R=1.0 F1=1.0  clusters=[1, 1]
+  [FAIL] generated_0337
+         P=0.0 R=1.0 F1=0.0  clusters=[2]
+         note: Anthropic label: DIFFERENT. System relatedness_score=0.48. because Article 1 is macro-level analysis about strategic interests while Article 2 is a retrospective summary of specific military/political/economic incidents—they are different article types covering the same conflict rather than the same specific incident.
+
+  270/348 cases as expected
+
+=== IDENTITY EVAL ===
+
+  [PASS] url_overlap_hard_match  action=mapped_existing  best_score=0.93
+  [PASS] entity_overlap_soft_match  action=mapped_existing  best_score=0.9
+  [PASS] false_merge_same_country_different_events  action=created_new  best_score=0.0
+  [PASS] no_candidates  action=created_new  no_candidates
+
+  4/4 passed
+
+
+=== IMPORTANCE EVAL ===
+
+  [PASS] mass_casualty_plateau
+         A=51.85  B=34.06  margin=17.79  expected=A higher  got=A
+         A reasons: ['5000 linked fatalities', 'escalation signals: attack, strike', '3 distinct sources (0 tier-1)', 'newly observed canonical event', 'source diversity across 1 regions and 1 languages']
+         B reasons: ['escalation signals: attack', '50 linked fatalities', '1 distinct sources (0 tier-1)', 'newly observed canonical event', 'source diversity across 1 regions and 1 languages']
+  [PASS] new_twitter_storm_vs_ongoing_humanitarian_crisis
+         A=61.56  B=24.65  margin=36.91  expected=A higher  got=A
+         A reasons: ['escalation/severity context from linked signals', '350 linked fatalities', '4 distinct sources (0 tier-1)', 'coverage growth (+0 articles, +4 sources)', 'source diversity across 1 regions and 2 languages']
+         B reasons: ['2 distinct sources (0 tier-1)', 'newly observed canonical event', 'source diversity across 1 regions and 1 languages', 'escalation signals: sanctions']
+  [PASS] tier1_sources_vs_high_volume_low_tier
+         A=59.8  B=49.25  margin=10.55  expected=A higher  got=A
+         A reasons: ['3 distinct sources (3 tier-1)', 'newly observed canonical event', 'escalation signals: attack, strike', 'source diversity across 1 regions and 1 languages']
+         B reasons: ['10 distinct sources (0 tier-1)', 'newly observed canonical event', 'source diversity across 1 regions and 1 languages']
+
+  3/3 passed
+
+=== SUMMARY ===
+
+  Clustering failures (78):
+    - generated_0013: P=1.0 R=0.0 F1=0.0
+    - generated_0014: P=1.0 R=0.0 F1=0.0
+    - generated_0036: P=1.0 R=0.0 F1=0.0
+    - generated_0044: P=1.0 R=0.0 F1=0.0
+    - generated_0046: P=1.0 R=0.0 F1=0.0
+    - generated_0048: P=1.0 R=0.0 F1=0.0
+    - generated_0051: P=1.0 R=0.0 F1=0.0
+    - generated_0052: P=1.0 R=0.0 F1=0.0
+    - generated_0055: P=1.0 R=0.0 F1=0.0
+    - generated_0057: P=1.0 R=0.0 F1=0.0
+    - generated_0059: P=1.0 R=0.0 F1=0.0
+    - generated_0063: P=1.0 R=0.0 F1=0.0
+    - generated_0066: P=1.0 R=0.0 F1=0.0
+    - generated_0068: P=1.0 R=0.0 F1=0.0
+    - generated_0077: P=1.0 R=0.0 F1=0.0
+    - generated_0084: P=1.0 R=0.0 F1=0.0
+    - generated_0086: P=1.0 R=0.0 F1=0.0
+    - generated_0089: P=1.0 R=0.0 F1=0.0
+    - generated_0094: P=1.0 R=0.0 F1=0.0
+    - generated_0095: P=1.0 R=0.0 F1=0.0
+    - generated_0097: P=1.0 R=0.0 F1=0.0
+    - generated_0101: P=1.0 R=0.0 F1=0.0
+    - generated_0114: P=1.0 R=0.0 F1=0.0
+    - generated_0116: P=1.0 R=0.0 F1=0.0
+    - generated_0119: P=1.0 R=0.0 F1=0.0
+    - generated_0123: P=1.0 R=0.0 F1=0.0
+    - generated_0124: P=1.0 R=0.0 F1=0.0
+    - generated_0129: P=1.0 R=0.0 F1=0.0
+    - generated_0132: P=1.0 R=0.0 F1=0.0
+    - generated_0136: P=0.0 R=1.0 F1=0.0
+    - generated_0137: P=1.0 R=0.0 F1=0.0
+    - generated_0142: P=1.0 R=0.0 F1=0.0
+    - generated_0143: P=1.0 R=0.0 F1=0.0
+    - generated_0148: P=0.0 R=1.0 F1=0.0
+    - generated_0149: P=1.0 R=0.0 F1=0.0
+    - generated_0151: P=1.0 R=0.0 F1=0.0
+    - generated_0158: P=1.0 R=0.0 F1=0.0
+    - generated_0160: P=1.0 R=0.0 F1=0.0
+    - generated_0163: P=1.0 R=0.0 F1=0.0
+    - generated_0175: P=1.0 R=0.0 F1=0.0
+    - generated_0176: P=1.0 R=0.0 F1=0.0
+    - generated_0180: P=1.0 R=0.0 F1=0.0
+    - generated_0182: P=1.0 R=0.0 F1=0.0
+    - generated_0185: P=1.0 R=0.0 F1=0.0
+    - generated_0187: P=1.0 R=0.0 F1=0.0
+    - generated_0189: P=1.0 R=0.0 F1=0.0
+    - generated_0192: P=1.0 R=0.0 F1=0.0
+    - generated_0195: P=1.0 R=0.0 F1=0.0
+    - generated_0198: P=1.0 R=0.0 F1=0.0
+    - generated_0203: P=1.0 R=0.0 F1=0.0
+    - generated_0215: P=1.0 R=0.0 F1=0.0
+    - generated_0225: P=1.0 R=0.0 F1=0.0
+    - generated_0232: P=1.0 R=0.0 F1=0.0
+    - generated_0235: P=1.0 R=0.0 F1=0.0
+    - generated_0239: P=1.0 R=0.0 F1=0.0
+    - generated_0240: P=1.0 R=0.0 F1=0.0
+    - generated_0243: P=1.0 R=0.0 F1=0.0
+    - generated_0249: P=1.0 R=0.0 F1=0.0
+    - generated_0253: P=1.0 R=0.0 F1=0.0
+    - generated_0255: P=1.0 R=0.0 F1=0.0
+    - generated_0256: P=1.0 R=0.0 F1=0.0
+    - generated_0258: P=1.0 R=0.0 F1=0.0
+    - generated_0261: P=1.0 R=0.0 F1=0.0
+    - generated_0262: P=0.0 R=1.0 F1=0.0
+    - generated_0263: P=1.0 R=0.0 F1=0.0
+    - generated_0267: P=1.0 R=0.0 F1=0.0
+    - generated_0275: P=0.0 R=1.0 F1=0.0
+    - generated_0277: P=0.0 R=1.0 F1=0.0
+    - generated_0278: P=1.0 R=0.0 F1=0.0
+    - generated_0281: P=1.0 R=0.0 F1=0.0
+    - generated_0290: P=0.0 R=1.0 F1=0.0
+    - generated_0293: P=0.0 R=1.0 F1=0.0
+    - generated_0297: P=1.0 R=0.0 F1=0.0
+    - generated_0306: P=1.0 R=0.0 F1=0.0
+    - generated_0316: P=1.0 R=0.0 F1=0.0
+    - generated_0322: P=0.0 R=1.0 F1=0.0
+    - generated_0328: P=0.0 R=1.0 F1=0.0
+    - generated_0337: P=0.0 R=1.0 F1=0.0
+

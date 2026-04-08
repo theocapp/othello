@@ -169,3 +169,22 @@ export async function sendQuery(question, options = null) {
   const response = await api.post('/query', body)
   return response.data
 }
+
+export async function fetchCanonicalEvent(eventId) {
+  const response = await api.get(`/events/canonical/${encodeURIComponent(eventId)}`)
+  return response.data
+}
+
+export async function mergeEvents(eventId, mergeWithEventId) {
+  const response = await api.post(`/events/${encodeURIComponent(eventId)}/merge`, {
+    merge_with_event_id: mergeWithEventId,
+  })
+  return response.data
+}
+
+export async function splitArticle(eventId, articleUrl) {
+  const response = await api.post(`/events/${encodeURIComponent(eventId)}/split-article`, {
+    article_url: articleUrl,
+  })
+  return response.data
+}
