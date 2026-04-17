@@ -3,6 +3,8 @@ from datetime import datetime
 import chromadb
 from chromadb.utils import embedding_functions
 
+from core.config import REQUEST_ENABLE_VECTOR_SEARCH
+
 _client = None
 _collection = None
 
@@ -100,6 +102,9 @@ def search_articles(query: str, n_results: int = 8, topic: str = None) -> list[d
 
 
 def get_collection_stats() -> dict:
+    if not REQUEST_ENABLE_VECTOR_SEARCH:
+        return {"total_articles": 0, "collection": "signal_articles"}
+
     try:
         count = get_collection().count()
     except Exception as exc:

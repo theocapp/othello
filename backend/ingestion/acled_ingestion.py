@@ -12,6 +12,7 @@ from datetime import datetime, timedelta, timezone
 import requests
 
 from corpus import get_source_registry, upsert_structured_events
+from db.events_repo import deduplicate_cross_dataset_events
 
 ACLED_AUTH_URL = "https://acleddata.com/oauth/token"
 ACLED_EVENTS_URL = "https://acleddata.com/api/acled/read"
@@ -239,6 +240,8 @@ def ingest_acled_recent(days: int = 2, limit: int = 500) -> dict:
         raise RuntimeError("ACLED source is not present in source_registry.")
     events, meta = fetch_acled_events(days=days, limit=limit)
     inserted = upsert_structured_events(events)
+    dedup_result = deduplicate_cross_dataset_events(days=3)
+    print(f"[acled] Cross-dataset dedup: {dedup_result}")
     return {
         "source_name": source["source_name"],
         "days": days,

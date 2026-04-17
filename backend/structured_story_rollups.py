@@ -569,6 +569,17 @@ def build_structured_story_clusters(
                 "sources": sources,
                 "events": [
                     {
+                        "source_urls": [
+                            url
+                            for url in [
+                                *(
+                                    str(value).strip()
+                                    for value in (item.get("source_urls") or [])
+                                ),
+                                str((item.get("payload") or {}).get("source_url") or "").strip(),
+                            ]
+                            if url
+                        ],
                         "event_id": item["event_id"],
                         "event_date": item.get("event_date"),
                         "country": item.get("country"),

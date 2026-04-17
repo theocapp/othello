@@ -7,12 +7,46 @@ import {
   HOTSPOT_TYPE_PALETTE,
   getHotspotAspect,
   getHotspotPalette,
-  hashToken,
   hotspotDisplayHeadline,
   hotspotEventDescription,
-  seededUnit,
 } from '../lib/hotspots'
 import { truncateText } from '../lib/formatters'
+
+const CONTINENTS = ['Africa', 'Asia', 'Europe', 'North America', 'South America', 'Oceania']
+
+const CONTINENT_BBOXES = {
+  Africa: { minLat: -35, maxLat: 38, minLon: -20, maxLon: 55 },
+  Asia: { minLat: -10, maxLat: 60, minLon: 25, maxLon: 150 },
+  Europe: { minLat: 34, maxLat: 66, minLon: -10, maxLon: 40 },
+  'North America': { minLat: 5, maxLat: 72, minLon: -140, maxLon: -50 },
+  'South America': { minLat: -56, maxLat: 13, minLon: -82, maxLon: -34 },
+  Oceania: { minLat: -50, maxLat: 10, minLon: 110, maxLon: 160 },
+}
+
+const CONTINENT_ZOOM = {
+  Africa: 1.0,
+  'South America': 1.0,
+  Asia: 1.25,
+  Europe: 1.25,
+  'North America': 1.3,
+  Oceania: 1.35,
+}
+
+const COUNTRIES = [
+  'Afghanistan','Albania','Algeria','Andorra','Angola','Antigua and Barbuda','Argentina','Armenia','Australia','Austria','Azerbaijan',
+  'Bahamas','Bahrain','Bangladesh','Barbados','Belarus','Belgium','Belize','Benin','Bhutan','Bolivia','Bosnia and Herzegovina','Botswana','Brazil','Brunei','Bulgaria','Burkina Faso','Burundi',
+  'Cote d\'Ivoire','Cabo Verde','Cambodia','Cameroon','Canada','Central African Republic','Chad','Chile','China','Colombia','Comoros','Costa Rica','Croatia','Cuba','Cyprus','Czech Republic',
+  'Democratic Republic of the Congo','Denmark','Djibouti','Dominica','Dominican Republic','Ecuador','Egypt','El Salvador','Equatorial Guinea','Eritrea','Estonia','Eswatini','Ethiopia',
+  'Fiji','Finland','France','Gabon','Gambia','Georgia','Germany','Ghana','Greece','Grenada','Guatemala','Guinea','Guinea-Bissau','Guyana','Haiti','Honduras','Hungary',
+  'Iceland','India','Indonesia','Iran','Iraq','Ireland','Israel','Italy','Jamaica','Japan','Jordan','Kazakhstan','Kenya','Kiribati','Kosovo','Kuwait','Kyrgyzstan',
+  'Laos','Latvia','Lebanon','Lesotho','Liberia','Libya','Liechtenstein','Lithuania','Luxembourg','Madagascar','Malawi','Malaysia','Maldives','Mali','Malta','Marshall Islands','Mauritania','Mauritius',
+  'Mexico','Micronesia','Moldova','Monaco','Mongolia','Montenegro','Morocco','Mozambique','Myanmar','Namibia','Nauru','Nepal','Netherlands','New Zealand','Nicaragua','Niger','Nigeria',
+  'North Korea','North Macedonia','Norway','Oman','Pakistan','Palau','Panama','Papua New Guinea','Paraguay','Peru','Philippines','Poland','Portugal','Qatar','Romania','Russia','Rwanda',
+  'Saint Kitts and Nevis','Saint Lucia','Saint Vincent and the Grenadines','Samoa','San Marino','Sao Tome and Principe','Saudi Arabia','Senegal','Serbia','Seychelles','Sierra Leone','Singapore','Slovakia','Slovenia','Solomon Islands','Somalia','South Africa','South Korea','South Sudan','Spain','Sri Lanka','Sudan','Suriname','Sweden','Switzerland','Syria',
+  'Taiwan','Tajikistan','Tanzania','Thailand','Timor-Leste','Togo','Tonga','Trinidad and Tobago','Tunisia','Turkey','Turkmenistan','Tuvalu','Uganda','Ukraine','United Arab Emirates','United Kingdom','United States','Uruguay','Uzbekistan','Vanuatu','Vatican City','Venezuela','Vietnam','Yemen','Zambia','Zimbabwe',
+]
+
+const EMPTY_HOTSPOTS = []
 
 export default function WorldHotspotMap({ data, error, loading, selectedHotspotId, onWindowChange, onSelectHotspot }) {
   const svgRef = useRef(null)
@@ -22,6 +56,7 @@ export default function WorldHotspotMap({ data, error, loading, selectedHotspotI
   const [hoveredHotspot, setHoveredHotspot] = useState(null)
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 })
   const [activeAspects, setActiveAspects] = useState(null)
+  const [animatedDots, setAnimatedDots] = useState('')
 
   const W = 1000
   const H = 520
@@ -40,63 +75,19 @@ export default function WorldHotspotMap({ data, error, loading, selectedHotspotI
 
   const zoomRef = useRef(null)
 
-  const allHotspots = Array.isArray(data?.hotspots) ? data.hotspots : []
+  const allHotspots = Array.isArray(data?.hotspots) ? data.hotspots : EMPTY_HOTSPOTS
 
   // search + continent filter state
   const [countryQuery, setCountryQuery] = useState('')
   const [selectedContinents, setSelectedContinents] = useState(null)
 
-  // only allow these continents (remove Antarctica)
-  const CONTINENTS = ['Africa', 'Asia', 'Europe', 'North America', 'South America', 'Oceania']
-
-  // improved continent bounding boxes (lon/lat) tuned to better fill viewport
-  const CONTINENT_BBOXES = {
-    'Africa': { minLat: -35, maxLat: 38, minLon: -20, maxLon: 55 },
-    // narrower Asia box to avoid extreme eastern longitudes that make fit tiny
-    'Asia': { minLat: -10, maxLat: 60, minLon: 25, maxLon: 150 },
-    // focus Europe around western/central europe to fill frame better
-    'Europe': { minLat: 34, maxLat: 66, minLon: -10, maxLon: 40 },
-    // continental North America (exclude far Aleutians / pacific longitudes)
-    'North America': { minLat: 5, maxLat: 72, minLon: -140, maxLon: -50 },
-    'South America': { minLat: -56, maxLat: 13, minLon: -82, maxLon: -34 },
-    // Oceania focused box (Australia + island nations)
-    'Oceania': { minLat: -50, maxLat: 10, minLon: 110, maxLon: 160 },
-  }
-
-  // per-continent zoom multipliers to make smaller/narrow continents fill viewport better
-  const CONTINENT_ZOOM = {
-    'Africa': 1.0,
-    'South America': 1.0,
-    'Asia': 1.25,
-    'Europe': 1.25,
-    'North America': 1.3,
-    'Oceania': 1.35,
-  }
-
-  // basic country name list for autocomplete (common country names)
-  const COUNTRIES = [
-    'Afghanistan','Albania','Algeria','Andorra','Angola','Antigua and Barbuda','Argentina','Armenia','Australia','Austria','Azerbaijan',
-    'Bahamas','Bahrain','Bangladesh','Barbados','Belarus','Belgium','Belize','Benin','Bhutan','Bolivia','Bosnia and Herzegovina','Botswana','Brazil','Brunei','Bulgaria','Burkina Faso','Burundi',
-    'Cote d\'Ivoire','Cabo Verde','Cambodia','Cameroon','Canada','Central African Republic','Chad','Chile','China','Colombia','Comoros','Costa Rica','Croatia','Cuba','Cyprus','Czech Republic',
-    'Democratic Republic of the Congo','Denmark','Djibouti','Dominica','Dominican Republic','Ecuador','Egypt','El Salvador','Equatorial Guinea','Eritrea','Estonia','Eswatini','Ethiopia',
-    'Fiji','Finland','France','Gabon','Gambia','Georgia','Germany','Ghana','Greece','Grenada','Guatemala','Guinea','Guinea-Bissau','Guyana','Haiti','Honduras','Hungary',
-    'Iceland','India','Indonesia','Iran','Iraq','Ireland','Israel','Italy','Jamaica','Japan','Jordan','Kazakhstan','Kenya','Kiribati','Kosovo','Kuwait','Kyrgyzstan',
-    'Laos','Latvia','Lebanon','Lesotho','Liberia','Libya','Liechtenstein','Lithuania','Luxembourg','Madagascar','Malawi','Malaysia','Maldives','Mali','Malta','Marshall Islands','Mauritania','Mauritius',
-    'Mexico','Micronesia','Moldova','Monaco','Mongolia','Montenegro','Morocco','Mozambique','Myanmar','Namibia','Nauru','Nepal','Netherlands','New Zealand','Nicaragua','Niger','Nigeria',
-    'North Korea','North Macedonia','Norway','Oman','Pakistan','Palau','Panama','Papua New Guinea','Paraguay','Peru','Philippines','Poland','Portugal','Qatar','Romania','Russia','Rwanda',
-    'Saint Kitts and Nevis','Saint Lucia','Saint Vincent and the Grenadines','Samoa','San Marino','Sao Tome and Principe','Saudi Arabia','Senegal','Serbia','Seychelles','Sierra Leone','Singapore','Slovakia','Slovenia','Solomon Islands','Somalia','South Africa','South Korea','South Sudan','Spain','Sri Lanka','Sudan','Suriname','Sweden','Switzerland','Syria',
-    'Taiwan','Tajikistan','Tanzania','Thailand','Timor-Leste','Togo','Tonga','Trinidad and Tobago','Tunisia','Turkey','Turkmenistan','Tuvalu','Uganda','Ukraine','United Arab Emirates','United Kingdom','United States','Uruguay','Uzbekistan','Vanuatu','Vatican City','Venezuela','Vietnam','Yemen','Zambia','Zimbabwe'
-  ]
-
   // autocomplete state
   const [inputFocused, setInputFocused] = useState(false)
   const [activeSuggestion, setActiveSuggestion] = useState(-1)
-  const suggestions = useMemo(() => {
-    const q = String(countryQuery || '').trim().toLowerCase()
-    if (!q) return []
-    return COUNTRIES.filter(c => c.toLowerCase().includes(q)).slice(0, 8)
-  }, [countryQuery])
-  useEffect(() => { setActiveSuggestion(-1) }, [suggestions])
+  const normalizedCountryQuery = String(countryQuery || '').trim().toLowerCase()
+  const suggestions = normalizedCountryQuery
+    ? COUNTRIES.filter(country => country.toLowerCase().includes(normalizedCountryQuery)).slice(0, 8)
+    : EMPTY_HOTSPOTS
 
   function inferContinent(hotspot) {
     const lat = Number(hotspot?.latitude)
@@ -153,7 +144,6 @@ export default function WorldHotspotMap({ data, error, loading, selectedHotspotI
   const mapSurfaceBg = isLightTheme
     ? 'linear-gradient(180deg, #f8fbff, #edf2f8)'
     : 'linear-gradient(180deg, rgba(8,11,16,0.99), rgba(13,17,22,0.99))'
-  const panelOverlayBg = isLightTheme ? 'rgba(255,255,255,0.86)' : 'rgba(9,11,15,0.78)'
   const tooltipBg = isLightTheme ? 'rgba(255,255,255,0.96)' : 'rgba(9,11,15,0.93)'
 
   useEffect(() => {
@@ -162,6 +152,14 @@ export default function WorldHotspotMap({ data, error, loading, selectedHotspotI
       .then(topo => setWorldData({ land: topojson.feature(topo, topo.objects.land), borders: topojson.mesh(topo, topo.objects.countries, (a, b) => a !== b) }))
       .catch(() => {})
   }, [])
+
+  useEffect(() => {
+    if (!loading) return
+    const interval = setInterval(() => {
+      setAnimatedDots(prev => prev.length >= 3 ? '' : prev + '.')
+    }, 500)
+    return () => clearInterval(interval)
+  }, [loading])
 
   useEffect(() => {
     const svgEl = svgRef.current
@@ -210,7 +208,7 @@ export default function WorldHotspotMap({ data, error, loading, selectedHotspotI
               d3.select(svgEl).call(zoom.transform, clamped)
               return
             }
-          } catch (e) {
+          } catch {
             // if bounds calculation fails, fall back to default behavior
           }
         }
@@ -244,7 +242,7 @@ export default function WorldHotspotMap({ data, error, loading, selectedHotspotI
         const cy = (y0 + y1) / 2
         initTx = W * CENTER_X_FRACTION - cx * initialScale
         initTy = H * CENTER_Y_FRACTION - cy * initialScale
-      } catch (e) {
+      } catch {
         initialScale = defaultMinScale
         initTx = W * CENTER_X_FRACTION
         initTy = H * CENTER_Y_FRACTION
@@ -374,7 +372,7 @@ export default function WorldHotspotMap({ data, error, loading, selectedHotspotI
       const lonMax = Number(b[3])
       panToLonLatBox(lonMin, latMin, lonMax, latMax, 1.05)
       return true
-    } catch (e) {
+    } catch {
       return false
     }
   }, [panToLonLatBox])
@@ -427,28 +425,6 @@ export default function WorldHotspotMap({ data, error, loading, selectedHotspotI
     if (rect) setTooltipPos({ x: e.clientX - rect.left + 14, y: e.clientY - rect.top - 10 })
   }, [clientToSvg, error, hotspots.length, loading, pickHotspotAtSvgPoint])
 
-  function buildParticles(hotspot, palette) {
-    const seed = hashToken(hotspot.hotspot_id)
-    // make particle clouds much smaller and more compact
-    const radius = (hotspot.cloud_radius || 32) * 0.35
-    const count = 7 + Math.round((hotspot.cloud_density || 0.45) * 6)
-    return Array.from({ length: count }, (_, i) => {
-      const a = seededUnit(seed + i * 13)
-      const b = seededUnit(seed + i * 29)
-      const c = seededUnit(seed + i * 47)
-      const angle = a * Math.PI * 2
-      const dist = Math.pow(b, 0.6) * radius
-      return {
-        dx: Math.cos(angle) * dist,
-        // keep distribution circular (no vertical squash)
-        dy: Math.sin(angle) * dist,
-        r: radius * 0.18 + c * radius * 0.22,
-        opacity: 0.12 + (1 - dist / Math.max(radius, 1)) * 0.28,
-        fill: palette.cloud,
-      }
-    })
-  }
-
   return (
     <div>
       <div style={{ border: `1px solid ${C.border}`, background: `linear-gradient(180deg, ${C.bgRaised}, ${C.bg})`, padding: '1.1rem', position: 'relative', overflow: 'hidden' }}>
@@ -456,9 +432,6 @@ export default function WorldHotspotMap({ data, error, loading, selectedHotspotI
         <div style={{ position: 'relative', height: 470, border: `1px solid ${C.border}`, background: mapSurfaceBg, overflow: 'hidden' }}>
           <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" onClick={handleMapSvgClick} onMouseMove={handleMapSvgMouseMove} onMouseLeave={() => setHoveredHotspot(null)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', cursor: hoveredHotspot ? 'pointer' : 'grab' }}>
             <defs>
-              <filter id="coreGlow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-              <filter id="cloudBlur" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="12" /></filter>
-              <filter id="ringBlur" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="5" /></filter>
               <clipPath id="mapClip"><rect x="0" y="0" width={W} height={H} /></clipPath>
             </defs>
             <g clipPath="url(#mapClip)">
@@ -471,27 +444,19 @@ export default function WorldHotspotMap({ data, error, loading, selectedHotspotI
                 const pt = project(hotspot.latitude, hotspot.longitude)
                 const isSelected = hotspot.hotspot_id === selected?.hotspot_id
                 const isHovered = !isSelected && hotspot.hotspot_id === hoveredHotspot?.hotspot_id
-                const particles = buildParticles(hotspot, palette)
-                const baseCloud = hotspot.cloud_radius || 32
-                // make the visible cloud much smaller and keep it circular
-                const cloudRadius = (baseCloud * 0.35) / Math.max(1, transform.k * 0.9)
-                const selRingRadius = cloudRadius * 0.9
+                const markerRadius = isSelected ? 4 : isHovered ? 3.4 : 2.8
                 return (
                   <g key={hotspot.hotspot_id} style={{ pointerEvents: 'none' }}>
-                    <circle cx={pt.x} cy={pt.y} r={cloudRadius} fill={palette.ring} filter="url(#cloudBlur)" opacity={isSelected ? 0.7 : isHovered ? 0.6 : 0.45} />
-                    {particles.map((p, idx) => <circle key={idx} cx={pt.x + p.dx / Math.max(1, transform.k * 0.9)} cy={pt.y + p.dy / Math.max(1, transform.k * 0.9)} r={p.r / Math.max(1, transform.k * 0.9)} fill={palette.ring} opacity={p.opacity * (isSelected ? 1.4 : isHovered ? 1.2 : 1)} filter="url(#cloudBlur)" />)}
-                    <circle cx={pt.x} cy={pt.y} r={(8 + (hotspot.intensity || 0.3) * 10) * (isSelected ? 1.2 : isHovered ? 1.05 : 1)} fill={palette.ring} filter="url(#ringBlur)" opacity={isSelected ? 0.6 : isHovered ? 0.5 : 0.35} />
-                    <circle cx={pt.x} cy={pt.y} r={isSelected ? 3.8 : isHovered ? 3.2 : 2.2} fill={palette.core} filter="url(#coreGlow)" opacity={1} />
+                    <circle cx={pt.x} cy={pt.y} r={markerRadius} fill={palette.core} opacity={1} />
                     {isSelected && <>
-                      <circle cx={pt.x} cy={pt.y} r={selRingRadius} fill="none" stroke={palette.core} strokeWidth="0.8" strokeDasharray="4 6" opacity={0.5} />
-                      <text x={pt.x + 10} y={pt.y - selRingRadius * 0.85} fill={palette.core} style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase' }}>{truncateText(hotspotDisplayHeadline(hotspot), 42)}</text>
+                      <text x={pt.x + 10} y={pt.y - 10} fill={palette.core} style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase' }}>{truncateText(hotspotDisplayHeadline(hotspot), 42)}</text>
                     </>}
                   </g>
                 )
               })}
             </g>
           </svg>
-          {loading && <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><div style={{ width: '78%', maxWidth: 520 }}>{[0, 1, 2].map(i => <div key={i} className="skeleton" style={{ height: i === 1 ? '5rem' : '3.5rem', width: i === 0 ? '56%' : i === 1 ? '72%' : '44%', margin: '0 auto 1rem' }} />)}</div></div>}
+          {loading && <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.85rem', color: C.textSecondary, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Map loading{animatedDots}</div></div>}
           {!loading && error && <div style={{ position: 'absolute', left: '1rem', right: '1rem', bottom: '1rem', border: `1px solid ${C.redDeep}`, background: `${C.redDeep}1c`, padding: '0.85rem 1rem', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.56rem', color: C.textSecondary, lineHeight: 1.6 }}>{error}</div>}
           {!loading && !error && hotspots.length === 0 && <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.58rem', color: C.textSecondary, letterSpacing: '0.08em' }}>No mapped incident or story hotspots yet for this time window.</div>}
           {hoveredHotspot && <div style={{ position: 'absolute', left: tooltipPos.x, top: tooltipPos.y, zIndex: 10, pointerEvents: 'none', maxWidth: 240, border: `1px solid ${C.borderMid}`, background: tooltipBg, backdropFilter: 'blur(12px)', padding: '0.6rem 0.75rem' }}>
@@ -535,7 +500,7 @@ export default function WorldHotspotMap({ data, error, loading, selectedHotspotI
                               if (zoomRef.current) d3.select(svgEl).transition().duration(600).call(zoomRef.current.transform, t)
                               else d3.select(svgEl).call(d3.zoom().transform, t)
                             }
-                          } catch (e) {
+                          } catch {
                             // ignore
                           }
                         } else {
@@ -568,7 +533,10 @@ export default function WorldHotspotMap({ data, error, loading, selectedHotspotI
             <div style={{ position: 'relative', width: 190 }}>
               <input
                 value={countryQuery}
-                onChange={e => setCountryQuery(e.target.value)}
+                onChange={event => {
+                  setCountryQuery(event.target.value)
+                  setActiveSuggestion(-1)
+                }}
                 onFocus={() => setInputFocused(true)}
                 onBlur={() => setTimeout(() => setInputFocused(false), 150)}
                 onKeyDown={e => {

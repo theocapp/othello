@@ -433,7 +433,17 @@ def _has_any_term(text: str, terms: set[str]) -> bool:
 
 
 def build_article_signatures(articles: list[dict]) -> list[dict]:
-    return [_article_signature(article) for article in articles]
+    signatures = [_article_signature(article) for article in articles]
+
+    # Batch-encode all article texts in one model call to avoid O(n²) encoding.
+    model = get_semantic_model()
+    texts = [sig.get("text") or "" for sig in signatures]
+    if texts:
+        all_embeddings = model.encode(texts, convert_to_numpy=True, show_progress_bar=False)
+        for sig, embedding in zip(signatures, all_embeddings):
+            sig["_embedding"] = embedding
+
+    return signatures
 
 
 def _text_signature(text: str) -> dict:
@@ -709,19 +719,18 @@ def relatedness_score(left: dict, right: dict) -> float:
     get a lower score, requiring stronger semantic similarity to cluster.
     Threshold: 0.40 (after temporal decay).
     """
-    model = get_semantic_model()
-    
-    # Get the combined text (title + description) for semantic encoding
-    left_text = left.get("text", "")
-    right_text = right.get("text", "")
-    
-    if not left_text or not right_text:
-        return 0.0
-    
-    # Encode both texts to embeddings
-    embeddings = model.encode([left_text, right_text], convert_to_numpy=True)
-    left_embedding = embeddings[0]
-    right_embedding = embeddings[1]
+    left_embedding = left.get("_embedding")
+    right_embedding = right.get("_embedding")
+
+    if left_embedding is None or right_embedding is None:
+        model = get_semantic_model()
+        left_text = left.get("text", "")
+        right_text = right.get("text", "")
+        if not left_text or not right_text:
+            return 0.0
+        embeddings = model.encode([left_text, right_text], convert_to_numpy=True)
+        left_embedding = embeddings[0]
+        right_embedding = embeddings[1]
     
     # Compute cosine similarity (returns value between -1 and 1, typically 0-1 for text)
     semantic_score = float(cosine_similarity(

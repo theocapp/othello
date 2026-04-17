@@ -252,8 +252,11 @@ def get_historical_url_queue_batch(
     statuses: list[str] | None = None,
     source_domain: str | None = None,
 ) -> list[dict]:
+    valid_statuses = {"pending", "retry", "failed", "fetched", "no_topic"}
     normalized_statuses = [
-        status for status in (statuses or ["pending", "retry"]) if status
+        status
+        for status in (statuses or ["pending", "retry"])
+        if status and status in valid_statuses
     ]
     clauses = []
     params: list[object] = []

@@ -8,6 +8,7 @@ import re
 from datetime import date
 
 from groq import Groq
+from core.config import REQUEST_ENABLE_LLM_RESPONSES
 
 logger = logging.getLogger(__name__)
 
@@ -474,35 +475,126 @@ URL: {article['url']}"""
     return "\n\n".join(lines)
 
 
-def generate_briefing(
-    topic: str,
+def build_deterministic_briefing(
     articles: list[dict],
-    signals: str = "",
-    contradictions: str = "",
-    event_brief: str = "",
-) -> str:
-    context_blocks = [_article_dump(articles)]
-    if signals:
-        context_blocks.append(signals)
-    if event_brief:
-        context_blocks.append(event_brief)
-    if contradictions:
-        context_blocks.append(contradictions)
-    joined_context = "\n\n".join(block for block in context_blocks if block)
+    topic: str | None = None,
+    events: list[dict] | None = None,
+) -> dict:
+    """Build a structured briefing from raw data without any LLM dependency.
 
-    prompt = f"""Generate an intelligence briefing on {topic} based on these recent news articles:
+    Returns a dict with fixed keys that the frontend can render directly.
+    Each field is populated from deterministic logic — sorted lists, counts,
+    entity extraction — so this always returns useful output.
+    """
+    from news import article_quality_score, infer_article_topics, diversify_articles
 
-{joined_context}
+    topic_articles = [
+        a for a in (articles or []) if not topic or topic in (infer_article_topics(a) or [])
+    ]
+    top_articles = sorted(
+        topic_articles,
+        key=lambda a: -article_quality_score(a, [topic] if topic else None),
+    )[:12]
 
-Today's date is {date.today().strftime('%B %d, %Y')}."""
+    key_developments = [
+        {
+            "headline": a.get("title", ""),
+            "source": a.get("source") or a.get("source_domain") or "Unknown",
+            "url": a.get("url", ""),
+            "published_at": a.get("published_at", ""),
+        }
+        for a in top_articles[:5]
+    ]
 
-    return _chat(
-        [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": prompt},
-        ],
-        max_tokens=1500,
+    entity_counts: dict[str, int] = {}
+    for a in top_articles:
+        for entity in (a.get("entities") or []):
+            name = entity if isinstance(entity, str) else entity.get("entity", "")
+            if name:
+                entity_counts[name] = entity_counts.get(name, 0) + 1
+    critical_actors = sorted(entity_counts.items(), key=lambda x: -x[1])[:6]
+
+    sources = sorted(
+        {a.get("source") or a.get("source_domain") or "Unknown" for a in top_articles}
     )
+
+    event_summary = []
+    for event in (events or [])[:5]:
+        event_summary.append(
+            {
+                "location": event.get("location") or event.get("country") or "Unknown",
+                "event_type": event.get("event_type", ""),
+                "fatalities": event.get("fatalities") or 0,
+                "date": str(event.get("event_date") or ""),
+            }
+        )
+
+    return {
+        "topic": topic or "general",
+        "article_count": len(topic_articles),
+        "key_developments": key_developments,
+        "critical_actors": [
+            {"entity": name, "mentions": count} for name, count in critical_actors
+        ],
+        "sources": sources,
+        "event_summary": event_summary,
+        "situation_summary": "",
+        "signal_vs_noise": "",
+        "llm_enriched": False,
+    }
+
+
+def generate_briefing(
+    articles: list[dict],
+    topic: str | None = None,
+    events: list[dict] | None = None,
+    use_llm: bool = True,
+) -> dict:
+    briefing = build_deterministic_briefing(articles, topic=topic, events=events)
+
+    if not use_llm or not REQUEST_ENABLE_LLM_RESPONSES:
+        return briefing
+
+    try:
+        top_headlines = "\n".join(
+            f"- {d['headline']} ({d['source']})" for d in briefing["key_developments"]
+        )
+        actors = ", ".join(d["entity"] for d in briefing["critical_actors"])
+        enrichment_prompt = (
+            f"Topic: {topic or 'general intelligence'}\n\n"
+            f"Top developments:\n{top_headlines}\n\n"
+            f"Key actors: {actors}\n\n"
+            "Write two short paragraphs:\n"
+            "1. SITUATION SUMMARY (3-4 sentences): What is the core situation?\n"
+            "2. SIGNAL VS NOISE (2-3 sentences): What is genuinely significant "
+            "versus routine reporting?\n\n"
+            "Be specific and factual. Do not introduce actors or events not listed above."
+        )
+        llm_response = _chat([{"role": "user", "content": enrichment_prompt}], max_tokens=500)
+        if llm_response:
+            lines = llm_response.strip().split("\n")
+            situation_lines = []
+            noise_lines = []
+            current = None
+            for line in lines:
+                low = line.lower()
+                if "situation summary" in low:
+                    current = "situation"
+                elif "signal vs noise" in low or "signal versus noise" in low:
+                    current = "noise"
+                elif current == "situation" and line.strip():
+                    situation_lines.append(line.strip())
+                elif current == "noise" and line.strip():
+                    noise_lines.append(line.strip())
+            if situation_lines:
+                briefing["situation_summary"] = " ".join(situation_lines)
+            if noise_lines:
+                briefing["signal_vs_noise"] = " ".join(noise_lines)
+            briefing["llm_enriched"] = True
+    except Exception as exc:
+        print(f"[briefing] LLM enrichment failed, returning scaffold: {exc}")
+
+    return briefing
 
 
 def answer_query(

@@ -492,6 +492,7 @@ def heuristic_contradictions(event: dict, max_items: int = 6) -> list[dict]:
                 contradictions.append(
                     {
                         "conflict_type": "scale",
+                        "contradiction_class": "factual_claim",
                         "sources_in_conflict": [
                             left.get("source"),
                             right.get("source"),
@@ -525,6 +526,7 @@ def heuristic_contradictions(event: dict, max_items: int = 6) -> list[dict]:
                             if dimension in {"closure", "ceasefire", "detention"}
                             else "fact"
                         ),
+                        "contradiction_class": "factual_claim",
                         "sources_in_conflict": [
                             left.get("source"),
                             right.get("source"),
@@ -554,6 +556,7 @@ def heuristic_contradictions(event: dict, max_items: int = 6) -> list[dict]:
                 contradictions.append(
                     {
                         "conflict_type": "intent",
+                        "contradiction_class": "framing_divergence",
                         "sources_in_conflict": [
                             left.get("source"),
                             right.get("source"),
@@ -1318,6 +1321,12 @@ def detect_contradictions(event: dict) -> list[dict]:
             normalized.append(
                 {
                     "conflict_type": contradiction.get("conflict_type", "fact"),
+                    "contradiction_class": (
+                        "framing_divergence"
+                        if str(contradiction.get("conflict_type", "")).lower()
+                        in {"intent", "framing", "label"}
+                        else "factual_claim"
+                    ),
                     "sources_in_conflict": source_labels,
                     "source_records": source_records,
                     "claim_a": _replace_article_refs(

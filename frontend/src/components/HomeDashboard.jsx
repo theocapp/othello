@@ -1,4 +1,4 @@
-import { Suspense, lazy, useState, useRef, useEffect } from 'react'
+import { Suspense, lazy } from 'react'
 import BriefingLaunchPanel from './BriefingLaunchPanel'
 import CorrelationPanel from './CorrelationPanel'
 import DecisionSurfacePanel from './DecisionSurfacePanel'
@@ -15,6 +15,7 @@ const WorldHotspotMap = lazy(() => import('./WorldHotspotMap'))
 export default function HomeDashboard({
   time,
   headerVisible,
+  animationPhase,
   localTimeZone,
   lastUpdated,
   healthFetchError,
@@ -96,50 +97,97 @@ export default function HomeDashboard({
     border: `1px solid rgba(97,165,255,0.65)`,
     boxShadow: '0 10px 24px rgba(60, 120, 255, 0.14)',
   }
+  const themeToggleStyle = {
+    width: 40,
+    height: 40,
+    borderRadius: '50%',
+    border: `1px solid ${C.borderMid}`,
+    background: C.bgRaised,
+    color: C.textSecondary,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 0,
+    cursor: 'pointer',
+    boxShadow: '0 8px 18px rgba(2, 6, 23, 0.12)',
+    transition: 'background 160ms ease, border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease',
+  }
   const entitySpikes = Array.isArray(entitySignals?.spikes) ? entitySignals.spikes : []
   const topEntities = Array.isArray(entitySignals?.top_entities) ? entitySignals.top_entities : []
   const surgingEntities = entitySpikes.filter(e => e?.trend === 'RISING' || e?.trend === 'NEW').slice(0, 4)
 
-  const [menuOpen, setMenuOpen] = useState(false)
-  const menuRef = useRef(null)
-
-  // Slideout animation state: mounted vs visible so we can animate in/out
-  const [panelActive, setPanelActive] = useState(false)
-  const [panelVisible, setPanelVisible] = useState(false)
-
-  useEffect(() => {
-    if (menuOpen) {
-      setPanelActive(true)
-      // allow mount to commit, then trigger visible for CSS transition
-      requestAnimationFrame(() => setPanelVisible(true))
-    } else {
-      // start hide animation, then unmount after transition
-      setPanelVisible(false)
-      const id = setTimeout(() => setPanelActive(false), 260)
-      return () => clearTimeout(id)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [menuOpen])
-
-  useEffect(() => {
-    function handleDocClick(e) {
-      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false)
-    }
-    function handleKey(e) {
-      if (e.key === 'Escape') setMenuOpen(false)
-    }
-    document.addEventListener('mousedown', handleDocClick)
-    document.addEventListener('keydown', handleKey)
-    return () => {
-      document.removeEventListener('mousedown', handleDocClick)
-      document.removeEventListener('keydown', handleKey)
-    }
-  }, [])
-
   return (
     <>
+      {/* Animated splash elements */}
+      {animationPhase !== 'complete' && (
+        <>
+          {/* Splash background overlay */}
+          <div style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 996,
+            background: C.bg,
+            opacity: animationPhase === 'moving' ? 0.96 : 1,
+            pointerEvents: 'none',
+            transition: animationPhase === 'moving' ? 'opacity 1.4s ease' : 'none',
+          }} />
+
+          {/* Animated title */}
+          <div style={{
+            position: 'fixed',
+            zIndex: 998,
+            fontFamily: "'Libre Baskerville', serif",
+            fontWeight: 800,
+            letterSpacing: '-0.01em',
+            lineHeight: 1,
+            color: C.textPrimary,
+            top: animationPhase === 'moving' ? '56px' : '50%',
+            left: 0,
+            right: 0,
+            width: '100%',
+            height: animationPhase === 'moving' ? '64px' : 'auto',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transform: animationPhase === 'moving' ? 'none' : 'translateY(-50%)',
+            fontSize: animationPhase === 'moving' ? '2.6rem' : '1.85rem',
+            WebkitFontSmoothing: 'antialiased',
+            MozOsxFontSmoothing: 'grayscale',
+            transition: animationPhase === 'moving' ? 'all 1.4s cubic-bezier(0.4, 0, 0.2, 1)' : 'none',
+            pointerEvents: 'none',
+          }}>
+            othello
+          </div>
+
+          {/* Animated date/time */}
+          <div style={{
+            position: 'fixed',
+            zIndex: 998,
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: animationPhase === 'moving' ? '0.54rem' : '0.75rem',
+            color: C.textSecondary,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            top: animationPhase === 'moving' ? '64px' : 'calc(50% + 2.15rem)',
+            left: 0,
+            right: 0,
+            width: '100%',
+            height: animationPhase === 'moving' ? '64px' : 'auto',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: animationPhase === 'moving' ? 'flex-start' : 'center',
+            paddingLeft: animationPhase === 'moving' ? '1rem' : 0,
+            opacity: animationPhase === 'title' ? 0 : 1,
+            transition: animationPhase === 'moving' ? 'all 1.4s cubic-bezier(0.4, 0, 0.2, 1)' : 'opacity 0.3s ease',
+            pointerEvents: 'none',
+          }}>
+            {dateStr.toUpperCase()} - {timeStr}
+          </div>
+        </>
+      )}
+
       {/* Top skinny stripe: clocks + market tickers */}
-      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, height: 48, zIndex: 110, background: `${C.bg}f0`, backdropFilter: 'blur(6px)', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 1rem' }}>
+      <div style={{ position: 'relative', height: 48, zIndex: 110, background: `${C.bg}f0`, backdropFilter: 'blur(6px)', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 1rem', opacity: animationPhase === 'complete' ? 1 : 0, transition: animationPhase === 'moving' ? 'opacity 1.4s ease 0.2s' : 'none' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           {worldClocks.map((clock, index) => (
             <div key={clock.zone} style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
@@ -149,20 +197,14 @@ export default function HomeDashboard({
             </div>
           ))}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.52rem', flex: 1, justifyContent: 'center', overflow: 'hidden' }}>
-          {/* Market tickers (static placeholders) - expanded to fill bar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.52rem', flex: 1, justifyContent: 'flex-end', overflow: 'hidden', marginRight: '0.5rem' }}>
+          {/* Top six market tickers */}
           {[
             { id: 'sp', label: 'S&P 500', value: 5283.73, pct: 0.62 },
             { id: 'nas', label: 'NASDAQ', value: 15523.12, pct: -0.41 },
             { id: 'dow', label: 'Dow Jones', value: 40012.55, pct: 0.12 },
             { id: 'rut', label: 'Russell 2000', value: 1836.42, pct: -0.33 },
-            { id: 'ftse', label: 'FTSE 100', value: 7531.22, pct: 0.04 },
-            { id: 'dax', label: 'DAX', value: 15230.44, pct: -0.22 },
-            { id: 'nik', label: 'Nikkei 225', value: 34901.11, pct: 0.77 },
-            { id: 'hang', label: 'Hang Seng', value: 18325.77, pct: -0.98 },
-            { id: 'ssec', label: 'SSE Composite', value: 3310.67, pct: 0.11 },
             { id: 'vix', label: 'VIX', value: 12.34, pct: -1.25 },
-            { id: 'vxus', label: 'VXUS', value: 62.11, pct: 0.18 },
             { id: 'gold', label: 'Gold', value: 2348.25, pct: -0.14 },
           ].map(t => {
             const up = Number(t.pct) >= 0
@@ -179,47 +221,35 @@ export default function HomeDashboard({
         </div>
       </div>
 
-      {/* Main header: centered site title, hamburger left, auth links right */}
-      <div style={{ position: 'fixed', top: 48, left: 0, right: 0, zIndex: 105, transform: headerVisible ? 'translateY(0)' : 'translateY(-100%)', transition: 'transform 0.3s ease', background: `${C.bg}e8`, backdropFilter: 'blur(12px)', padding: '0.7rem 1.25rem', minHeight: 64, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ position: 'absolute', left: '1rem', display: 'flex', alignItems: 'center' }}>
-          <button aria-label="Open menu" onClick={() => setMenuOpen(!menuOpen)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.25rem' }}>
-            <svg width="24" height="18" viewBox="0 0 32 22" fill="none" xmlns="http://www.w3.org/2000/svg"><rect y="3" width="32" height="3" rx="1" fill={C.textPrimary} /><rect y="9.5" width="32" height="3" rx="1" fill={C.textPrimary} /><rect y="16" width="32" height="3" rx="1" fill={C.textPrimary} /></svg>
-          </button>
-
-          {panelActive && (
-            <>
-              <div onClick={() => setMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 220, background: panelVisible ? 'rgba(0,0,0,0.36)' : 'rgba(0,0,0,0)', transition: 'background 220ms ease' }} />
-              <nav role="dialog" aria-label="Main menu" style={{ position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 230, width: 320, maxWidth: '85vw', transform: panelVisible ? 'translateX(0)' : 'translateX(-100%)', transition: 'transform 220ms ease', background: 'transparent', padding: '1rem', display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-start' }}>
-                <div ref={menuRef} style={{ width: '100%', maxHeight: '100vh', overflowY: 'auto' }}>
-                  <div style={{ background: C.bgRaised, border: `1px solid ${C.border}`, borderRadius: 10, boxShadow: '0 10px 30px rgba(2,6,23,0.12)', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.9rem', fontWeight: 700, color: C.textPrimary }}>Menu</div>
-                      <button aria-label="Close menu" onClick={() => setMenuOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textPrimary, fontSize: '1.05rem' }}>✕</button>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                      <button onClick={() => { const el = document.getElementById('hotspot-map'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); setMenuOpen(false) }} style={{ width: '100%', textAlign: 'left', background: 'transparent', border: 'none', padding: '0.65rem', cursor: 'pointer', color: C.textPrimary, fontFamily: "'JetBrains Mono', monospace" }}>Map — Hotspots</button>
-                      {topics && topics.length > 0 && <>
-                        <button onClick={() => { setBriefingPage(topics[0]); setMenuOpen(false) }} style={{ width: '100%', textAlign: 'left', background: 'transparent', border: 'none', padding: '0.65rem', cursor: 'pointer', color: C.textPrimary, fontFamily: "'JetBrains Mono', monospace" }}>{topics[0].label}</button>
-                        <button onClick={() => { setBriefingPage(topics[1] || topics[0]); setMenuOpen(false) }} style={{ width: '100%', textAlign: 'left', background: 'transparent', border: 'none', padding: '0.65rem', cursor: 'pointer', color: C.textPrimary, fontFamily: "'JetBrains Mono', monospace" }}>{(topics[1] || topics[0]).label}</button>
-                        <button onClick={() => { setBriefingPage(topics[2] || topics[0]); setMenuOpen(false) }} style={{ width: '100%', textAlign: 'left', background: 'transparent', border: 'none', padding: '0.65rem', cursor: 'pointer', color: C.textPrimary, fontFamily: "'JetBrains Mono', monospace" }}>{(topics[2] || topics[0]).label}</button>
-                      </>}
-                      <button onClick={() => { setForesightPage && setForesightPage('predictions'); setMenuOpen(false) }} style={{ width: '100%', textAlign: 'left', background: 'transparent', border: 'none', padding: '0.65rem', cursor: 'pointer', color: C.textPrimary, fontFamily: "'JetBrains Mono', monospace" }}>Foresight — Predictions</button>
-                      <button onClick={() => { if (theaters && theaters.length) setTimelinePage && setTimelinePage(theaters[0].query); else { const el = document.getElementById('timelines'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }) } setMenuOpen(false) }} style={{ width: '100%', textAlign: 'left', background: 'transparent', border: 'none', padding: '0.65rem', cursor: 'pointer', color: C.textPrimary, fontFamily: "'JetBrains Mono', monospace" }}>Timelines</button>
-                      <button onClick={() => { const el = document.getElementById('briefings'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); setMenuOpen(false) }} style={{ width: '100%', textAlign: 'left', background: 'transparent', border: 'none', padding: '0.65rem', cursor: 'pointer', color: C.textPrimary, fontFamily: "'JetBrains Mono', monospace" }}>Briefings</button>
-                      <button onClick={() => { const el = document.getElementById('news-column'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); setMenuOpen(false) }} style={{ width: '100%', textAlign: 'left', background: 'transparent', border: 'none', padding: '0.65rem', cursor: 'pointer', color: C.textPrimary, fontFamily: "'JetBrains Mono', monospace" }}>News</button>
-                      <button onClick={() => { const el = document.getElementById('narrative-fractures'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); setMenuOpen(false) }} style={{ width: '100%', textAlign: 'left', background: 'transparent', border: 'none', padding: '0.65rem', cursor: 'pointer', color: C.textPrimary, fontFamily: "'JetBrains Mono', monospace" }}>Narrative Fractures</button>
-                      <button onClick={() => { const el = document.getElementById('tracked-entities'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); setMenuOpen(false) }} style={{ width: '100%', textAlign: 'left', background: 'transparent', border: 'none', padding: '0.65rem', cursor: 'pointer', color: C.textPrimary, fontFamily: "'JetBrains Mono', monospace" }}>Tracked Entities</button>
-                    </div>
-                  </div>
-                </div>
-              </nav>
-            </>
-          )}
+      {/* Main header: metadata left, centered title, auth right */}
+      <div style={{ position: 'relative', zIndex: 105, background: `${C.bg}e8`, backdropFilter: 'blur(12px)', padding: '0.7rem 1.25rem', minHeight: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: animationPhase === 'complete' ? 1 : 0, transitionProperty: 'opacity', transitionDuration: '0.3s' }}>
+        <div style={{ position: 'absolute', left: '1rem', display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap', opacity: animationPhase === 'complete' ? 1 : 0, transition: 'opacity 0.3s ease' }}>
+          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.54rem', color: C.textSecondary, letterSpacing: '0.08em' }}>{dateStr.toUpperCase()} - {timeStr}</div>
+          <div style={{ width: '1px', height: '0.65rem', background: C.borderMid }} />
+          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.54rem', color: C.textMuted, letterSpacing: '0.08em' }}>LAST UPDATE: <span style={{ color: C.textSecondary }}>{lastUpdatedStr}</span></div>
         </div>
         <div style={{ position: 'absolute', left: 0, right: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-          <div style={{ fontFamily: "'Libre Baskerville', serif", fontSize: '1.9rem', fontWeight: 800, color: C.textPrimary, pointerEvents: 'auto', letterSpacing: '-0.01em' }}>othello</div>
+          <div style={{ fontFamily: "'Libre Baskerville', serif", fontSize: '2.6rem', fontWeight: 800, color: C.textPrimary, pointerEvents: 'auto', letterSpacing: '-0.01em', lineHeight: 1, opacity: animationPhase === 'complete' ? 1 : 0, transition: 'opacity 0.3s ease' }}>othello</div>
         </div>
-        <div style={{ position: 'absolute', right: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div style={{ position: 'absolute', right: '1rem', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <button
+            type="button"
+            onClick={onToggleThemeMode}
+            style={themeToggleStyle}
+            aria-label={themeMode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            title={themeMode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {themeMode === 'dark' ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <circle cx="12" cy="12" r="4" stroke={C.textSecondary} strokeWidth="1.8" />
+                <path d="M12 2.5V5.2M12 18.8V21.5M21.5 12H18.8M5.2 12H2.5M18.72 5.28L16.81 7.19M7.19 16.81L5.28 18.72M18.72 18.72L16.81 16.81M7.19 7.19L5.28 5.28" stroke={C.textSecondary} strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M20.5 14.3C19.3 14.9 18 15.2 16.6 15.2C11.8 15.2 8 11.4 8 6.6C8 5.2 8.3 3.9 8.9 2.7C5.2 4 2.5 7.5 2.5 11.6C2.5 16.9 6.8 21.2 12.1 21.2C16.2 21.2 19.7 18.5 21 14.8C20.9 14.7 20.7 14.5 20.5 14.3Z" stroke={C.textSecondary} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            )}
+          </button>
           <button
             type="button"
             onClick={() => { window.location.hash = 'signup' }}
@@ -236,14 +266,27 @@ export default function HomeDashboard({
           </button>
         </div>
       </div>
-      <div className="main-padding" style={{ padding: '120px 1.5rem 0 1.5rem' }}>
-        <header className="header-section" style={{ paddingTop: '1rem', paddingBottom: '1.2rem', animation: 'fadeUp 0.6s ease' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.58rem', color: C.textSecondary, letterSpacing: '0.08em' }}>{dateStr.toUpperCase()} — {timeStr}</div>
-            <div style={{ width: '1px', height: '0.8rem', background: C.borderMid }} />
-            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.58rem', color: C.textMuted, letterSpacing: '0.08em' }}>LAST UPDATE: <span style={{ color: C.textSecondary }}>{lastUpdatedStr}</span></div>
-          </div>
-        </header>
+
+      <div style={{ position: 'relative', zIndex: 104, background: `${C.bg}dd`, backdropFilter: 'blur(10px)', minHeight: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.35rem 1rem', overflowX: 'auto', opacity: animationPhase === 'complete' ? 1 : 0, transitionProperty: 'opacity', transitionDuration: '0.3s' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', whiteSpace: 'nowrap' }}>
+          <button onClick={() => { const el = document.getElementById('hotspot-map'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }) }} style={{ border: 'none', background: 'transparent', color: C.textSecondary, fontFamily: "'JetBrains Mono', monospace", fontSize: '0.5rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '0.35rem 0.65rem', cursor: 'pointer', borderBottom: '2px solid transparent', transition: 'color 160ms ease, border-color 160ms ease' }} onMouseEnter={(e) => { e.target.style.borderColor = C.gold; e.target.style.color = C.textPrimary }} onMouseLeave={(e) => { e.target.style.borderColor = 'transparent'; e.target.style.color = C.textSecondary }} >Map</button>
+          {topics && topics.length > 0 && (
+            <>
+              <button onClick={() => setBriefingPage(topics[0])} style={{ border: 'none', background: 'transparent', color: C.textSecondary, fontFamily: "'JetBrains Mono', monospace", fontSize: '0.5rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '0.35rem 0.65rem', cursor: 'pointer', borderBottom: '2px solid transparent', transition: 'color 160ms ease, border-color 160ms ease' }} onMouseEnter={(e) => { e.target.style.borderColor = C.gold; e.target.style.color = C.textPrimary }} onMouseLeave={(e) => { e.target.style.borderColor = 'transparent'; e.target.style.color = C.textSecondary }} >{topics[0].label}</button>
+              <button onClick={() => setBriefingPage(topics[1] || topics[0])} style={{ border: 'none', background: 'transparent', color: C.textSecondary, fontFamily: "'JetBrains Mono', monospace", fontSize: '0.5rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '0.35rem 0.65rem', cursor: 'pointer', borderBottom: '2px solid transparent', transition: 'color 160ms ease, border-color 160ms ease' }} onMouseEnter={(e) => { e.target.style.borderColor = C.gold; e.target.style.color = C.textPrimary }} onMouseLeave={(e) => { e.target.style.borderColor = 'transparent'; e.target.style.color = C.textSecondary }} >{(topics[1] || topics[0]).label}</button>
+              <button onClick={() => setBriefingPage(topics[2] || topics[0])} style={{ border: 'none', background: 'transparent', color: C.textSecondary, fontFamily: "'JetBrains Mono', monospace", fontSize: '0.5rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '0.35rem 0.65rem', cursor: 'pointer', borderBottom: '2px solid transparent', transition: 'color 160ms ease, border-color 160ms ease' }} onMouseEnter={(e) => { e.target.style.borderColor = C.gold; e.target.style.color = C.textPrimary }} onMouseLeave={(e) => { e.target.style.borderColor = 'transparent'; e.target.style.color = C.textSecondary }} >{(topics[2] || topics[0]).label}</button>
+            </>
+          )}
+          <button onClick={() => { setForesightPage && setForesightPage('predictions') }} style={{ border: 'none', background: 'transparent', color: C.textSecondary, fontFamily: "'JetBrains Mono', monospace", fontSize: '0.5rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '0.35rem 0.65rem', cursor: 'pointer', borderBottom: '2px solid transparent', transition: 'color 160ms ease, border-color 160ms ease' }} onMouseEnter={(e) => { e.target.style.borderColor = C.gold; e.target.style.color = C.textPrimary }} onMouseLeave={(e) => { e.target.style.borderColor = 'transparent'; e.target.style.color = C.textSecondary }} >Foresight</button>
+          <button onClick={() => { if (theaters && theaters.length) setTimelinePage && setTimelinePage(theaters[0].query); else { const el = document.getElementById('timelines'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }) } }} style={{ border: 'none', background: 'transparent', color: C.textSecondary, fontFamily: "'JetBrains Mono', monospace", fontSize: '0.5rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '0.35rem 0.65rem', cursor: 'pointer', borderBottom: '2px solid transparent', transition: 'color 160ms ease, border-color 160ms ease' }} onMouseEnter={(e) => { e.target.style.borderColor = C.gold; e.target.style.color = C.textPrimary }} onMouseLeave={(e) => { e.target.style.borderColor = 'transparent'; e.target.style.color = C.textSecondary }} >Timelines</button>
+          <button onClick={() => { const el = document.getElementById('briefings'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }) }} style={{ border: 'none', background: 'transparent', color: C.textSecondary, fontFamily: "'JetBrains Mono', monospace", fontSize: '0.5rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '0.35rem 0.65rem', cursor: 'pointer', borderBottom: '2px solid transparent', transition: 'color 160ms ease, border-color 160ms ease' }} onMouseEnter={(e) => { e.target.style.borderColor = C.gold; e.target.style.color = C.textPrimary }} onMouseLeave={(e) => { e.target.style.borderColor = 'transparent'; e.target.style.color = C.textSecondary }} >Briefings</button>
+          <button onClick={() => { const el = document.getElementById('news-column'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }) }} style={{ border: 'none', background: 'transparent', color: C.textSecondary, fontFamily: "'JetBrains Mono', monospace", fontSize: '0.5rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '0.35rem 0.65rem', cursor: 'pointer', borderBottom: '2px solid transparent', transition: 'color 160ms ease, border-color 160ms ease' }} onMouseEnter={(e) => { e.target.style.borderColor = C.gold; e.target.style.color = C.textPrimary }} onMouseLeave={(e) => { e.target.style.borderColor = 'transparent'; e.target.style.color = C.textSecondary }} >News</button>
+          <button onClick={() => { const el = document.getElementById('narrative-fractures'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }) }} style={{ border: 'none', background: 'transparent', color: C.textSecondary, fontFamily: "'JetBrains Mono', monospace", fontSize: '0.5rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '0.35rem 0.65rem', cursor: 'pointer', borderBottom: '2px solid transparent', transition: 'color 160ms ease, border-color 160ms ease' }} onMouseEnter={(e) => { e.target.style.borderColor = C.gold; e.target.style.color = C.textPrimary }} onMouseLeave={(e) => { e.target.style.borderColor = 'transparent'; e.target.style.color = C.textSecondary }} >Fractures</button>
+          <button onClick={() => { const el = document.getElementById('tracked-entities'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }) }} style={{ border: 'none', background: 'transparent', color: C.textSecondary, fontFamily: "'JetBrains Mono', monospace", fontSize: '0.5rem', letterSpacing: '0.05em', textTransform: 'uppercase', padding: '0.35rem 0.65rem', cursor: 'pointer', borderBottom: '2px solid transparent', transition: 'color 160ms ease, border-color 160ms ease' }} onMouseEnter={(e) => { e.target.style.borderColor = C.gold; e.target.style.color = C.textPrimary }} onMouseLeave={(e) => { e.target.style.borderColor = 'transparent'; e.target.style.color = C.textSecondary }} >Entities</button>
+        </div>
+      </div>
+
+      <div className="main-padding" style={{ padding: '1.5rem', opacity: animationPhase === 'complete' ? 1 : 0, transition: 'opacity 0.3s ease' }}>
         {healthFetchError && <div style={{ marginBottom: '1rem', border: `1px solid ${C.redDeep}`, background: `${C.redDeep}18`, padding: '0.85rem 1rem', animation: 'fadeUp 0.4s ease both' }}><div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.52rem', color: C.red, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: '0.3rem' }}>API health check failed</div><div style={{ fontFamily: "'Source Serif 4', serif", fontSize: '0.88rem', color: C.textSecondary, lineHeight: 1.5 }}>{healthFetchError}</div></div>}
         {!healthFetchError && healthSnapshot?.runtime && (!healthSnapshot.runtime.llm_ready || !healthSnapshot.runtime.contradiction_ready) && <div style={{ marginBottom: '1rem', border: `1px solid rgba(251,191,36,0.35)`, background: 'rgba(251,191,36,0.06)', padding: '0.75rem 1rem', animation: 'fadeUp 0.4s ease both' }}><div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.5rem', color: '#fbbf24', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '0.28rem' }}>Partial capability</div><div style={{ fontFamily: "'Source Serif 4', serif", fontSize: '0.86rem', color: C.textSecondary, lineHeight: 1.55 }}>{!healthSnapshot.runtime.llm_ready && 'LLM-backed answers and briefings may use fallbacks (set GROQ_API_KEY on the API). '}{!healthSnapshot.runtime.contradiction_ready && 'Narrative fracture mining is limited without ANTHROPIC_API_KEY. '}</div></div>}
         <div className="home-shell" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.45fr) 360px', gap: '1.25rem', alignItems: 'start', paddingBottom: '10vh' }}>
@@ -271,13 +314,13 @@ export default function HomeDashboard({
   </Suspense>
 </section>
             <section style={{ animation: 'fadeUp 0.6s ease 0.2s both' }}>
+            <div id="briefings" style={{ marginBottom: '1rem' }}><BriefingLaunchPanel topics={topics} onOpenBriefing={setBriefingPage} onOpenForesight={setForesightPage} /></div>
             <DecisionSurfacePanel
               canonicalEvents={canonicalEvents}
               canonicalEventsLoading={canonicalEventsLoading}
               canonicalEventsError={canonicalEventsError}
               onOpenEventDebug={openEventDebug}
             />
-            <div id="briefings" style={{ marginBottom: '1rem' }}><BriefingLaunchPanel topics={topics} onOpenBriefing={setBriefingPage} onOpenForesight={setForesightPage} /></div>
             <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '1.25rem', marginBottom: '1rem' }}>
               <InstabilityPanel data={instabilityData} loading={instabilityLoading} error={instabilityError} onAnalyze={country => setDeepDive({ title: `Instability Analysis: ${country.label}`, query: `Analyze the current instability situation in ${country.label}. The country scores ${country.score}/100 on the instability index (level: ${country.level}). Break down: what conflict events are occurring, what's driving media attention, are there contradictory narratives across sources, what entities are most active, and what should we watch for in the coming days? Components: conflict=${country.components?.conflict}, media=${country.components?.media_attention}, contradictions=${country.components?.contradiction}, severity=${country.components?.event_severity}. Be analytically precise.`, queryTopic: 'geopolitics', regionContext: country.country })} />
               <CorrelationPanel data={correlationData} loading={correlationLoading} error={correlationError} onAnalyze={card => setDeepDive({ title: `Signal Convergence: ${card.label}`, query: `Analyze the signal convergence detected in ${card.label} (score: ${card.score}/100, type: ${card.convergence_type.replace(/_/g, ' ')}). Active domains: ${card.active_domains.join(', ')}. Domain scores: ${Object.entries(card.domain_scores).map(([k, v]) => `${k}=${v}`).join(', ')}. What is driving this multi-domain convergence? What does the intersection of these signals suggest about the developing situation? What should analysts watch for? Be specific and analytical.`, queryTopic: 'geopolitics', regionContext: card.country })} />
@@ -287,7 +330,7 @@ export default function HomeDashboard({
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}><div style={{ width: 6, height: 6, borderRadius: '50%', background: C.red }} /><h2 style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.55rem', color: C.silver, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Narrative Fractures</h2></div>
                 <div style={{ height: '1px', background: C.border, marginBottom: '0.35rem' }} />
                 {contradictionsLoading && <div>{[0, 1, 2].map(i => <div key={i} style={{ padding: '0.9rem 0.2rem', borderBottom: `1px solid ${C.border}` }}><div className="skeleton" style={{ height: '0.8rem', width: i === 0 ? '88%' : '74%', marginBottom: '0.35rem' }} /><div className="skeleton" style={{ height: '0.55rem', width: '45%' }} /></div>)}</div>}
-                {!contradictionsLoading && contradictionEvents.length === 0 && <div style={{ padding: '0.95rem 0.2rem', borderBottom: `1px solid ${C.border}`, fontFamily: "'JetBrains Mono', monospace", fontSize: '0.58rem', color: C.textSecondary }}>{contradictionsError || 'No stored contradiction-rich events are currently surfaced in the active corpus.'}</div>}
+                {!contradictionsLoading && contradictionEvents.length === 0 && <div style={{ padding: '0.95rem 0.2rem', borderBottom: `1px solid ${C.border}`, fontFamily: "'JetBrains Mono', monospace", fontSize: '0.58rem', color: C.textSecondary }}>{contradictionsError || 'No stored framing-divergence events are currently surfaced in the active corpus; this view highlights sources using different framing for the same event.'}</div>}
                 {!contradictionsLoading && contradictionEvents.map((event, i) => <div key={event.event_id || i} className="theater-row" onClick={() => setSelectedContradiction(event)} style={{ padding: '0.9rem 0.2rem', borderBottom: `1px solid ${C.border}`, cursor: 'pointer', borderRadius: 2 }}><div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', marginBottom: '0.25rem' }}><div style={{ fontFamily: "'Source Serif 4', serif", fontSize: '0.94rem', color: C.textSecondary, lineHeight: 1.5 }}>{event.label}</div><div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.48rem', color: C.red, flexShrink: 0 }}>{totalNarrativeFlags(event)} FLAGS</div></div><div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.48rem', color: C.textMuted, lineHeight: 1.6 }}><div>{formatDateTime(event.latest_update)}</div><div>{event.source_count} sources split across the cluster{(event.narrative_fracture_count || 0) > 0 ? ` · ${event.narrative_fracture_count} framing fractures` : ''}</div></div></div>)}
               </div>
               <div style={{ display: 'grid', gap: '1.25rem' }}>

@@ -73,8 +73,8 @@ export function buildAppStyles() {
     }
     @media (max-width: 700px) {
       .briefing-btn { text-align: left !important; }
-      .header-section { padding-top: 8vh !important; padding-bottom: 2vh !important; }
-      .main-padding { padding: 0 1rem !important; }
+      .header-section { padding-top: 0.4rem !important; padding-bottom: 0.8rem !important; }
+      .main-padding { padding: 172px 1rem 0 !important; }
       .briefing-layout { grid-template-columns: 1fr !important; }
       .briefing-sidebar { position: static !important; }
       .coverage-summary { grid-template-columns: 1fr !important; }

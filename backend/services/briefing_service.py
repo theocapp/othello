@@ -41,7 +41,7 @@ def _briefing_fallback(
     events: list[dict],
     signals: str = "",
     contradictions: str = "",
-) -> str:
+) -> dict:
     top_event_lines = (
         "\n".join(f"- {event['label']}: {event['summary']}" for event in events[:4])
         or "- No major clustered events yet."
@@ -71,7 +71,7 @@ def _briefing_fallback(
         or "No significant contradictions detected in current clustered coverage."
     )
 
-    return f"""SITUATION REPORT:
+    situation_summary = f"""SITUATION REPORT:
 This briefing is generated from the stored Othello corpus for {topic}. The system is operating in deterministic mode because LLM generation is unavailable.
 
 KEY DEVELOPMENTS:
@@ -97,6 +97,17 @@ WHAT TO WATCH:
 SOURCE CONTRADICTIONS:
 {contradiction_block}
 """
+
+    return {
+        "topic": topic,
+        "key_developments": [],
+        "critical_actors": [],
+        "sources": [],
+        "event_summary": [],
+        "situation_summary": situation_summary,
+        "signal_vs_noise": "",
+        "llm_enriched": False,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -145,7 +156,8 @@ def build_topic_briefing(topic: str, force_refresh: bool = False) -> dict | None
             from analyst import generate_briefing
 
             briefing = generate_briefing(
-                topic, articles, signals, contradictions, event_brief
+                articles,
+                topic=topic,
             )
         except Exception as exc:
             print(
@@ -164,7 +176,7 @@ def build_topic_briefing(topic: str, force_refresh: bool = False) -> dict | None
     generated_at = cached["generated_at"] if cached else time.time()
     predictions = extract_predictions_from_briefing(
         topic=topic,
-        briefing_text=briefing,
+        briefing_text=briefing.get("situation_summary", "") + " " + briefing.get("signal_vs_noise", ""),
         source_ref=f"{topic}:{int(generated_at)}",
         generated_at=generated_at,
         events=events,

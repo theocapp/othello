@@ -505,7 +505,15 @@ def get_articles_by_urls(urls: list[str], *, limit: int = 64) -> dict[str, dict]
         return {}
     cap = max(1, min(limit, 120))
     cleaned = cleaned[:cap]
-    placeholders = ", ".join(["%s"] * len(cleaned))
+    canonical_map = {url: _canonical_url(url) for url in cleaned}
+    canonical_values = list({value for value in canonical_map.values() if value})
+    url_placeholders = ", ".join(["%s"] * len(cleaned))
+    canonical_placeholders = ", ".join(["%s"] * len(canonical_values))
+    where_clause = f"a.url IN ({url_placeholders})"
+    params: list[object] = [*cleaned]
+    if canonical_values:
+        where_clause += f" OR a.canonical_url IN ({canonical_placeholders})"
+        params.extend(canonical_values)
     with _connect() as conn:
         rows = conn.execute(
             f"""
@@ -513,11 +521,35 @@ def get_articles_by_urls(urls: list[str], *, limit: int = 64) -> dict[str, dict]
                    tr.target_language AS translation_target_language, tr.translation_provider, tr.translated_at
             FROM articles a
             LEFT JOIN article_translations tr ON tr.article_url = a.url
-            WHERE a.url IN ({placeholders})
+            WHERE {where_clause}
             """,
-            cleaned,
+            params,
         ).fetchall()
-    return {str(row["url"]): _row_to_article(row) for row in rows}
+
+    resolved_by_key: dict[str, dict] = {}
+    for row in rows:
+        article = _row_to_article(row)
+        url = str(row.get("url") or "").strip()
+        canonical = str(row.get("canonical_url") or "").strip()
+        if url:
+            resolved_by_key[url] = article
+        if canonical and canonical not in resolved_by_key:
+            resolved_by_key[canonical] = article
+
+    # Preserve compatibility: return lookups under the originally requested keys.
+    out: dict[str, dict] = {}
+    for original in cleaned:
+        article = resolved_by_key.get(original) or resolved_by_key.get(
+            canonical_map.get(original) or ""
+        )
+        if article is not None:
+            out[original] = article
+
+    # Keep direct row-key entries for callers that iterate over values only.
+    for key, article in resolved_by_key.items():
+        if key not in out:
+            out[key] = article
+    return out
 
 
 def _published_values(topic: str | None = None) -> list[str]:
@@ -626,3 +658,109 @@ def search_recent_articles_by_keywords(
 
     ranked.sort(key=lambda item: (item[0], item[1]), reverse=True)
     return [article for _, _, article in ranked[:limit]]
+
+
+def upsert_minimal_articles_from_urls(urls: list[str], provider: str = "structured_event_fallback") -> int:
+    """Upsert minimal article rows from structured event source URLs.
+    
+    For URLs not already in the articles table, creates minimal rows with just
+    URL, canonical URL, domain, and a basic title. This enables map enrichment
+    to resolve article headlines when structured events carry source URLs.
+    
+    Args:
+        urls: List of source URLs from structured events
+        provider: Provider name for these articles (default: structured_event_fallback)
+    
+    Returns:
+        Count of rows upserted (best-effort).
+    """
+    cleaned = [str(u).strip() for u in urls if u and str(u).strip().startswith("http")]
+    if not cleaned:
+        return 0
+    
+    # Batch-check which URLs already exist
+    cap = max(1, min(len(cleaned), 180))
+    existing_urls: set[str] = set()
+    for idx in range(0, len(cleaned), 180):
+        chunk = cleaned[idx : idx + 180]
+        placeholders = ", ".join(["%s"] * len(chunk))
+        with _connect() as conn:
+            rows = conn.execute(
+                f"SELECT DISTINCT url FROM articles_v2 WHERE url IN ({placeholders})",
+                chunk,
+            ).fetchall()
+        existing_urls.update(row["url"] for row in rows if row.get("url"))
+    
+    # For new URLs, create minimal article records
+    now_iso = datetime.now(timezone.utc).isoformat()
+    records: list[dict] = []
+    for url in cleaned:
+        if url in existing_urls:
+            continue
+        
+        canonical = _canonical_url(url)
+        domain = _domain(url)
+        
+        # Try to extract a title from the URL path
+        title = url.split("/")[-1].replace("-", " ").replace("_", " ").strip()
+        if not title or len(title) > 200:
+            title = f"Article from {domain}" if domain else "Structured event article"
+        
+        record = {
+            "url": url,
+            "canonical_url": canonical,
+            "title": title[:200],
+            "description": "",
+            "source": domain or "unknown",
+            "source_domain": domain or "",
+            "published_at": now_iso,
+            "language": "",
+            "provider": provider,
+            "content_hash": _content_hash(
+                {
+                    "url": url,
+                    "canonical_url": canonical,
+                    "title": title[:200],
+                    "description": "",
+                    "source": domain or "unknown",
+                }
+            ),
+            "payload": {"origin": "structured_event_source_url", "inferred": True},
+        }
+        records.append(record)
+    
+    if not records:
+        return 0
+    
+    # Upsert records into articles_v2
+    with _connect() as conn:
+        for rec in records:
+            canonical = rec["canonical_url"]
+            conn.execute(
+                """
+                INSERT INTO articles_v2 (
+                    url, canonical_url, title, description, source, source_domain,
+                    published_at, language, provider, content_hash,
+                    first_ingested_at, last_ingested_at, payload
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb)
+                ON CONFLICT (url) DO NOTHING
+                """,
+                (
+                    rec["url"],
+                    canonical,
+                    rec["title"],
+                    rec["description"],
+                    rec["source"],
+                    rec.get("source_domain") or "",
+                    rec["published_at"],
+                    rec.get("language") or "",
+                    rec["provider"],
+                    rec["content_hash"],
+                    now_iso,
+                    now_iso,
+                    json.dumps(rec["payload"]),
+                ),
+            )
+    
+    return len(records)

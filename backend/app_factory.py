@@ -1,3 +1,7 @@
+import logging
+import os
+import sys
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -11,6 +15,40 @@ from api.routes.query import router as query_router
 from bootstrap import initialize_runtime
 from core.config import CORS_ORIGINS, INTERNAL_SCHEDULER_ENABLED
 from core.scheduler import build_scheduler, schedule_initial_analytics_warm
+
+
+def _log_runtime_environment() -> None:
+    certifi_path = None
+    requests_ca_path = None
+    try:
+        import certifi
+
+        certifi_path = certifi.where()
+    except Exception:
+        certifi_path = None
+    try:
+        import requests
+
+        requests_ca_path = requests.certs.where()
+    except Exception:
+        requests_ca_path = None
+
+    logger = logging.getLogger("runtime.startup")
+    message = (
+        "Runtime environment | python=%s | certifi=%s | requests_ca=%s | "
+        "REQUESTS_CA_BUNDLE=%s | SSL_CERT_FILE=%s | CURL_CA_BUNDLE=%s"
+    )
+    fields = (
+        sys.executable,
+        certifi_path,
+        requests_ca_path,
+        os.getenv("REQUESTS_CA_BUNDLE"),
+        os.getenv("SSL_CERT_FILE"),
+        os.getenv("CURL_CA_BUNDLE"),
+    )
+    logger.info(message, *fields)
+    # Emit a plain line as well so startup diagnostics are visible even when logging is reconfigured.
+    print(message % fields)
 
 
 def create_app() -> FastAPI:
@@ -38,6 +76,7 @@ def create_app() -> FastAPI:
 
     @app.on_event("startup")
     def startup() -> None:
+        _log_runtime_environment()
         initialize_runtime()
         schedule_initial_analytics_warm(scheduler)
         if INTERNAL_SCHEDULER_ENABLED and not scheduler.running:

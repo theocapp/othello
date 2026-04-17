@@ -394,6 +394,61 @@ def init_db():
                 first_seen_at DOUBLE PRECISION NOT NULL
             )
             """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS entity_mentions (
+                id          BIGSERIAL PRIMARY KEY,
+                entity      TEXT NOT NULL,
+                entity_type TEXT NOT NULL,
+                topic       TEXT NOT NULL,
+                article_url TEXT NOT NULL,
+                mentioned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                UNIQUE (topic, article_url, entity)
+            )
+            """)
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_entity_mentions_entity "
+            "ON entity_mentions (entity)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_entity_mentions_mentioned_at "
+            "ON entity_mentions (mentioned_at)"
+        )
+
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS entity_cooccurrences (
+                id          BIGSERIAL PRIMARY KEY,
+                entity_a    TEXT NOT NULL,
+                entity_b    TEXT NOT NULL,
+                topic       TEXT NOT NULL,
+                article_url TEXT NOT NULL,
+                mentioned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                UNIQUE (topic, article_url, entity_a, entity_b)
+            )
+            """)
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_entity_cooc_a "
+            "ON entity_cooccurrences (entity_a)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_entity_cooc_b "
+            "ON entity_cooccurrences (entity_b)"
+        )
+
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS entity_links (
+                entity       TEXT NOT NULL,
+                qid          TEXT NOT NULL,
+                label        TEXT,
+                description  TEXT,
+                source       TEXT,
+                retrieved_at TIMESTAMPTZ,
+                PRIMARY KEY (entity, qid)
+            )
+            """)
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_entity_links_entity "
+            "ON entity_links (entity)"
+        )
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_article_summaries_topic ON article_summaries (topic, published_at DESC)"
         )
@@ -429,6 +484,14 @@ def init_db():
         )
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_structured_events_dataset ON structured_events (dataset, event_date DESC)"
+        )
+        conn.execute(
+            "ALTER TABLE structured_events "
+            "ADD COLUMN IF NOT EXISTS superseded_by TEXT REFERENCES structured_events(event_id)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_structured_events_superseded "
+            "ON structured_events (superseded_by) WHERE superseded_by IS NOT NULL"
         )
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_materialized_story_clusters_topic ON materialized_story_clusters (topic, computed_at DESC)"

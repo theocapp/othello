@@ -220,10 +220,10 @@ EVALUATION_COHESION_HIGH_OUTLIER_THRESHOLD = max(
 # Feature flags
 # ---------------------------------------------------------------------------
 REQUEST_ENABLE_VECTOR_SEARCH = (
-    os.getenv("OTHELLO_ENABLE_VECTOR_SEARCH", "false").lower() == "true"
+    os.getenv("OTHELLO_ENABLE_VECTOR_SEARCH", "true").lower() == "true"
 )
 REQUEST_ENABLE_CHROMA_INGEST = (
-    os.getenv("OTHELLO_ENABLE_CHROMA_INGEST", "false").lower() == "true"
+    os.getenv("OTHELLO_ENABLE_CHROMA_INGEST", "true").lower() == "true"
 )
 REQUEST_ENABLE_LIVE_FETCH = (
     os.getenv("OTHELLO_ENABLE_LIVE_FETCH", "false").lower() == "true"

@@ -1,4 +1,5 @@
 import json
+import math
 import time
 from datetime import datetime, timezone, timedelta
 
@@ -9,6 +10,126 @@ from db.common import (
     _row_to_perspective,
     _parse_published_at,
 )
+
+
+def _haversine_km(lat_a: float, lon_a: float, lat_b: float, lon_b: float) -> float:
+    radius_km = 6371.0
+    lat1, lon1 = math.radians(lat_a), math.radians(lon_a)
+    lat2, lon2 = math.radians(lat_b), math.radians(lon_b)
+    dlat, dlon = lat2 - lat1, lon2 - lon1
+    arc = (
+        math.sin(dlat / 2) ** 2
+        + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
+    )
+    return 2 * radius_km * math.asin(min(1.0, math.sqrt(max(0.0, arc))))
+
+
+def deduplicate_cross_dataset_events(
+    days: int = 3,
+    radius_km: float = 50.0,
+    max_hours_apart: float = 24.0,
+) -> dict:
+    """Mark GDELT events as superseded when a matching ACLED event exists nearby.
+
+    Matching criteria:
+    - Both events within radius_km of each other (default 50 km)
+    - Event dates within max_hours_apart (default 24 hours)
+    - Same broad event category (Battles/Violence maps to ACLED equivalents)
+
+    ACLED is preferred as the canonical source. When a match is found,
+    the GDELT row's superseded_by is set to the ACLED event_id.
+    Only processes events from the last `days` days.
+
+    Returns a summary dict with counts of matches found and marked.
+    """
+    from datetime import date
+
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+
+    with _connect() as conn:
+        acled_rows = conn.execute(
+            """
+            SELECT event_id, latitude, longitude, event_date, event_type, country
+            FROM structured_events
+            WHERE dataset = 'acled'
+              AND latitude IS NOT NULL
+              AND longitude IS NOT NULL
+              AND last_ingested_at >= %s
+            """,
+            (cutoff,),
+        ).fetchall()
+
+        gdelt_rows = conn.execute(
+            """
+            SELECT event_id, latitude, longitude, event_date, event_type, country
+            FROM structured_events
+            WHERE dataset = 'gdelt_gkg'
+              AND latitude IS NOT NULL
+              AND longitude IS NOT NULL
+              AND superseded_by IS NULL
+              AND last_ingested_at >= %s
+            """,
+            (cutoff,),
+        ).fetchall()
+
+    matched = 0
+    updates: list[tuple[str, str]] = []
+    for gdelt in gdelt_rows:
+        g_lat = float(gdelt["latitude"] or 0)
+        g_lon = float(gdelt["longitude"] or 0)
+        g_date = str(gdelt["event_date"] or "")
+        g_country = (gdelt["country"] or "").strip().lower()
+
+        best_acled_id = None
+        best_distance = float("inf")
+
+        for acled in acled_rows:
+            a_lat = float(acled["latitude"] or 0)
+            a_lon = float(acled["longitude"] or 0)
+            a_date = str(acled["event_date"] or "")
+            a_country = (acled["country"] or "").strip().lower()
+
+            if g_country and a_country and g_country != a_country:
+                continue
+
+            try:
+                gd = date.fromisoformat(g_date[:10]) if g_date else None
+                ad = date.fromisoformat(a_date[:10]) if a_date else None
+                if gd and ad:
+                    hours_apart = abs((gd - ad).total_seconds()) / 3600
+                    if hours_apart > max_hours_apart:
+                        continue
+            except ValueError:
+                continue
+
+            dist = _haversine_km(g_lat, g_lon, a_lat, a_lon)
+            if dist <= radius_km and dist < best_distance:
+                best_distance = dist
+                best_acled_id = acled["event_id"]
+
+        if best_acled_id:
+            updates.append((best_acled_id, gdelt["event_id"]))
+            matched += 1
+
+    if updates:
+        with _connect() as conn:
+            for best_acled_id, gdelt_event_id in updates:
+                conn.execute(
+                    """
+                    UPDATE structured_events
+                    SET superseded_by = %s
+                    WHERE event_id = %s AND superseded_by IS NULL
+                    """,
+                    (best_acled_id, gdelt_event_id),
+                )
+
+    return {
+        "acled_events_checked": len(acled_rows),
+        "gdelt_events_checked": len(gdelt_rows),
+        "duplicates_marked": matched,
+        "radius_km": radius_km,
+        "days": days,
+    }
 
 
 def upsert_structured_events(events: list[dict]) -> int:
@@ -106,7 +227,7 @@ def get_recent_structured_events(
         base_params.append(event_type)
 
     def fetch_rows(cutoff_value: str) -> list:
-        clauses = ["event_date >= %s", *base_clauses]
+        clauses = ["event_date >= %s", "superseded_by IS NULL", *base_clauses]
         params = [cutoff_value, *base_params, limit]
         where = " AND ".join(clauses)
         with _connect() as conn:

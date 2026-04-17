@@ -28,14 +28,12 @@ function getSelectBase() {
 export default function NewsColumn({
   headlines,
   headlinesLoading,
-  headlinesLoaded,
   headlinesError,
   headlineSort,
   headlineRegion,
   headlineRegions,
   onChangeSort,
   onChangeRegion,
-  onRefresh,
   onOpenStory,
   onOpenEventDebug,
 }) {

@@ -58,9 +58,9 @@ __all__ = [name for name in globals().keys() if not name.startswith("_")]
 import importlib.util
 import os
 import spacy
-import sqlite3
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from db.common import _connect
 
 # ─── Model ────────────────────────────────────────────────────────────────────
 # Install: python3 -m spacy download en_core_web_sm
@@ -461,83 +461,12 @@ ALIASES = {
     "us": None,  # too ambiguous — "us" vs "US"
 }
 
-DB_PATH = "./entities.db"
-SQLITE_TIMEOUT_SECONDS = float(os.getenv("OTHELLO_SQLITE_TIMEOUT_SECONDS", "30"))
-
-
-def _connect():
-    conn = sqlite3.connect(DB_PATH, timeout=SQLITE_TIMEOUT_SECONDS)
-    conn.execute("PRAGMA busy_timeout=30000")
-    try:
-        conn.execute("PRAGMA journal_mode=WAL")
-        conn.execute("PRAGMA synchronous=NORMAL")
-    except sqlite3.OperationalError as exc:
-        if "locked" not in str(exc).lower():
-            raise
-    return conn
-
-
 # ─── DB init ──────────────────────────────────────────────────────────────────
 def init_db():
-    conn = _connect()
-    c = conn.cursor()
+    from db.schema import init_db as initialize_schema
 
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS entity_mentions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            entity TEXT NOT NULL,
-            entity_type TEXT NOT NULL,
-            topic TEXT NOT NULL,
-            article_url TEXT NOT NULL,
-            mentioned_at TIMESTAMP NOT NULL
-        )
-    """)
-
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS entity_cooccurrences (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            entity_a TEXT NOT NULL,
-            entity_b TEXT NOT NULL,
-            topic TEXT NOT NULL,
-            article_url TEXT NOT NULL,
-            mentioned_at TIMESTAMP NOT NULL
-        )
-    """)
-
-    c.execute("CREATE INDEX IF NOT EXISTS idx_entity ON entity_mentions(entity)")
-    c.execute(
-        "CREATE INDEX IF NOT EXISTS idx_mentioned_at ON entity_mentions(mentioned_at)"
-    )
-    c.execute("CREATE INDEX IF NOT EXISTS idx_cooc_a ON entity_cooccurrences(entity_a)")
-    c.execute("CREATE INDEX IF NOT EXISTS idx_cooc_b ON entity_cooccurrences(entity_b)")
-    c.execute("""
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_entity_mention
-        ON entity_mentions(topic, article_url, entity)
-    """)
-    c.execute("""
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_entity_cooccurrence
-        ON entity_cooccurrences(topic, article_url, entity_a, entity_b)
-    """)
-
-    # Cached external KB links (e.g., Wikidata)
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS entity_links (
-            entity TEXT NOT NULL,
-            qid TEXT NOT NULL,
-            label TEXT,
-            description TEXT,
-            source TEXT,
-            retrieved_at TIMESTAMP,
-            PRIMARY KEY(entity, qid)
-        )
-    """)
-    c.execute(
-        "CREATE INDEX IF NOT EXISTS idx_entity_links_entity ON entity_links(entity)"
-    )
-
-    conn.commit()
-    conn.close()
-    print("[entities] Database initialized")
+    initialize_schema()
+    print("[entities] Database initialized (PostgreSQL)")
 
 
 # ─── Normalization ────────────────────────────────────────────────────────────
@@ -616,9 +545,7 @@ def extract_entities(text: str, language: str | None = None) -> list[dict]:
 # ─── Storage ──────────────────────────────────────────────────────────────────
 def store_entity_mentions(articles: list[dict], topic: str):
     """Extract entities, store mentions and co-occurrences."""
-    conn = _connect()
-    c = conn.cursor()
-    now = datetime.now().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
     total_mentions = 0
     total_cooc = 0
     path_counts = {}
@@ -626,89 +553,82 @@ def store_entity_mentions(articles: list[dict], topic: str):
     language_counts = {}
     language_paths = {}
 
-    for article in articles:
-        extraction = describe_entity_extraction(article)
-        article_language = extraction["article_language"]
-        path = extraction["path"]
-        model_name = extraction["model_name"]
+    with _connect() as conn:
+        for article in articles:
+            extraction = describe_entity_extraction(article)
+            article_language = extraction["article_language"]
+            path = extraction["path"]
+            model_name = extraction["model_name"]
 
-        if extraction["text_source"] == "original":
-            title = article.get("original_title") or article.get("title") or ""
-            description = (
-                article.get("original_description") or article.get("description") or ""
-            )
-        else:
-            title = (
-                article.get("translated_title")
-                or article.get("title")
-                or article.get("original_title")
-                or ""
-            )
-            description = (
-                article.get("translated_description")
-                or article.get("description")
-                or article.get("original_description")
-                or ""
-            )
-        extraction_language = extraction["extraction_language"]
-        text = f"{title}. {description}"
-        entities = extract_entities(text, language=extraction_language)
-
-        language_counts[article_language] = language_counts.get(article_language, 0) + 1
-        path_counts[path] = path_counts.get(path, 0) + 1
-        if model_name:
-            model_counts[model_name] = model_counts.get(model_name, 0) + 1
-        language_entry = language_paths.setdefault(
-            article_language,
-            {
-                "articles": 0,
-                "path_counts": {},
-                "model_counts": {},
-                "text_sources": {},
-            },
-        )
-        language_entry["articles"] += 1
-        language_entry["path_counts"][path] = (
-            language_entry["path_counts"].get(path, 0) + 1
-        )
-        if model_name:
-            language_entry["model_counts"][model_name] = (
-                language_entry["model_counts"].get(model_name, 0) + 1
-            )
-        text_source = extraction["text_source"]
-        language_entry["text_sources"][text_source] = (
-            language_entry["text_sources"].get(text_source, 0) + 1
-        )
-
-        for entity in entities:
-            c.execute(
-                """
-                INSERT INTO entity_mentions (entity, entity_type, topic, article_url, mentioned_at)
-                VALUES (?, ?, ?, ?, ?)
-                ON CONFLICT(topic, article_url, entity) DO NOTHING
-            """,
-                (entity["entity"], entity["type"], topic, article["url"], now),
-            )
-            total_mentions += c.rowcount
-
-        for i in range(len(entities)):
-            for j in range(i + 1, len(entities)):
-                a = entities[i]["entity"]
-                b = entities[j]["entity"]
-                if a > b:
-                    a, b = b, a
-                c.execute(
-                    """
-                    INSERT INTO entity_cooccurrences (entity_a, entity_b, topic, article_url, mentioned_at)
-                    VALUES (?, ?, ?, ?, ?)
-                    ON CONFLICT(topic, article_url, entity_a, entity_b) DO NOTHING
-                """,
-                    (a, b, topic, article["url"], now),
+            if extraction["text_source"] == "original":
+                title = article.get("original_title") or article.get("title") or ""
+                description = (
+                    article.get("original_description") or article.get("description") or ""
                 )
-                total_cooc += c.rowcount
+            else:
+                title = (
+                    article.get("translated_title")
+                    or article.get("title")
+                    or article.get("original_title")
+                    or ""
+                )
+                description = (
+                    article.get("translated_description")
+                    or article.get("description")
+                    or article.get("original_description")
+                    or ""
+                )
+            extraction_language = extraction["extraction_language"]
+            text = f"{title}. {description}"
+            entities = extract_entities(text, language=extraction_language)
 
-    conn.commit()
-    conn.close()
+            language_counts[article_language] = language_counts.get(article_language, 0) + 1
+            path_counts[path] = path_counts.get(path, 0) + 1
+            if model_name:
+                model_counts[model_name] = model_counts.get(model_name, 0) + 1
+            language_entry = language_paths.setdefault(
+                article_language,
+                {"articles": 0, "path_counts": {}, "model_counts": {}, "text_sources": {}},
+            )
+            language_entry["articles"] += 1
+            language_entry["path_counts"][path] = language_entry["path_counts"].get(path, 0) + 1
+            if model_name:
+                language_entry["model_counts"][model_name] = (
+                    language_entry["model_counts"].get(model_name, 0) + 1
+                )
+            text_source = extraction["text_source"]
+            language_entry["text_sources"][text_source] = (
+                language_entry["text_sources"].get(text_source, 0) + 1
+            )
+
+            for entity in entities:
+                result = conn.execute(
+                    """
+                    INSERT INTO entity_mentions (entity, entity_type, topic, article_url, mentioned_at)
+                    VALUES (%s, %s, %s, %s, %s)
+                    ON CONFLICT (topic, article_url, entity) DO NOTHING
+                    """,
+                    (entity["entity"], entity["type"], topic, article["url"], now),
+                )
+                total_mentions += result.rowcount if result.rowcount > 0 else 0
+
+            for i in range(len(entities)):
+                for j in range(i + 1, len(entities)):
+                    a = entities[i]["entity"]
+                    b = entities[j]["entity"]
+                    if a > b:
+                        a, b = b, a
+                    result = conn.execute(
+                        """
+                        INSERT INTO entity_cooccurrences
+                            (entity_a, entity_b, topic, article_url, mentioned_at)
+                        VALUES (%s, %s, %s, %s, %s)
+                        ON CONFLICT (topic, article_url, entity_a, entity_b) DO NOTHING
+                        """,
+                        (a, b, topic, article["url"], now),
+                    )
+                    total_cooc += result.rowcount if result.rowcount > 0 else 0
+
     print(
         f"[entities] Stored {total_mentions} mentions, {total_cooc} co-occurrences for '{topic}'"
     )
@@ -733,44 +653,42 @@ def get_entity_frequencies(
     Applies tier-based thresholds — high-frequency entities need a bigger
     spike to be considered signal.
     """
-    conn = _connect()
-    c = conn.cursor()
-
     now = datetime.now()
     recent_cutoff = (now - timedelta(days=days_recent)).isoformat()
     baseline_cutoff = (now - timedelta(days=days_baseline)).isoformat()
 
-    topic_filter = "AND topic = ?" if topic else ""
+    topic_filter = "AND topic = %s" if topic else ""
     params_recent = [recent_cutoff] + ([topic] if topic else [])
     params_baseline = [baseline_cutoff, recent_cutoff] + ([topic] if topic else [])
 
-    # Deduplicate by entity name only (ignore spaCy type inconsistencies)
-    c.execute(
-        f"""
-        SELECT entity, entity_type, COUNT(*) as count
-        FROM entity_mentions
-        WHERE mentioned_at > ?
-        {topic_filter}
-        GROUP BY entity
-        ORDER BY count DESC
-    """,
-        params_recent,
-    )
-    recent = {row[0]: {"type": row[1], "recent": row[2]} for row in c.fetchall()}
+    with _connect() as conn:
+        recent_rows = conn.execute(
+            f"""
+            SELECT entity, MAX(entity_type) AS entity_type, COUNT(*) AS count
+            FROM entity_mentions
+            WHERE mentioned_at > %s
+            {topic_filter}
+            GROUP BY entity
+            ORDER BY count DESC
+        """,
+            params_recent,
+        ).fetchall()
+        recent = {
+            row["entity"]: {"type": row["entity_type"], "recent": row["count"]}
+            for row in recent_rows
+        }
 
-    c.execute(
-        f"""
-        SELECT entity, COUNT(*) as count
-        FROM entity_mentions
-        WHERE mentioned_at > ? AND mentioned_at <= ?
-        {topic_filter}
-        GROUP BY entity
-    """,
-        params_baseline,
-    )
-    baseline = {row[0]: row[1] for row in c.fetchall()}
-
-    conn.close()
+        baseline_rows = conn.execute(
+            f"""
+            SELECT entity, COUNT(*) AS count
+            FROM entity_mentions
+            WHERE mentioned_at > %s AND mentioned_at <= %s
+            {topic_filter}
+            GROUP BY entity
+        """,
+            params_baseline,
+        ).fetchall()
+        baseline = {row["entity"]: row["count"] for row in baseline_rows}
 
     results = []
     for entity, data in recent.items():
@@ -816,58 +734,53 @@ def get_entity_frequencies(
 
 def get_top_entities(topic: str = None, days: int = 7, limit: int = 10) -> list[dict]:
     """Get most mentioned entities over a time period, deduplicated by name."""
-    conn = _connect()
-    c = conn.cursor()
-
     cutoff = (datetime.now() - timedelta(days=days)).isoformat()
-    topic_filter = "AND topic = ?" if topic else ""
+    topic_filter = "AND topic = %s" if topic else ""
     params = [cutoff] + ([topic] if topic else [])
 
-    c.execute(
-        f"""
-        SELECT entity, entity_type, COUNT(*) as count
-        FROM entity_mentions
-        WHERE mentioned_at > ?
-        {topic_filter}
-        GROUP BY entity
-        ORDER BY count DESC
-        LIMIT ?
-    """,
-        params + [limit],
-    )
+    with _connect() as conn:
+        rows = conn.execute(
+            f"""
+            SELECT entity, MAX(entity_type) AS entity_type, COUNT(*) AS count
+            FROM entity_mentions
+            WHERE mentioned_at > %s
+            {topic_filter}
+            GROUP BY entity
+            ORDER BY count DESC
+            LIMIT %s
+        """,
+            params + [limit],
+        ).fetchall()
 
     results = [
-        {"entity": row[0], "type": row[1], "mentions": row[2]} for row in c.fetchall()
+        {"entity": row["entity"], "type": row["entity_type"], "mentions": row["count"]}
+        for row in rows
     ]
-    conn.close()
     return results
 
 
 # ─── Co-occurrence / relationships ───────────────────────────────────────────
 def get_entity_relationships(entity: str, days: int = 7, limit: int = 10) -> list[dict]:
     """Get entities most frequently co-mentioned with a given entity."""
-    conn = _connect()
-    c = conn.cursor()
-
     cutoff = (datetime.now() - timedelta(days=days)).isoformat()
 
-    c.execute(
-        """
-        SELECT
-            CASE WHEN entity_a = ? THEN entity_b ELSE entity_a END as related_entity,
-            COUNT(*) as co_mentions
-        FROM entity_cooccurrences
-        WHERE (entity_a = ? OR entity_b = ?)
-        AND mentioned_at > ?
-        GROUP BY related_entity
-        ORDER BY co_mentions DESC
-        LIMIT ?
-    """,
-        (entity, entity, entity, cutoff, limit),
-    )
+    with _connect() as conn:
+        rows = conn.execute(
+            """
+            SELECT
+                CASE WHEN entity_a = %s THEN entity_b ELSE entity_a END AS related_entity,
+                COUNT(*) AS co_mentions
+            FROM entity_cooccurrences
+            WHERE (entity_a = %s OR entity_b = %s)
+            AND mentioned_at > %s
+            GROUP BY related_entity
+            ORDER BY co_mentions DESC
+            LIMIT %s
+        """,
+            (entity, entity, entity, cutoff, limit),
+        ).fetchall()
 
-    results = [{"entity": row[0], "co_mentions": row[1]} for row in c.fetchall()]
-    conn.close()
+    results = [{"entity": row["related_entity"], "co_mentions": row["co_mentions"]} for row in rows]
     return results
 
 
@@ -875,28 +788,27 @@ def get_relationship_graph(
     days: int = 7, min_cooccurrences: int = 2, topic: str = None
 ) -> dict:
     """Return full entity relationship graph for visualization."""
-    conn = _connect()
-    c = conn.cursor()
-
     cutoff = (datetime.now() - timedelta(days=days)).isoformat()
-    topic_filter = "AND topic = ?" if topic else ""
+    topic_filter = "AND topic = %s" if topic else ""
     params = [cutoff] + ([topic] if topic else []) + [min_cooccurrences]
 
-    c.execute(
-        f"""
-        SELECT entity_a, entity_b, COUNT(*) as weight
-        FROM entity_cooccurrences
-        WHERE mentioned_at > ?
-        {topic_filter}
-        GROUP BY entity_a, entity_b
-        HAVING weight >= ?
-        ORDER BY weight DESC
-    """,
-        params,
-    )
+    with _connect() as conn:
+        rows = conn.execute(
+            f"""
+            SELECT entity_a, entity_b, COUNT(*) AS weight
+            FROM entity_cooccurrences
+            WHERE mentioned_at > %s
+            {topic_filter}
+            GROUP BY entity_a, entity_b
+            HAVING COUNT(*) >= %s
+            ORDER BY weight DESC
+        """,
+            params,
+        ).fetchall()
 
     edges = [
-        {"source": row[0], "target": row[1], "weight": row[2]} for row in c.fetchall()
+        {"source": row["entity_a"], "target": row["entity_b"], "weight": row["weight"]}
+        for row in rows
     ]
 
     nodes = set()
@@ -904,7 +816,6 @@ def get_relationship_graph(
         nodes.add(edge["source"])
         nodes.add(edge["target"])
 
-    conn.close()
     return {
         "nodes": [{"id": n} for n in nodes],
         "edges": edges,
@@ -964,30 +875,25 @@ def lookup_entity_links(
         return []
 
     normalized = str(entity).strip()
-    conn = _connect()
-    c = conn.cursor()
-
     if not refresh:
-        c.execute(
-            "SELECT qid, label, description, source, retrieved_at FROM entity_links WHERE entity = ? ORDER BY retrieved_at DESC LIMIT ?",
-            (normalized, limit),
-        )
-        rows = c.fetchall()
+        with _connect() as conn:
+            rows = conn.execute(
+                "SELECT qid, label, description, source, retrieved_at FROM entity_links WHERE entity = %s ORDER BY retrieved_at DESC LIMIT %s",
+                (normalized, limit),
+            ).fetchall()
         if rows:
-            conn.close()
             return [
                 {
-                    "qid": r[0],
-                    "label": r[1],
-                    "description": r[2],
-                    "source": r[3],
-                    "retrieved_at": r[4],
+                    "qid": r["qid"],
+                    "label": r["label"],
+                    "description": r["description"],
+                    "source": r["source"],
+                    "retrieved_at": r["retrieved_at"],
                 }
                 for r in rows
             ]
 
     if not allow_remote:
-        conn.close()
         return []
 
     # Remote lookup against Wikidata
@@ -1008,45 +914,55 @@ def lookup_entity_links(
         payload = resp.json() or {}
         results = []
         now = datetime.utcnow().isoformat()
-        for item in payload.get("search", []):
-            qid = item.get("id")
-            label = item.get("label")
-            desc = item.get("description")
-            results.append(
-                {"qid": qid, "label": label, "description": desc, "source": "wikidata"}
-            )
-            try:
-                c.execute(
-                    "INSERT OR REPLACE INTO entity_links (entity, qid, label, description, source, retrieved_at) VALUES (?, ?, ?, ?, ?, ?)",
-                    (normalized, qid, label, desc, "wikidata", now),
+        with _connect() as conn:
+            for item in payload.get("search", []):
+                qid = item.get("id")
+                label = item.get("label")
+                desc = item.get("description")
+                results.append(
+                    {
+                        "qid": qid,
+                        "label": label,
+                        "description": desc,
+                        "source": "wikidata",
+                        "retrieved_at": now,
+                    }
                 )
-            except Exception:
-                # non-fatal cache write error
-                pass
-        conn.commit()
-        conn.close()
+                try:
+                    conn.execute(
+                        """
+                        INSERT INTO entity_links (entity, qid, label, description, source, retrieved_at)
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (entity, qid) DO UPDATE SET
+                            label = EXCLUDED.label,
+                            description = EXCLUDED.description,
+                            source = EXCLUDED.source,
+                            retrieved_at = EXCLUDED.retrieved_at
+                        """,
+                        (normalized, qid, label, desc, "wikidata", now),
+                    )
+                except Exception:
+                    pass
         return results
+
     except Exception:
-        # On failure, return any cached rows if available, otherwise empty
         try:
-            c.execute(
-                "SELECT qid, label, description, source, retrieved_at FROM entity_links WHERE entity = ? ORDER BY retrieved_at DESC LIMIT ?",
-                (normalized, limit),
-            )
-            rows = c.fetchall()
-            conn.close()
+            with _connect() as conn:
+                rows = conn.execute(
+                    "SELECT qid, label, description, source, retrieved_at FROM entity_links WHERE entity = %s ORDER BY retrieved_at DESC LIMIT %s",
+                    (normalized, limit),
+                ).fetchall()
             return [
                 {
-                    "qid": r[0],
-                    "label": r[1],
-                    "description": r[2],
-                    "source": r[3],
-                    "retrieved_at": r[4],
+                    "qid": r["qid"],
+                    "label": r["label"],
+                    "description": r["description"],
+                    "source": r["source"],
+                    "retrieved_at": r["retrieved_at"],
                 }
                 for r in rows
             ]
         except Exception:
-            conn.close()
             return []
 
 

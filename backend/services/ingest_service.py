@@ -99,22 +99,7 @@ def _store_articles_safe(articles: list[dict], topic: str) -> None:
 
 
 def _store_entity_mentions_with_translation(articles: list[dict], topic: str) -> dict:
-    attempts = 3
-    for attempt in range(1, attempts + 1):
-        try:
-            return store_entity_mentions(articles, topic)
-        except sqlite3.OperationalError as exc:
-            if "locked" not in str(exc).lower() or attempt == attempts:
-                print(f"[entities] Entity extraction skipped for '{topic}': {exc}")
-                return {
-                    "topic": topic,
-                    "articles_processed": len(articles),
-                    "mentions_written": 0,
-                    "cooccurrences_written": 0,
-                    "error": str(exc),
-                    "status": "skipped_locked",
-                }
-            time.sleep(0.5 * attempt)
+    return store_entity_mentions(articles, topic)
 
 
 def _clear_headlines_resilient() -> None:

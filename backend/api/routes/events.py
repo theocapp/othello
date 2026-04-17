@@ -58,8 +58,32 @@ def split_article(event_id: str, body: SplitArticleRequest):
 
 
 @router.get("/events")
-def get_events(limit: int = 12):
-    return get_events_payload(limit=limit)
+def get_events(limit: int = 12, include_factual: bool = False):
+    payload = get_events_payload(limit=limit)
+    filtered_events = []
+    for event in payload.get("events", []):
+        all_contradictions = event.get("contradictions") or []
+        contradictions = (
+            all_contradictions
+            if include_factual
+            else [
+                c
+                for c in all_contradictions
+                if c.get("contradiction_class") != "factual_claim"
+            ]
+        )
+        filtered_events.append(
+            {
+                **event,
+                "contradictions": contradictions,
+                "contradiction_count": len(contradictions),
+            }
+        )
+    return {
+        **payload,
+        "events": filtered_events,
+        "count": len(filtered_events),
+    }
 
 
 @router.get("/events/structured")

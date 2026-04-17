@@ -22,6 +22,10 @@ USER_AGENT = (
     "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0 Safari/537.36"
 )
 REQUEST_TIMEOUT_SECONDS = 15
+_NON_RETRYABLE_EXTRACTION_ERRORS = (
+    "could not extract a title",
+    "unsupported content type",
+)
 DOMAIN_RULES = {
     "reuters.com": {
         "body_markers": [
@@ -78,9 +82,10 @@ class _ArticleTextParser(HTMLParser):
         self.title = ""
         self.meta: dict[str, str] = {}
         self._in_title = False
-        self._capture_depth = 0
+        self._capture_stack: list[str] = []
         self._chunks: list[str] = []
         self._paragraphs: list[str] = []
+        self._seen_paragraphs: set[str] = set()
         self._domain_rules = _domain_rule(domain)
 
     def handle_starttag(self, tag: str, attrs) -> None:
@@ -99,25 +104,32 @@ class _ArticleTextParser(HTMLParser):
             body_markers = [
                 marker.lower() for marker in self._domain_rules.get("body_markers", [])
             ]
-            if (
+            is_capture = (
                 tag == "p"
                 or any(
                     marker in css
                     for marker in ("article", "story", "content", "body", "main")
                 )
                 or any(marker and marker in css for marker in body_markers)
-            ):
-                self._capture_depth += 1
+            )
+            if is_capture:
+                self._capture_stack.append(tag)
+            else:
+                self._capture_stack.append("")
 
     def handle_endtag(self, tag: str) -> None:
         if tag == "title":
             self._in_title = False
-        if tag in {"p", "article", "div", "section"} and self._capture_depth > 0:
-            text = _collapse_whitespace(" ".join(self._chunks))
-            if len(text) >= 60:
-                self._paragraphs.append(text)
-            self._chunks = []
-            self._capture_depth -= 1
+        if tag in {"p", "article", "div", "section"}:
+            if not self._capture_stack:
+                return
+            triggered = self._capture_stack.pop()
+            if triggered:
+                text = _collapse_whitespace(" ".join(self._chunks))
+                if len(text) >= 60 and text not in self._seen_paragraphs:
+                    self._paragraphs.append(text)
+                    self._seen_paragraphs.add(text)
+                self._chunks = []
 
     def handle_data(self, data: str) -> None:
         text = _collapse_whitespace(data)
@@ -125,7 +137,7 @@ class _ArticleTextParser(HTMLParser):
             return
         if self._in_title:
             self.title = f"{self.title} {text}".strip()
-        if self._capture_depth > 0:
+        if any(self._capture_stack):
             self._chunks.append(text)
 
     @property
@@ -242,14 +254,24 @@ def fetch_historical_queue(
     min_domain_interval_seconds: float,
     max_attempts: int,
     dry_run: bool,
+    retry_share: float = 0.2,
 ) -> dict:
     init_cache_db()
     init_corpus_db()
     seed_sources()
 
-    queue_rows = get_historical_url_queue_batch(
-        limit=limit, statuses=["pending", "retry"]
+    pending_limit = max(1, int(limit * (1.0 - retry_share)))
+    retry_limit = max(0, limit - pending_limit)
+
+    pending_rows = get_historical_url_queue_batch(
+        limit=pending_limit, statuses=["pending"]
     )
+    retry_rows = (
+        get_historical_url_queue_batch(limit=retry_limit, statuses=["retry"])
+        if retry_limit > 0
+        else []
+    )
+    queue_rows = pending_rows + retry_rows
     if not queue_rows:
         return {
             "requested": limit,
@@ -257,6 +279,7 @@ def fetch_historical_queue(
             "inserted_or_updated": 0,
             "succeeded": 0,
             "retry": 0,
+            "no_topic": 0,
             "failed": 0,
             "topics": {},
         }
@@ -272,6 +295,7 @@ def fetch_historical_queue(
         "inserted_or_updated": 0,
         "succeeded": 0,
         "retry": 0,
+        "no_topic": 0,
         "failed": 0,
         "topics": defaultdict(int),
     }
@@ -317,7 +341,13 @@ def fetch_historical_queue(
             continue
 
         if extraction_error or not article:
-            fetch_status = "retry" if attempts < max_attempts else "failed"
+            err_lower = (extraction_error or "").lower()
+            non_retryable = any(
+                pattern in err_lower for pattern in _NON_RETRYABLE_EXTRACTION_ERRORS
+            )
+            fetch_status = (
+                "failed" if non_retryable or attempts >= max_attempts else "retry"
+            )
             update_historical_url_queue_status(
                 url,
                 fetch_status,
@@ -337,19 +367,42 @@ def fetch_historical_queue(
             row.get("published_at") or article.get("published_at") or ""
         )
         article["language"] = row.get("language") or article.get("language") or "en"
+        if article["language"] == "en":
+            text_sample = " ".join(
+                filter(
+                    None,
+                    [
+                        article.get("title", ""),
+                        article.get("description", ""),
+                    ],
+                )
+            )
+            if text_sample and not text_sample.isascii():
+                try:
+                    from langdetect import detect
+
+                    detected = detect(text_sample)
+                    if detected and detected != "en":
+                        article["language"] = detected
+                except Exception:
+                    pass
         article["body_text"] = article.get("body_text") or ""
         article["payload"] = {
             "historical_queue_url": url,
             "historical_discovered_via": row.get("discovered_via"),
             "historical_topic_guess": row.get("topic_guess"),
-            "body_text": article["body_text"],
         }
 
-        topics = (
-            [row["topic_guess"]]
-            if row.get("topic_guess")
-            else infer_article_topics(article)
-        )
+        if row.get("topic_guess"):
+            inferred = infer_article_topics(article)
+            if inferred:
+                topics = inferred
+                if row["topic_guess"] not in topics:
+                    pass
+            else:
+                topics = [row["topic_guess"]]
+        else:
+            topics = infer_article_topics(article)
         if not topics:
             topics = (
                 ["geopolitics"]
@@ -359,13 +412,20 @@ def fetch_historical_queue(
         if not topics:
             update_historical_url_queue_status(
                 url,
-                "failed",
+                "no_topic",
                 attempt_count=attempts,
                 payload_patch={
                     "last_error": "Could not infer a topic for fetched article"
                 },
             )
-            summary["failed"] += 1
+            summary["no_topic"] += 1
+            if not dry_run:
+                summary["inserted_or_updated"] += upsert_articles(
+                    [dict(article)],
+                    topic="unclassified",
+                    provider="historical-fetch",
+                    default_analytic_tier="volume",
+                )
             continue
 
         for topic in topics:
@@ -446,6 +506,12 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Fetch and classify articles without writing them into the article corpus.",
     )
+    parser.add_argument(
+        "--retry-share",
+        type=float,
+        default=0.2,
+        help="Share of queue slots reserved for retry items.",
+    )
     return parser.parse_args()
 
 
@@ -457,6 +523,7 @@ def main() -> int:
         min_domain_interval_seconds=max(0.0, args.min_domain_interval),
         max_attempts=max(1, args.max_attempts),
         dry_run=args.dry_run,
+        retry_share=max(0.0, min(1.0, args.retry_share)),
     )
     print(json.dumps(result, indent=2))
     return 0

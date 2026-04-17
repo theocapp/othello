@@ -34,6 +34,7 @@ import requests
 import urllib3
 
 from corpus import upsert_structured_events
+from db.events_repo import deduplicate_cross_dataset_events
 
 # GDELT's data.gdeltproject.org has a hostname mismatch on its cert;
 # disable verification when OTHELLO_ALLOW_INSECURE_GDELT is true (same as news.py).
@@ -646,6 +647,8 @@ def ingest_gdelt_gkg_recent(hours: int = 24) -> dict:
     """Fetch recent GDELT events and store them in structured_events."""
     events, meta = fetch_gdelt_gkg_events(hours=hours)
     inserted = upsert_structured_events(events)
+    dedup_result = deduplicate_cross_dataset_events(days=3)
+    print(f"[acled] Cross-dataset dedup: {dedup_result}")
     return {
         "dataset": "gdelt_gkg",
         "hours": hours,

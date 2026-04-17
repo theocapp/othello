@@ -79,6 +79,7 @@ export default function App() {
   })
   const [time, setTime] = useState(new Date())
   const [headerVisible, setHeaderVisible] = useState(true)
+  const [animationPhase, setAnimationPhase] = useState('title') // title | date | moving | complete
   const { data: healthSnapshot, error: healthFetchError } = useHealth()
 
   useEffect(() => {
@@ -87,6 +88,21 @@ export default function App() {
       window.localStorage.setItem('othello-theme-mode', themeMode)
     }
   }, [themeMode])
+
+  useEffect(() => {
+    if (animationPhase === 'title') {
+      const timer = setTimeout(() => setAnimationPhase('date'), 1000)
+      return () => clearTimeout(timer)
+    }
+    if (animationPhase === 'date') {
+      const timer = setTimeout(() => setAnimationPhase('moving'), 1000)
+      return () => clearTimeout(timer)
+    }
+    if (animationPhase === 'moving') {
+      const timer = setTimeout(() => setAnimationPhase('complete'), 1400)
+      return () => clearTimeout(timer)
+    }
+  }, [animationPhase])
 
   function toErrorText(error, label) {
     if (!error) return null
@@ -397,6 +413,7 @@ export default function App() {
       <HomeDashboard
         time={time}
         headerVisible={headerVisible}
+        animationPhase={animationPhase}
         localTimeZone={localTimeZone}
         lastUpdated={lastUpdated}
         healthFetchError={healthFetchErrorText}

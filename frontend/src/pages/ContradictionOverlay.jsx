@@ -37,9 +37,9 @@ export default function ContradictionOverlay({ event, onClose }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: C.bg, zIndex: 220, overflowY: 'auto', animation: 'slideIn 0.3s ease' }}>
-      <div style={{ position: 'sticky', top: 0, background: `${C.bg}ee`, backdropFilter: 'blur(12px)', borderBottom: `1px solid ${C.border}`, padding: '1rem 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 10 }}>
+      <div style={{ position: 'static', background: `${C.bg}ee`, backdropFilter: 'blur(12px)', borderBottom: `1px solid ${C.border}`, padding: '1rem 2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 10 }}>
         <button onClick={onClose} style={{ background: 'none', border: `1px solid ${C.borderMid}`, color: C.textSecondary, fontFamily: "'JetBrains Mono', monospace", fontSize: '0.6rem', letterSpacing: '0.1em', padding: '0.4rem 0.8rem', cursor: 'pointer', borderRadius: '4px' }}>← BACK</button>
-        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.55rem', color: C.silver, letterSpacing: '0.2em' }}>OTHELLO — CONTRADICTIONS</div>
+        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.55rem', color: C.silver, letterSpacing: '0.2em' }}>OTHELLO — FRAMING DIVERGENCES</div>
         <div style={{ width: 80 }} />
       </div>
       <div style={{ maxWidth: 980, margin: '0 auto', padding: '3rem 2rem 6rem' }}>
@@ -64,7 +64,7 @@ export default function ContradictionOverlay({ event, onClose }) {
                   <div style={{ borderLeft: `2px solid ${C.red}`, paddingLeft: '0.8rem' }}><div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.48rem', color: C.silver, marginBottom: '0.35rem' }}><SourceLabel record={leftRecord} fallback={(item.sources_in_conflict || [])[0] || 'Source A'} /></div><div style={{ fontFamily: "'Source Serif 4', serif", fontSize: '0.9rem', color: C.textSecondary, lineHeight: 1.65 }}>{item.claim_a || 'No claim captured.'}</div></div>
                   <div style={{ borderLeft: `2px solid ${C.borderMid}`, paddingLeft: '0.8rem' }}><div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.48rem', color: C.silver, marginBottom: '0.35rem' }}><SourceLabel record={rightRecord} fallback={(item.sources_in_conflict || [])[1] || 'Source B'} /></div><div style={{ fontFamily: "'Source Serif 4', serif", fontSize: '0.9rem', color: C.textSecondary, lineHeight: 1.65 }}>{item.claim_b || 'No conflicting claim captured.'}</div></div>
                 </div>
-                <div style={{ fontFamily: "'Source Serif 4', serif", fontSize: '0.88rem', color: C.textMuted, lineHeight: 1.65 }}><strong style={{ color: C.textSecondary }}>Assessment:</strong> {item.reasoning || 'No reasoning provided.'}</div>
+                <div style={{ fontFamily: "'Source Serif 4', serif", fontSize: '0.88rem', color: C.textMuted, lineHeight: 1.65 }}><strong style={{ color: C.textSecondary }}>Assessment:</strong> {item.reasoning || 'Sources are using different framing for the same event.'}</div>
                 <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.5rem', color: C.textMuted, marginTop: '0.7rem' }}>Most credible source: <SourceLabel record={mostCredible} fallback={item.most_credible_source || 'unresolved'} /></div>
               </div>
             })}

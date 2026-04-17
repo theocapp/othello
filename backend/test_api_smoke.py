@@ -110,7 +110,7 @@ class TestAPISmoke(unittest.TestCase):
                     "actor_secondary": "Force B",
                     "fatalities": 1,
                     "source_count": 2,
-                    "source_urls": [],
+                    "source_urls": ["https://example.com/smoke-map-a"],
                     "summary": "Smoke test incident note for map clustering.",
                     "payload": {},
                     "first_ingested_at": now_ts,
@@ -174,6 +174,15 @@ class TestAPISmoke(unittest.TestCase):
                     str(ev.get("summary") or ev.get("title") or "").strip(),
                     "each sample_event needs summary or title",
                 )
+            self.assertTrue(
+                any(
+                    isinstance(ev.get("source_urls"), list)
+                    and any(str(url).strip() for url in ev.get("source_urls") or [])
+                    for h in data["hotspots"]
+                    for ev in h["sample_events"]
+                ),
+                "at least one structured sample_event should preserve non-empty source_urls",
+            )
 
 
 if __name__ == "__main__":

@@ -118,6 +118,15 @@ SIGNAL_KEYS = [
     "Domain",
 ]
 
+EXPLICIT_TOPIC_KEYS = [
+    "topic",
+    "Topic",
+    "topic_guess",
+    "topicGuess",
+    "category",
+    "Category",
+]
+
 GDELT_MENTIONS_COLUMNS = [
     "GlobalEventID",
     "EventTimeDate",
@@ -206,7 +215,31 @@ def _normalize_domain(url: str | None, fallback: str | None = None) -> str | Non
     return urlparse(url).netloc.lower() or None
 
 
+def _canonical_url(url: str | None) -> str | None:
+    if not url:
+        return None
+    parsed = urlparse(str(url).strip())
+    if not parsed.scheme or not parsed.netloc:
+        return None
+    path = parsed.path.rstrip("/") or "/"
+    return f"{parsed.scheme.lower()}://{parsed.netloc.lower()}{path}"
+
+
 def _infer_topic_guess(record: dict) -> str | None:
+    explicit = _extract_value(record, EXPLICIT_TOPIC_KEYS)
+    if explicit:
+        token = explicit.strip().lower()
+        for topic in TOPICS:
+            if token == topic or topic in token:
+                return topic
+
+    query_hint = _extract_value(record, QUERY_KEYS)
+    if query_hint:
+        lowered = query_hint.strip().lower()
+        for topic in TOPICS:
+            if topic in lowered:
+                return topic
+
     signals = " ".join(str(record.get(key) or "") for key in SIGNAL_KEYS).lower()
     best_topic = None
     best_score = 0
@@ -224,8 +257,12 @@ def _normalize_queue_record(
     url = _extract_value(record, URL_KEYS)
     if not url:
         return None
+    canonical_url = _canonical_url(url)
+    if not canonical_url:
+        return None
     normalized = {
         "url": url,
+        "canonical_url": canonical_url,
         "title": _extract_value(record, TITLE_KEYS),
         "source_name": _extract_value(record, SOURCE_NAME_KEYS),
         "source_domain": _normalize_domain(
@@ -244,6 +281,7 @@ def _normalize_queue_record(
             _extract_value(record, WINDOW_END_KEYS)
         ),
         "fetch_status": "pending",
+        "last_attempt_at": None,
         "attempt_count": 0,
         "payload": {
             "raw_record": record,
