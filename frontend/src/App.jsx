@@ -1,21 +1,18 @@
-import { Suspense, lazy, useEffect, useRef, useState, useMemo } from 'react'
-import useHealth from './hooks/useHealth'
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from 'react-router-dom'
 import HomeDashboard from './components/HomeDashboard'
 import { applyTheme, buildAppStyles, C } from './constants/theme'
-import { friendlyErrorMessage, formatRegionLabel, parseDateValue } from './lib/formatters'
-import {
-  buildHotspotClusterAnalysisQuery,
-  collectHotspotSourceUrls,
-  normalizeStoryTopicForQuery,
-} from './lib/hotspots'
-import useContradictions from './hooks/useContradictions'
-import useEntitySignals from './hooks/useEntitySignals'
-import useMapAttention from './hooks/useMapAttention'
-import useInstability from './hooks/useInstability'
-import useCorrelations from './hooks/useCorrelations'
-import usePredictionLedger from './hooks/usePredictionLedger'
-import useBeforeNewsArchive from './hooks/useBeforeNewsArchive'
-import useCanonicalEvents from './hooks/useCanonicalEvents'
+import { AppContext } from './context/AppContext'
+import useHealth from './hooks/useHealth'
+import { parseDateValue } from './lib/formatters'
 
 const DeepDive = lazy(() => import('./pages/DeepDive'))
 const BriefingPage = lazy(() => import('./pages/BriefingPage'))
@@ -48,15 +45,15 @@ const TOPICS = [
     label: 'Conflict Briefing',
     tag: 'Conflict',
     accent: '#ef4444',
-    description: 'Hotspots, incident tempo, fatalities, and the fractures forming around live conflict zones.',
+    description: 'Hotspots, incident tempo, fatalities, and fractures around active conflict zones.',
   },
 ]
 
 const THEATERS = [
-  { label: 'US–Iran Military Conflict', query: 'US Iran military conflict war strikes' },
-  { label: 'Russia–Ukraine War', query: 'Russia Ukraine war conflict' },
+  { label: 'US-Iran Military Conflict', query: 'US Iran military conflict war strikes' },
+  { label: 'Russia-Ukraine War', query: 'Russia Ukraine war conflict' },
   { label: 'Federal Reserve & Interest Rates', query: 'Federal Reserve interest rates monetary policy' },
-  { label: 'China–Taiwan Tensions', query: 'China Taiwan tensions military' },
+  { label: 'China-Taiwan Tensions', query: 'China Taiwan tensions military' },
 ]
 
 function OverlayFallback() {
@@ -72,15 +69,144 @@ function OverlayFallback() {
   )
 }
 
+function goBackOrHome(navigate) {
+  if (window.history.length > 1) {
+    navigate(-1)
+    return
+  }
+  navigate('/')
+}
+
+function BriefingRoute() {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { topic } = useParams()
+  const selectedTopic = TOPICS.find(item => item.id === topic)
+
+  if (!selectedTopic) return <Navigate to="/" replace />
+
+  if (selectedTopic.kind === 'conflict') {
+    const state = location.state || {}
+    return (
+      <ConflictBriefingPage
+        topic={selectedTopic}
+        hotspot={state.hotspot || null}
+        hotspots={Array.isArray(state.hotspots) ? state.hotspots : []}
+        contradictionEvents={Array.isArray(state.contradictionEvents) ? state.contradictionEvents : []}
+        windowId={state.windowId || '24h'}
+        onClose={() => goBackOrHome(navigate)}
+        onOpenContradiction={event => navigate('/contradiction', { state: { event } })}
+      />
+    )
+  }
+
+  return <BriefingPage topic={selectedTopic} onClose={() => goBackOrHome(navigate)} />
+}
+
+function DeepDiveRoute() {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [searchParams] = useSearchParams()
+  const state = location.state || {}
+
+  const payload = {
+    title: state.title || searchParams.get('title') || 'Intelligence Analysis',
+    query: state.query || searchParams.get('query') || 'Analyze current geopolitical developments.',
+    entityName: state.entityName || state.entity || searchParams.get('entity') || undefined,
+    queryTopic: state.queryTopic || searchParams.get('topic') || undefined,
+    regionContext: state.regionContext || searchParams.get('region') || undefined,
+    hotspotId: state.hotspotId || searchParams.get('hotspotId') || undefined,
+    storyEventId: state.storyEventId || searchParams.get('storyEventId') || undefined,
+    sourceUrls: Array.isArray(state.sourceUrls) ? state.sourceUrls : undefined,
+    attentionWindow: state.attentionWindow || searchParams.get('window') || undefined,
+  }
+
+  return <DeepDive {...payload} onClose={() => goBackOrHome(navigate)} />
+}
+
+function TimelineRoute() {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [searchParams] = useSearchParams()
+  const query = location.state?.query || searchParams.get('query') || 'global geopolitics timeline'
+
+  return <TimelinePage query={query} onClose={() => goBackOrHome(navigate)} />
+}
+
+function ForesightRoute() {
+  const navigate = useNavigate()
+  const { mode } = useParams()
+  const resolvedMode = mode === 'archive' ? 'before-news' : 'predictions'
+
+  return <ForesightPage mode={resolvedMode} onClose={() => goBackOrHome(navigate)} />
+}
+
+function ContradictionRoute() {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const event = location.state?.event
+
+  if (!event) {
+    return (
+      <div style={{ minHeight: '100vh', background: C.bg, color: C.textPrimary, padding: '2rem' }}>
+        <div style={{ border: `1px solid ${C.border}`, background: C.bgRaised, maxWidth: 780, margin: '0 auto', padding: '1.2rem' }}>
+          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.56rem', color: C.textSecondary, marginBottom: '0.7rem' }}>
+            No contradiction payload was provided for this route.
+          </div>
+          <button
+            type="button"
+            onClick={() => goBackOrHome(navigate)}
+            style={{
+              border: `1px solid ${C.borderMid}`,
+              background: 'transparent',
+              color: C.textSecondary,
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: '0.56rem',
+              padding: '0.42rem 0.8rem',
+              cursor: 'pointer',
+            }}
+          >
+            Back
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return <ContradictionOverlay event={event} onClose={() => goBackOrHome(navigate)} />
+}
+
+function EventDebugRoute() {
+  const navigate = useNavigate()
+  const { eventId } = useParams()
+
+  if (!eventId) return <Navigate to="/" replace />
+  return <EventDebugOverlay eventId={eventId} onClose={() => goBackOrHome(navigate)} />
+}
+
 export default function App() {
+  const location = useLocation()
   const [themeMode, setThemeMode] = useState(() => {
     if (typeof window === 'undefined') return 'dark'
     return window.localStorage.getItem('othello-theme-mode') === 'light' ? 'light' : 'dark'
   })
   const [time, setTime] = useState(new Date())
   const [headerVisible, setHeaderVisible] = useState(true)
-  const [animationPhase, setAnimationPhase] = useState('title') // title | date | moving | complete
+  const [animationPhase, setAnimationPhase] = useState(() => {
+    if (typeof window === 'undefined') return 'title'
+    return window.sessionStorage.getItem('othello-splashed') ? 'complete' : 'title'
+  })
   const { data: healthSnapshot, error: healthFetchError } = useHealth()
+
+  const [deepDive, setDeepDive] = useState(null)
+  const [briefingPage, setBriefingPage] = useState(null)
+  const [selectedContradiction, setSelectedContradiction] = useState(null)
+  const [timelinePage, setTimelinePage] = useState(null)
+  const [foresightPage, setForesightPage] = useState(null)
+  const [eventDebugPage, setEventDebugPage] = useState(null)
+
+  const lastScrollY = useRef(0)
+  const localTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
 
   useEffect(() => {
     applyTheme(themeMode)
@@ -102,207 +228,10 @@ export default function App() {
       const timer = setTimeout(() => setAnimationPhase('complete'), 1400)
       return () => clearTimeout(timer)
     }
+    if (animationPhase === 'complete' && typeof window !== 'undefined') {
+      window.sessionStorage.setItem('othello-splashed', '1')
+    }
   }, [animationPhase])
-
-  function toErrorText(error, label) {
-    if (!error) return null
-    if (typeof error === 'string') return error
-    if (error instanceof Error && error.message) return error.message
-    if (error?.response?.data?.detail) return String(error.response.data.detail)
-    if (label) return `Unable to load ${label}.`
-    return String(error)
-  }
-
-  const lastUpdated = useMemo(() => {
-    try {
-      return healthSnapshot?.runtime?.corpus?.latest_published_at
-        ? parseDateValue(healthSnapshot.runtime.corpus.latest_published_at)
-        : null
-    } catch {
-      return null
-    }
-  }, [healthSnapshot])
-
-  const [headlineSort, setHeadlineSort] = useState('relevance')
-  const [headlineRegion, setHeadlineRegion] = useState('all')
-
-  const [mapAttentionWindow, setMapAttentionWindow] = useState('24h')
-  const [selectedMapHotspot, setSelectedMapHotspot] = useState(null)
-
-  const { data: entitySignals, error: entitySignalsError } = useEntitySignals()
-
-  const {
-    data: contradictionEvents = [],
-    error: contradictionsError,
-    isLoading: contradictionsLoading,
-  } = useContradictions(6)
-
-  const {
-    data: mapAttention,
-    error: mapAttentionError,
-    isLoading: mapAttentionLoading,
-    refetch: refetchMapAttention,
-  } = useMapAttention(mapAttentionWindow)
-  const mapHotspots = useMemo(
-    () => (Array.isArray(mapAttention?.hotspots) ? mapAttention.hotspots : []),
-    [mapAttention]
-  )
-
-  const {
-    data: instabilityData,
-    error: instabilityError,
-    isLoading: instabilityLoading,
-  } = useInstability(3)
-
-  const {
-    data: correlationData,
-    error: correlationError,
-    isLoading: correlationLoading,
-  } = useCorrelations(3)
-
-  const { data: predictionLedgerResp, error: predictionLedgerError } = usePredictionLedger()
-  const predictionLedger = predictionLedgerResp?.predictions || []
-
-  const { data: beforeNewsData, error: beforeNewsError } = useBeforeNewsArchive()
-  const beforeNewsArchive = beforeNewsData?.records || []
-
-  const {
-    data: canonicalEventsData,
-    error: canonicalEventsError,
-    isLoading: canonicalEventsLoading,
-    refetch: refetchCanonicalEvents,
-  } = useCanonicalEvents({ topic: null, limit: 160 })
-  const canonicalEvents = useMemo(() => canonicalEventsData?.events ?? [], [canonicalEventsData])
-
-  const canonicalStories = useMemo(() => {
-    const stories = canonicalEvents.map(event => {
-      const payload = event?.payload || {}
-      const region = (
-        event?.geo_region ||
-        event?.geo_country ||
-        payload?.dominant_region ||
-        'global'
-      )
-      const summary =
-        event?.neutral_summary ||
-        payload?.summary ||
-        (event?.importance_reasons || [])[0] ||
-        'Coverage is still developing.'
-
-      return {
-        event_id: event?.event_id,
-        headline: event?.label || event?.event_id,
-        summary,
-        topic: event?.topic || 'geopolitics',
-        dominant_region: String(region || 'global').toLowerCase(),
-        latest_update: event?.last_updated_at || event?.computed_at || event?.first_reported_at,
-        source_count: Number(event?.source_count || 0),
-        article_count: Number(event?.article_count || 0),
-        contradiction_count: Number(event?.contradiction_count || 0),
-        importance_score: Number(event?.importance_score || 0),
-        sources: [],
-      }
-    })
-
-    const filtered = headlineRegion === 'all'
-      ? stories
-      : stories.filter(story => story?.dominant_region === headlineRegion)
-
-    if (headlineSort === 'region') {
-      return [...filtered].sort((left, right) => {
-        const regionCompare = String(left?.dominant_region || '').localeCompare(String(right?.dominant_region || ''))
-        if (regionCompare !== 0) return regionCompare
-        const importanceDelta = Number(right?.importance_score || 0) - Number(left?.importance_score || 0)
-        if (importanceDelta !== 0) return importanceDelta
-        return String(right?.latest_update || '').localeCompare(String(left?.latest_update || ''))
-      })
-    }
-
-    if (headlineSort === 'most_covered') {
-      return [...filtered].sort((left, right) => {
-        const sourceDelta = Number(right?.source_count || 0) - Number(left?.source_count || 0)
-        if (sourceDelta !== 0) return sourceDelta
-        const articleDelta = Number(right?.article_count || 0) - Number(left?.article_count || 0)
-        if (articleDelta !== 0) return articleDelta
-        return String(right?.latest_update || '').localeCompare(String(left?.latest_update || ''))
-      })
-    }
-
-    if (headlineSort === 'recent') {
-      return [...filtered].sort((left, right) => String(right?.latest_update || '').localeCompare(String(left?.latest_update || '')))
-    }
-
-    return [...filtered].sort((left, right) => {
-      const importanceDelta = Number(right?.importance_score || 0) - Number(left?.importance_score || 0)
-      if (importanceDelta !== 0) return importanceDelta
-      const contradictionDelta = Number(right?.contradiction_count || 0) - Number(left?.contradiction_count || 0)
-      if (contradictionDelta !== 0) return contradictionDelta
-      return String(right?.latest_update || '').localeCompare(String(left?.latest_update || ''))
-    })
-  }, [canonicalEvents, headlineRegion, headlineSort])
-
-  const headlineRegions = useMemo(() => {
-    return Array.from(
-      new Set(
-        canonicalEvents
-          .map(event => {
-            const payload = event?.payload || {}
-            return String(
-              event?.geo_region ||
-              event?.geo_country ||
-              payload?.dominant_region ||
-              ''
-            ).trim().toLowerCase()
-          })
-          .filter(region => region && region !== 'global')
-      )
-    ).sort((left, right) => left.localeCompare(right))
-  }, [canonicalEvents])
-
-  const headlines = canonicalStories
-  const headlinesLoaded = headlines.length > 0
-  const headlinesLoading = canonicalEventsLoading
-  const headlinesError = canonicalEventsError
-    ? friendlyErrorMessage(canonicalEventsError, 'canonical event feed')
-    : null
-
-  const healthFetchErrorText = toErrorText(healthFetchError, 'health status')
-  const mapAttentionErrorText = toErrorText(mapAttentionError, 'map attention')
-  const entitySignalsErrorText = toErrorText(entitySignalsError, 'entity signals')
-  const instabilityErrorText = toErrorText(instabilityError, 'instability index')
-  const correlationErrorText = toErrorText(correlationError, 'signal convergence')
-  const predictionLedgerErrorText = toErrorText(predictionLedgerError, 'prediction ledger')
-  const beforeNewsErrorText = toErrorText(beforeNewsError, 'before-news archive')
-  const canonicalEventsErrorText = toErrorText(canonicalEventsError, 'canonical event feed')
-  const contradictionsErrorText = toErrorText(contradictionsError, 'narrative fractures')
-
-  const [deepDive, setDeepDive] = useState(null)
-  const [briefingPage, setBriefingPage] = useState(null)
-  const [selectedContradiction, setSelectedContradiction] = useState(null)
-  const [timelinePage, setTimelinePage] = useState(null)
-  const [foresightPage, setForesightPage] = useState(null)
-  const [eventDebugPage, setEventDebugPage] = useState(null)
-
-  const lastScrollY = useRef(0)
-  const localTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
-
-  useEffect(() => {
-    const handleWindowError = event => {
-      console.error('Unhandled frontend error', event.error || event.message)
-    }
-
-    const handleUnhandledRejection = event => {
-      console.error('Unhandled promise rejection', event.reason)
-    }
-
-    window.addEventListener('error', handleWindowError)
-    window.addEventListener('unhandledrejection', handleUnhandledRejection)
-
-    return () => {
-      window.removeEventListener('error', handleWindowError)
-      window.removeEventListener('unhandledrejection', handleUnhandledRejection)
-    }
-  }, [])
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000)
@@ -325,206 +254,143 @@ export default function App() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  function loadHeadlines() {
-    // Expose a compatible API for components: trigger canonical feed refresh.
-    refetchCanonicalEvents()
-  }
-
-  async function loadMapAttention(windowParam = mapAttentionWindow) {
-    setMapAttentionWindow(windowParam)
-    try {
-      const res = await refetchMapAttention()
-      const data = res?.data ?? res
-      const hotspots = Array.isArray(data?.hotspots) ? data.hotspots : []
-      setSelectedMapHotspot(current =>
-        current && hotspots.some(item => item.hotspot_id === current)
-          ? current
-          : hotspots[0]?.hotspot_id || null
-      )
-    } catch {
-      // mapAttentionError is provided by the hook; no local error state needed
-    }
-  }
-
   useEffect(() => {
-    if (!selectedMapHotspot && mapHotspots.length) {
-      setSelectedMapHotspot(mapHotspots[0]?.hotspot_id || null)
+    const state = location.state || null
+    if (location.pathname.startsWith('/deep-dive')) setDeepDive(state)
+    if (location.pathname.startsWith('/briefing/')) setBriefingPage(state)
+    if (location.pathname === '/contradiction') setSelectedContradiction(state?.event || null)
+    if (location.pathname === '/timeline') setTimelinePage(state)
+    if (location.pathname.startsWith('/foresight/')) setForesightPage(state)
+    if (location.pathname.startsWith('/debug/')) setEventDebugPage(state)
+  }, [location.pathname, location.state])
+
+  const contextValue = useMemo(
+    () => ({
+      deepDive,
+      setDeepDive,
+      briefingPage,
+      setBriefingPage,
+      selectedContradiction,
+      setSelectedContradiction,
+      timelinePage,
+      setTimelinePage,
+      foresightPage,
+      setForesightPage,
+      eventDebugPage,
+      setEventDebugPage,
+    }),
+    [
+      briefingPage,
+      deepDive,
+      eventDebugPage,
+      foresightPage,
+      selectedContradiction,
+      timelinePage,
+    ]
+  )
+
+  const lastUpdated = useMemo(() => {
+    try {
+      return healthSnapshot?.runtime?.corpus?.latest_published_at
+        ? parseDateValue(healthSnapshot.runtime.corpus.latest_published_at)
+        : null
+    } catch {
+      return null
     }
-  }, [mapHotspots, selectedMapHotspot])
-
-  function openStoryDeepDive(story) {
-    const sourceUrls = (story.sources || [])
-      .map(s => s?.url)
-      .filter(u => typeof u === 'string' && u.startsWith('http'))
-      .slice(0, 12)
-
-    const qt = normalizeStoryTopicForQuery(story.topic)
-
-    setDeepDive({
-      title: story.headline,
-      query: `Give me a comprehensive intelligence deep-dive on this story: "${story.headline}". Cover: what is actually happening beyond the surface narrative, key actors and their motivations, what mainstream media is missing or underreporting, historical parallels, geopolitical implications, and your probability assessments for how this develops. Be direct, analytical, and specific.`,
-      queryTopic: qt || undefined,
-      storyEventId: story.event_id || undefined,
-      sourceUrls: sourceUrls.length ? sourceUrls : undefined,
-      regionContext: story.dominant_region ? formatRegionLabel(story.dominant_region) : undefined,
-    })
-  }
-
-  function openEventDebug(story) {
-    const eventId = (story?.event_id || '').trim()
-    if (!eventId) return
-    setEventDebugPage({
-      eventId,
-      label: story?.headline || story?.label || eventId,
-    })
-  }
-
-  function openHotspotClusterAnalysis(hotspot, queryTopic) {
-    if (!hotspot) return
-
-    const urls = collectHotspotSourceUrls(hotspot)
-
-    setDeepDive({
-      title: `Cluster: ${hotspot.location || hotspot.label || 'Hotspot'}`,
-      query: buildHotspotClusterAnalysisQuery(hotspot),
-      queryTopic,
-      regionContext: [hotspot.location || hotspot.label, hotspot.admin1, hotspot.country]
-        .filter(Boolean)
-        .join(', ') || undefined,
-      hotspotId: hotspot.hotspot_id || undefined,
-      attentionWindow: mapAttentionWindow,
-      sourceUrls: urls.length ? urls : undefined,
-    })
-  }
-
-  const selectedHotspot =
-    mapHotspots.find(item => item.hotspot_id === selectedMapHotspot) ||
-    mapHotspots[0] ||
-    null
+  }, [healthSnapshot])
 
   function toggleThemeMode() {
     setThemeMode(current => (current === 'dark' ? 'light' : 'dark'))
   }
 
+  function toErrorText(error, fallback) {
+    if (!error) return null
+    if (typeof error === 'string') return error
+    if (error instanceof Error && error.message) return error.message
+    if (error?.response?.data?.detail) return String(error.response.data.detail)
+    return fallback || 'An unexpected error occurred.'
+  }
+
   return (
-    <div style={{ background: C.bg, minHeight: '100vh', color: C.textPrimary }}>
-      <style>{buildAppStyles()}</style>
+    <AppContext.Provider value={contextValue}>
+      <div style={{ background: C.bg, minHeight: '100vh', color: C.textPrimary }}>
+        <style>{buildAppStyles()}</style>
 
-      <HomeDashboard
-        time={time}
-        headerVisible={headerVisible}
-        animationPhase={animationPhase}
-        localTimeZone={localTimeZone}
-        lastUpdated={lastUpdated}
-        healthFetchError={healthFetchErrorText}
-        healthSnapshot={healthSnapshot}
-        mapAttention={mapAttention}
-        mapAttentionError={mapAttentionErrorText}
-        mapAttentionLoading={mapAttentionLoading}
-        selectedMapHotspot={selectedMapHotspot}
-        selectedHotspot={selectedHotspot}
-        loadMapAttention={loadMapAttention}
-        handleMapHotspotSelect={setSelectedMapHotspot}
-        setBriefingPage={setBriefingPage}
-        openHotspotClusterAnalysis={openHotspotClusterAnalysis}
-        headlines={headlines}
-        headlinesLoading={headlinesLoading}
-        headlinesLoaded={headlinesLoaded}
-        headlinesError={headlinesError}
-        headlineSort={headlineSort}
-        headlineRegion={headlineRegion}
-        headlineRegions={headlineRegions}
-        setHeadlineSort={setHeadlineSort}
-        setHeadlineRegion={setHeadlineRegion}
-        loadHeadlines={loadHeadlines}
-        openStoryDeepDive={openStoryDeepDive}
-        openEventDebug={openEventDebug}
-        canonicalEvents={canonicalEvents}
-        canonicalEventsError={canonicalEventsErrorText}
-        canonicalEventsLoading={canonicalEventsLoading}
-        topics={TOPICS}
-        setForesightPage={setForesightPage}
-        instabilityData={instabilityData}
-        instabilityLoading={instabilityLoading}
-        instabilityError={instabilityErrorText}
-        correlationData={correlationData}
-        correlationLoading={correlationLoading}
-        correlationError={correlationErrorText}
-        setDeepDive={setDeepDive}
-        contradictionEvents={contradictionEvents}
-        contradictionsLoading={contradictionsLoading}
-        contradictionsError={contradictionsErrorText}
-        setSelectedContradiction={setSelectedContradiction}
-        theaters={THEATERS}
-        setTimelinePage={setTimelinePage}
-        entitySignals={entitySignals}
-        entitySignalsError={entitySignalsErrorText}
-        themeMode={themeMode}
-        onToggleThemeMode={toggleThemeMode}
-      />
-
-      {deepDive && (
-        <Suspense fallback={<OverlayFallback />}>
-          <DeepDive
-            {...deepDive}
-            entityName={deepDive.entityName || deepDive.entity}
-            onClose={() => setDeepDive(null)}
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <HomeDashboard
+                time={time}
+                headerVisible={headerVisible}
+                animationPhase={animationPhase}
+                localTimeZone={localTimeZone}
+                lastUpdated={lastUpdated}
+                healthSnapshot={healthSnapshot}
+                healthFetchError={toErrorText(healthFetchError, 'Unable to load health status.')}
+                themeMode={themeMode}
+                onToggleThemeMode={toggleThemeMode}
+              />
+            }
           />
-        </Suspense>
-      )}
 
-      {briefingPage && (
-        <Suspense fallback={<OverlayFallback />}>
-          {briefingPage.kind === 'conflict' ? (
-            <ConflictBriefingPage
-              topic={briefingPage}
-              hotspot={selectedHotspot}
-              hotspots={mapHotspots}
-              contradictionEvents={contradictionEvents}
-              windowId={mapAttentionWindow}
-              onClose={() => setBriefingPage(null)}
-              onOpenContradiction={event => setSelectedContradiction(event)}
-            />
-          ) : (
-            <BriefingPage topic={briefingPage} onClose={() => setBriefingPage(null)} />
-          )}
-        </Suspense>
-      )}
-
-      {selectedContradiction && (
-        <Suspense fallback={<OverlayFallback />}>
-          <ContradictionOverlay
-            event={selectedContradiction}
-            onClose={() => setSelectedContradiction(null)}
+          <Route
+            path="/briefing/:topic"
+            element={
+              <Suspense fallback={<OverlayFallback />}>
+                <BriefingRoute />
+              </Suspense>
+            }
           />
-        </Suspense>
-      )}
 
-      {timelinePage && (
-        <Suspense fallback={<OverlayFallback />}>
-          <TimelinePage query={timelinePage} onClose={() => setTimelinePage(null)} />
-        </Suspense>
-      )}
-
-      {foresightPage && (
-        <Suspense fallback={<OverlayFallback />}>
-          <ForesightPage
-            mode={foresightPage}
-            records={foresightPage === 'predictions' ? predictionLedger : beforeNewsArchive}
-            error={foresightPage === 'predictions' ? predictionLedgerErrorText : beforeNewsErrorText}
-            onClose={() => setForesightPage(null)}
+          <Route
+            path="/deep-dive"
+            element={
+              <Suspense fallback={<OverlayFallback />}>
+                <DeepDiveRoute />
+              </Suspense>
+            }
           />
-        </Suspense>
-      )}
 
-      {eventDebugPage && (
-        <Suspense fallback={<OverlayFallback />}>
-          <EventDebugOverlay
-            eventId={eventDebugPage.eventId}
-            onClose={() => setEventDebugPage(null)}
+          <Route
+            path="/timeline"
+            element={
+              <Suspense fallback={<OverlayFallback />}>
+                <TimelineRoute />
+              </Suspense>
+            }
           />
-        </Suspense>
-      )}
-    </div>
+
+          <Route
+            path="/foresight/:mode"
+            element={
+              <Suspense fallback={<OverlayFallback />}>
+                <ForesightRoute />
+              </Suspense>
+            }
+          />
+
+          <Route
+            path="/contradiction"
+            element={
+              <Suspense fallback={<OverlayFallback />}>
+                <ContradictionRoute />
+              </Suspense>
+            }
+          />
+
+          <Route
+            path="/debug/:eventId"
+            element={
+              <Suspense fallback={<OverlayFallback />}>
+                <EventDebugRoute />
+              </Suspense>
+            }
+          />
+
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </div>
+    </AppContext.Provider>
   )
 }

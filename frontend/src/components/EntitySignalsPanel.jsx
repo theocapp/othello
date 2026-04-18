@@ -1,0 +1,23 @@
+import { C } from '../constants/theme'
+import useEntitySignals from '../hooks/useEntitySignals'
+import { friendlyErrorMessage } from '../lib/formatters'
+
+export default function EntitySignalsPanel({ onOpenEntityAnalysis }) {
+  const { data: entitySignals, error } = useEntitySignals()
+  const entitySignalsError = error ? friendlyErrorMessage(error, 'entity signals') : null
+  const entitySpikes = Array.isArray(entitySignals?.spikes) ? entitySignals.spikes : []
+  const topEntities = Array.isArray(entitySignals?.top_entities) ? entitySignals.top_entities : []
+  const surgingEntities = entitySpikes.filter(e => e?.trend === 'RISING' || e?.trend === 'NEW').slice(0, 4)
+
+  return (
+    <div id="tracked-entities" style={{ border: `1px solid ${C.border}`, background: C.bgRaised, padding: '1rem' }}>
+      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.55rem', color: C.silver, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '1rem' }}>Tracked Entities</div>
+      <div style={{ height: '1px', background: C.border, marginBottom: '0.5rem' }} />
+      {!entitySignals && (entitySignalsError ? <div style={{ padding: '0.8rem 0.2rem', borderBottom: `1px solid ${C.border}`, fontFamily: "'JetBrains Mono', monospace", fontSize: '0.56rem', color: C.textSecondary, lineHeight: 1.6 }}>{entitySignalsError}</div> : <div>{[0, 1, 2, 3, 4].map(i => <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0.2rem', borderBottom: `1px solid ${C.border}` }}><div className="skeleton" style={{ height: '0.75rem', width: '55%' }} /><div className="skeleton" style={{ height: '0.75rem', width: '15%' }} /></div>)}</div>)}
+      {entitySignals && <div>
+        {surgingEntities.length > 0 && <div style={{ marginBottom: '1.25rem' }}><div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.2rem', marginBottom: '0.1rem' }}><div style={{ width: 4, height: 4, borderRadius: '50%', background: C.red }} /><div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.48rem', color: C.red, letterSpacing: '0.15em' }}>SURGING</div></div>{surgingEntities.map((e, i) => <div key={i} className="entity-item" onClick={() => onOpenEntityAnalysis?.(e.entity, `Give me a comprehensive intelligence analysis of ${e.entity}. Who or what are they, what role are they playing in current geopolitical events, why are they suddenly getting increased attention in the news, what are their motivations and capabilities, and what should we expect from them in the coming weeks? Be specific and analytical.`)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0.2rem', borderBottom: `1px solid ${C.border}`, cursor: 'pointer', borderRadius: 2 }}><div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><span style={{ fontSize: '0.85rem', color: C.textPrimary, fontFamily: "'Source Serif 4', serif" }}>{e.entity}</span><span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.44rem', color: C.textMuted, letterSpacing: '0.06em' }}>{e.type}</span></div><span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.52rem', color: C.silver, flexShrink: 0 }}>{e.trend === 'NEW' ? 'NEW' : `${e.spike_ratio}×`}</span></div>)}</div>}
+        {topEntities.length > 0 && <div><div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.48rem', color: C.textSecondary, letterSpacing: '0.12em', padding: '0.4rem 0.2rem', marginBottom: '0.1rem' }}>MOST DISCUSSED</div>{topEntities.slice(0, 6).map((e, i) => <div key={i} className="entity-item" onClick={() => onOpenEntityAnalysis?.(e.entity, `Give me a comprehensive intelligence analysis of ${e.entity}. Who or what are they, what role are they currently playing in world events, what are their key actions and motivations right now, and what should we be watching for? Be direct and analytically precise.`)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0.2rem', borderBottom: `1px solid ${C.border}`, cursor: 'pointer', borderRadius: 2 }}><div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.48rem', color: C.textMuted, width: '0.9rem' }}>{i + 1}</span><span style={{ fontSize: '0.85rem', color: C.textSecondary, fontFamily: "'Source Serif 4', serif" }}>{e.entity}</span></div><span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.5rem', color: C.textMuted, flexShrink: 0 }}>{e.mentions}</span></div>)}</div>}
+      </div>}
+    </div>
+  )
+}

@@ -44,7 +44,7 @@ def deduplicate_cross_dataset_events(
     """
     from datetime import date
 
-    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    cutoff = time.time() - (max(1, int(days)) * 86400)
 
     with _connect() as conn:
         acled_rows = conn.execute(

@@ -66,19 +66,54 @@ export async function fetchEvaluationScorecard({
 }
 
 export async function fetchRegionAttention(windowOrParams = '24h') {
-  let params
-  if (typeof windowOrParams === 'string') {
-    params = { window: windowOrParams }
-  } else if (windowOrParams && typeof windowOrParams === 'object') {
-    params = windowOrParams
-  } else {
-    params = { window: '24h' }
+  const windowToDays = windowId => {
+    switch (String(windowId || '').toLowerCase()) {
+      case '24h':
+        return 1
+      case '7d':
+        return 7
+      case '30d':
+        return 30
+      case '90d':
+        return 90
+      case '365d':
+        return 365
+      default:
+        return 7
+    }
   }
 
-  const response = await api.get('/coverage/map', {
+  let params
+  let windowLabel = '24h'
+  if (typeof windowOrParams === 'string') {
+    windowLabel = windowOrParams
+    params = { days: windowToDays(windowOrParams), limit: 500 }
+  } else if (windowOrParams && typeof windowOrParams === 'object') {
+    windowLabel = String(windowOrParams.window || 'custom')
+    if (windowOrParams.days != null) {
+      params = { days: Number(windowOrParams.days), limit: 500 }
+    } else {
+      const start = windowOrParams.start ? new Date(windowOrParams.start) : null
+      const end = windowOrParams.end ? new Date(windowOrParams.end) : null
+      if (start instanceof Date && !Number.isNaN(start.getTime()) && end instanceof Date && !Number.isNaN(end.getTime())) {
+        const ms = Math.max(0, end.getTime() - start.getTime())
+        const days = Math.max(1, Math.ceil(ms / (24 * 60 * 60 * 1000)))
+        params = { days, limit: 500 }
+      } else {
+        params = { days: 7, limit: 500 }
+      }
+    }
+  } else {
+    params = { days: 1, limit: 500 }
+  }
+
+  const response = await api.get('/events/canonical/map', {
     params: compactParams(params),
   })
-  return response.data
+  return {
+    ...response.data,
+    window: windowLabel,
+  }
 }
 
 export async function fetchInstability(days = 3) {

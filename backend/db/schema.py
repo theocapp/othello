@@ -572,6 +572,39 @@ def init_db():
         conn.execute(
             "ALTER TABLE canonical_events ADD COLUMN IF NOT EXISTS importance_reasons JSONB NOT NULL DEFAULT '[]'::jsonb"
         )
+        conn.execute(
+            "ALTER TABLE canonical_events ADD COLUMN IF NOT EXISTS resolved_title TEXT"
+        )
+        conn.execute(
+            "ALTER TABLE canonical_events ADD COLUMN IF NOT EXISTS resolved_summary TEXT"
+        )
+        conn.execute(
+            "ALTER TABLE canonical_events ADD COLUMN IF NOT EXISTS event_date_best TIMESTAMPTZ"
+        )
+        conn.execute(
+            "ALTER TABLE canonical_events ADD COLUMN IF NOT EXISTS geo_admin1 TEXT"
+        )
+        conn.execute(
+            "ALTER TABLE canonical_events ADD COLUMN IF NOT EXISTS geo_location TEXT"
+        )
+        conn.execute(
+            "ALTER TABLE canonical_events ADD COLUMN IF NOT EXISTS actor_primary TEXT"
+        )
+        conn.execute(
+            "ALTER TABLE canonical_events ADD COLUMN IF NOT EXISTS actor_secondary TEXT"
+        )
+        conn.execute(
+            "ALTER TABLE canonical_events ADD COLUMN IF NOT EXISTS geo_precision INTEGER"
+        )
+        conn.execute(
+            "ALTER TABLE canonical_events ADD COLUMN IF NOT EXISTS fatality_total INTEGER NOT NULL DEFAULT 0"
+        )
+        conn.execute("""
+            DELETE FROM canonical_events
+            WHERE geo_country IS NULL
+              AND latitude IS NULL
+              AND event_type IN ('political', 'economic', 'conflict', 'diplomatic', 'legal', 'humanitarian')
+        """)
         conn.execute("""
             CREATE TABLE IF NOT EXISTS event_perspectives (
                 perspective_id TEXT PRIMARY KEY,
@@ -662,6 +695,9 @@ def init_db():
         )
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_canonical_events_status ON canonical_events (status, last_updated_at DESC)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_canonical_events_map_window ON canonical_events (event_date_best DESC, importance_score DESC)"
         )
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_event_perspectives_event ON event_perspectives (event_id, analyzed_at DESC)"

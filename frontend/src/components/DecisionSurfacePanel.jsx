@@ -1,5 +1,7 @@
 import { C } from '../constants/theme'
 import { formatDateTime } from '../lib/formatters'
+import useCanonicalEvents from '../hooks/useCanonicalEvents'
+import { friendlyErrorMessage } from '../lib/formatters'
 
 function num(value, fallback = 0) {
   const parsed = Number(value)
@@ -79,12 +81,18 @@ function EventRow({ event, onOpenEventDebug }) {
 }
 
 export default function DecisionSurfacePanel({
-  canonicalEvents,
-  canonicalEventsLoading,
-  canonicalEventsError,
   onOpenEventDebug,
 }) {
-  const events = canonicalEvents || []
+  const {
+    data: canonicalEventsData,
+    error: canonicalEventsError,
+    isLoading: canonicalEventsLoading,
+  } = useCanonicalEvents({ topic: null, limit: 160 })
+
+  const events = canonicalEventsData?.events || []
+  const canonicalEventsErrorText = canonicalEventsError
+    ? friendlyErrorMessage(canonicalEventsError, 'canonical event feed')
+    : null
   const topImportanceRows = sectionRows(events, topImportance)
   const disputedRows = sectionRows(events, disputed)
   const moverRows = sectionRows(events, movers)
@@ -115,13 +123,13 @@ export default function DecisionSurfacePanel({
         </div>
       )}
 
-      {!canonicalEventsLoading && canonicalEventsError && (
+      {!canonicalEventsLoading && canonicalEventsErrorText && (
         <div style={{ padding: '0.9rem 1rem', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.54rem', color: C.textSecondary }}>
-          {canonicalEventsError}
+          {canonicalEventsErrorText}
         </div>
       )}
 
-      {!canonicalEventsLoading && !canonicalEventsError && (
+      {!canonicalEventsLoading && !canonicalEventsErrorText && (
         <div className="coverage-summary" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '0.85rem', padding: '0.9rem 1rem' }}>
           <div style={{ border: `1px solid ${C.borderMid}`, background: C.bg, padding: '0.6rem 0.7rem' }}>
             <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.46rem', color: C.silver, letterSpacing: '0.12em', marginBottom: '0.35rem' }}>WHAT MATTERS NOW</div>

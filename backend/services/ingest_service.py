@@ -7,7 +7,6 @@ from pathlib import Path
 from fastapi import HTTPException
 
 from analyst import translate_article
-from apply_corrections import apply_corrections
 from cache import clear_headlines
 from chroma import store_articles
 from corpus import (
@@ -50,6 +49,7 @@ from claim_resolution import build_claim_resolution_snapshot
 from narrative_drift import analyze_narrative_drift
 from foresight import load_early_signal_archive, load_prediction_ledger
 from story_materialization import rebuild_materialized_story_clusters
+from services.canonical_events_pipeline import populate_canonical_events
 
 from core.config import (
     CORPUS_WINDOW_HOURS,
@@ -579,6 +579,9 @@ def ingest_all_topics() -> list[dict]:
     ]
     for topic in sparse_topics:
         results.append(ingest_topic(topic))
+    # NOTE: populate_canonical_events is not called here — it uses the sentence
+    # transformer which deadlocks when called from a background thread on macOS.
+    # Use POST /ingest/canonical to refresh canonical events manually.
     return results
 
 
@@ -960,17 +963,17 @@ def run_scheduled_historical_queue_fetch():
 
 
 def run_scheduled_story_materialization():
+    # NOTE: populate_canonical_events is intentionally NOT called here.
+    # The sentence transformer it uses will deadlock uvicorn worker threads on macOS
+    # when invoked from an APScheduler background thread. Trigger it manually via
+    # POST /ingest/canonical instead.
     def _job():
         result = rebuild_materialized_story_clusters(
             topics=TOPICS,
             window_hours=CORPUS_WINDOW_HOURS,
             articles_limit=120,
         )
-        # Apply analyst corrections at the end of clustering cycle
-        corrections_result = apply_corrections()
-        if corrections_result.get("processed"):
-            print(f"Applied analyst corrections: {corrections_result}")
-        return result
+        return {"materialization": result}
 
     return run_exclusive_or_skip(
         STORY_MATERIALIZATION_JOB_LOCK, "story materialization", _job

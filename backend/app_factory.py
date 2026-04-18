@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+import threading
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -51,6 +52,13 @@ def _log_runtime_environment() -> None:
     print(message % fields)
 
 
+def _prewarm_models() -> None:
+    # Intentionally not used — loading the sentence transformer in a background
+    # thread crashes uvicorn on macOS due to tokenizer semaphore conflicts.
+    # The model loads lazily on first use instead.
+    pass
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title="Othello V2 API")
 
@@ -76,8 +84,11 @@ def create_app() -> FastAPI:
 
     @app.on_event("startup")
     def startup() -> None:
+        import os
+        os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
         _log_runtime_environment()
         initialize_runtime()
+        threading.Thread(target=_prewarm_models, daemon=True).start()
         schedule_initial_analytics_warm(scheduler)
         if INTERNAL_SCHEDULER_ENABLED and not scheduler.running:
             scheduler.start()

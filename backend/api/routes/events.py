@@ -9,6 +9,7 @@ from services.analytics_service import (
     get_instability_payload,
 )
 from services.events_service import (
+    get_canonical_map_payload,
     get_canonical_event_debug_payload,
     get_canonical_event_payload,
     get_canonical_events_payload,
@@ -137,6 +138,11 @@ def get_canonical_events_route(
     topic: str | None = None, status: str | None = None, limit: int = 40
 ):
     return get_canonical_events_payload(topic=topic, status=status, limit=limit)
+
+
+@router.get("/events/canonical/map")
+def get_canonical_events_map_route(days: int = 7, limit: int = 500):
+    return get_canonical_map_payload(days=days, limit=limit)
 
 
 @router.get("/events/canonical/{event_id}/perspectives")

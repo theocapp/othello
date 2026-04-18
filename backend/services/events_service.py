@@ -15,6 +15,7 @@ from corpus import (
     load_materialized_story_clusters,
 )
 from services.headlines_service import _build_global_events, _build_topic_events
+from services.canonical_events_pipeline import get_canonical_events_map_payload
 from structured_story_rollups import build_structured_story_clusters
 
 
@@ -81,6 +82,10 @@ def get_canonical_events_payload(
         limit=max(1, min(limit, 200)),
     )
     return {"topic": topic, "status": status, "events": events, "count": len(events)}
+
+
+def get_canonical_map_payload(days: int = 7, limit: int = 500) -> dict:
+    return get_canonical_events_map_payload(days=days, limit=limit)
 
 
 def get_canonical_event_payload(event_id: str) -> dict:

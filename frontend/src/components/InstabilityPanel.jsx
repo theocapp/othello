@@ -1,10 +1,19 @@
 import { C } from '../constants/theme'
+import useInstability from '../hooks/useInstability'
+import { friendlyErrorMessage } from '../lib/formatters'
 
 const LEVEL_COLORS = { critical: '#ef4444', high: '#f97316', elevated: '#fbbf24', low: '#4ade80' }
 const TREND_ARROWS = { rising: '▲', falling: '▼', stable: '—', new: '●' }
 const TREND_COLORS = { rising: '#ef4444', falling: '#4ade80', stable: '#7d8794', new: '#60a5fa' }
 
-export default function InstabilityPanel({ data, loading, error, onAnalyze }) {
+export default function InstabilityPanel({ onAnalyze }) {
+  const {
+    data,
+    error,
+    isLoading: loading,
+  } = useInstability(3)
+
+  const errorText = error ? friendlyErrorMessage(error, 'instability index') : null
   const countries = data?.countries || []
   const topCountries = countries.slice(0, 12)
 
@@ -20,9 +29,9 @@ export default function InstabilityPanel({ data, loading, error, onAnalyze }) {
       <div style={{ height: '1px', background: C.border, marginBottom: '0.5rem' }} />
 
       {loading && <div>{[0, 1, 2, 3, 4].map(i => <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.55rem 0.2rem', borderBottom: `1px solid ${C.border}` }}><div className="skeleton" style={{ height: '0.75rem', width: '50%' }} /><div className="skeleton" style={{ height: '0.75rem', width: '12%' }} /></div>)}</div>}
-      {!loading && error && <div style={{ padding: '0.8rem 0.2rem', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.56rem', color: C.textSecondary }}>{error}</div>}
-      {!loading && !error && topCountries.length === 0 && <div style={{ padding: '0.8rem 0.2rem', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.56rem', color: C.textSecondary }}>No instability data available yet — structured events may still be ingesting.</div>}
-      {!loading && !error && topCountries.map((country, i) => (
+      {!loading && errorText && <div style={{ padding: '0.8rem 0.2rem', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.56rem', color: C.textSecondary }}>{errorText}</div>}
+      {!loading && !errorText && topCountries.length === 0 && <div style={{ padding: '0.8rem 0.2rem', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.56rem', color: C.textSecondary }}>No instability data available yet — structured events may still be ingesting.</div>}
+      {!loading && !errorText && topCountries.map((country, i) => (
         <div key={country.country} className="theater-row" onClick={() => onAnalyze?.(country)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.55rem 0.2rem', borderBottom: `1px solid ${C.border}`, cursor: 'pointer', borderRadius: 2 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0 }}>
             <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.46rem', color: C.textMuted, width: '1rem', textAlign: 'right', flexShrink: 0 }}>{i + 1}</div>
@@ -36,7 +45,7 @@ export default function InstabilityPanel({ data, loading, error, onAnalyze }) {
           </div>
         </div>
       ))}
-      {!loading && !error && countries.length > 12 && <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.44rem', color: C.textMuted, padding: '0.6rem 0.2rem', letterSpacing: '0.06em' }}>+ {countries.length - 12} more countries tracked</div>}
+      {!loading && !errorText && countries.length > 12 && <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.44rem', color: C.textMuted, padding: '0.6rem 0.2rem', letterSpacing: '0.06em' }}>+ {countries.length - 12} more countries tracked</div>}
     </div>
   )
 }

@@ -35,6 +35,23 @@ def trigger_gdelt_backfill(
     return trigger_backfill_payload(topic)
 
 
+@router.post("/ingest/acled")
+def trigger_acled_ingest(_: None = Depends(require_write_access_dep)):
+    from ingestion.acled_ingestion import ingest_acled_recent
+    from services.canonical_events_pipeline import populate_canonical_events
+
+    result = ingest_acled_recent()
+    canonical = populate_canonical_events(days=7, limit=500)
+    return {"acled": result, "canonical": canonical}
+
+
+@router.post("/ingest/canonical")
+def trigger_canonical_refresh(_: None = Depends(require_write_access_dep)):
+    from services.canonical_events_pipeline import populate_canonical_events
+
+    return populate_canonical_events(days=7, limit=500)
+
+
 @router.get("/sources/registry")
 def source_registry():
     return source_registry_payload()

@@ -1,4 +1,6 @@
 import { C } from '../constants/theme'
+import useCorrelations from '../hooks/useCorrelations'
+import { friendlyErrorMessage } from '../lib/formatters'
 
 const TREND_ARROWS = { rising: '▲', falling: '▼', stable: '—', new: '●' }
 const TREND_COLORS = { rising: '#ef4444', falling: '#4ade80', stable: '#7d8794', new: '#60a5fa' }
@@ -12,7 +14,13 @@ const CONVERGENCE_COLORS = {
   multi_signal: '#60a5fa',
 }
 
-export default function CorrelationPanel({ data, loading, error, onAnalyze }) {
+export default function CorrelationPanel({ onAnalyze }) {
+  const {
+    data,
+    error,
+    isLoading: loading,
+  } = useCorrelations(3)
+  const errorText = error ? friendlyErrorMessage(error, 'signal convergence') : null
   const cards = Array.isArray(data?.cards) ? data.cards : []
 
   return (
@@ -26,9 +34,9 @@ export default function CorrelationPanel({ data, loading, error, onAnalyze }) {
       </div>
       <div style={{ height: '1px', background: C.border, marginBottom: '0.5rem' }} />
       {loading && <div>{[0, 1, 2].map(i => <div key={i} style={{ padding: '0.75rem 0.2rem', borderBottom: `1px solid ${C.border}` }}><div className="skeleton" style={{ height: '0.8rem', width: '70%', marginBottom: '0.35rem' }} /><div className="skeleton" style={{ height: '0.55rem', width: '90%' }} /></div>)}</div>}
-      {!loading && error && <div style={{ padding: '0.8rem 0.2rem', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.56rem', color: C.textSecondary }}>{error}</div>}
-      {!loading && !error && cards.length === 0 && <div style={{ padding: '0.8rem 0.2rem', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.56rem', color: C.textSecondary }}>No cross-domain convergences detected in the current window.</div>}
-      {!loading && !error && cards.slice(0, 8).map(card => (
+      {!loading && errorText && <div style={{ padding: '0.8rem 0.2rem', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.56rem', color: C.textSecondary }}>{errorText}</div>}
+      {!loading && !errorText && cards.length === 0 && <div style={{ padding: '0.8rem 0.2rem', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.56rem', color: C.textSecondary }}>No cross-domain convergences detected in the current window.</div>}
+      {!loading && !errorText && cards.slice(0, 8).map(card => (
         <div key={card.country} className="theater-row" onClick={() => onAnalyze?.(card)} style={{ padding: '0.7rem 0.2rem', borderBottom: `1px solid ${C.border}`, cursor: 'pointer', borderRadius: 2 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

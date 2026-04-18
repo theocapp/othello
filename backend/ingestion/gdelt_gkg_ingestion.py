@@ -27,13 +27,14 @@ import re
 import time
 import zipfile
 from datetime import datetime, timedelta, timezone
+from urllib.parse import urlparse
 
 import os
 
 import requests
 import urllib3
 
-from corpus import upsert_structured_events
+from corpus import upsert_historical_url_queue, upsert_structured_events
 from db.events_repo import deduplicate_cross_dataset_events
 
 # GDELT's data.gdeltproject.org has a hostname mismatch on its cert;
@@ -395,6 +396,44 @@ _FIPS_OVERRIDES: dict[str, str] = {
 COUNTRY_CODE_TO_NAME.update(_FIPS_OVERRIDES)
 
 
+def _queue_urls_for_fetch(urls: list[str], *, discovered_via: str) -> int:
+    now = time.time()
+    records: list[dict] = []
+    seen: set[str] = set()
+    for raw in urls:
+        url = str(raw or "").strip()
+        if not url or not url.startswith("http") or url in seen:
+            continue
+        seen.add(url)
+        domain = urlparse(url).netloc.lower() or None
+        records.append(
+            {
+                "url": url,
+                "canonical_url": url,
+                "title": None,
+                "source_name": domain,
+                "source_domain": domain,
+                "published_at": None,
+                "language": None,
+                "discovered_via": discovered_via,
+                "topic_guess": "geopolitics",
+                "gdelt_query": None,
+                "gdelt_window_start": None,
+                "gdelt_window_end": None,
+                "fetch_status": "pending",
+                "last_attempt_at": None,
+                "attempt_count": 0,
+                "payload": {
+                    "queued_from": discovered_via,
+                    "queued_at": now,
+                    "url": url,
+                    "source_domain": domain,
+                },
+            }
+        )
+    return upsert_historical_url_queue(records)
+
+
 def _get_recent_update_urls(count: int = 4) -> list[str]:
     """Fetch the GDELT last-update manifest and build a list of export CSV URLs."""
     resp = requests.get(
@@ -534,6 +573,12 @@ def _parse_events_csv(zip_bytes: bytes) -> list[dict]:
                     goldstein, num_mentions, num_articles = 0.0, 1, 1
 
                 source_url = row[_C_SOURCE_URL].strip()
+                raw_source_urls = [
+                    value.strip()
+                    for value in re.split(r"[\s,;|]+", source_url)
+                    if value and value.strip().startswith("http")
+                ]
+                source_urls = list(dict.fromkeys(raw_source_urls))
                 event_id_raw = row[_C_EVENT_ID].strip()
                 material = f"gdelt_events|{event_id_raw}|{lat:.4f}|{lon:.4f}"
                 event_id = "gevt-" + hashlib.sha256(material.encode()).hexdigest()[:18]
@@ -580,7 +625,7 @@ def _parse_events_csv(zip_bytes: bytes) -> list[dict]:
                         "actor_secondary": None,
                         "fatalities": None,
                         "source_count": num_articles,
-                        "source_urls": [source_url] if source_url else [],
+                        "source_urls": source_urls,
                         "summary": summary_line[:220],
                         "payload": {
                             "event_code": event_code,
@@ -647,6 +692,16 @@ def ingest_gdelt_gkg_recent(hours: int = 24) -> dict:
     """Fetch recent GDELT events and store them in structured_events."""
     events, meta = fetch_gdelt_gkg_events(hours=hours)
     inserted = upsert_structured_events(events)
+    queued_urls: list[str] = []
+    seen_queued_urls: set[str] = set()
+    for event in events:
+        for url in event.get("source_urls") or []:
+            normalized = str(url or "").strip()
+            if not normalized or normalized in seen_queued_urls:
+                continue
+            seen_queued_urls.add(normalized)
+            queued_urls.append(normalized)
+    queued = _queue_urls_for_fetch(queued_urls, discovered_via="gdelt-gkg-structured") if queued_urls else 0
     dedup_result = deduplicate_cross_dataset_events(days=3)
     print(f"[acled] Cross-dataset dedup: {dedup_result}")
     return {
@@ -654,6 +709,7 @@ def ingest_gdelt_gkg_recent(hours: int = 24) -> dict:
         "hours": hours,
         "fetched": meta["fetched"],
         "inserted_or_updated": inserted,
+        "queued_for_fetch": queued,
         "errors": meta["errors"],
         "files_attempted": meta.get("files_attempted", 0),
     }

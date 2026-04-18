@@ -8,16 +8,59 @@ was kept intact to preserve behavior.
 import os
 import time
 from datetime import datetime, timedelta, timezone
+from urllib.parse import urlparse
 
 import requests
 
-from corpus import get_source_registry, upsert_structured_events
+from corpus import (
+    get_source_registry,
+    upsert_historical_url_queue,
+    upsert_structured_events,
+)
 from db.events_repo import deduplicate_cross_dataset_events
 
 ACLED_AUTH_URL = "https://acleddata.com/oauth/token"
 ACLED_EVENTS_URL = "https://acleddata.com/api/acled/read"
 
 _token_cache = {"access_token": None, "expires_at": 0.0}
+
+
+def _queue_urls_for_fetch(urls: list[str], *, discovered_via: str) -> int:
+    now = time.time()
+    seen: set[str] = set()
+    records: list[dict] = []
+    for raw in urls:
+        url = str(raw or "").strip()
+        if not url or not url.startswith("http") or url in seen:
+            continue
+        seen.add(url)
+        domain = urlparse(url).netloc.lower() or None
+        records.append(
+            {
+                "url": url,
+                "canonical_url": url,
+                "title": None,
+                "source_name": domain,
+                "source_domain": domain,
+                "published_at": None,
+                "language": None,
+                "discovered_via": discovered_via,
+                "topic_guess": "geopolitics",
+                "gdelt_query": None,
+                "gdelt_window_start": None,
+                "gdelt_window_end": None,
+                "fetch_status": "pending",
+                "last_attempt_at": None,
+                "attempt_count": 0,
+                "payload": {
+                    "queued_from": discovered_via,
+                    "queued_at": now,
+                    "url": url,
+                    "source_domain": domain,
+                },
+            }
+        )
+    return upsert_historical_url_queue(records)
 
 
 def _session() -> requests.Session:
@@ -240,6 +283,16 @@ def ingest_acled_recent(days: int = 2, limit: int = 500) -> dict:
         raise RuntimeError("ACLED source is not present in source_registry.")
     events, meta = fetch_acled_events(days=days, limit=limit)
     inserted = upsert_structured_events(events)
+    queued_urls: list[str] = []
+    seen_queued_urls: set[str] = set()
+    for event in events:
+        for url in event.get("source_urls") or []:
+            normalized = str(url or "").strip()
+            if not normalized or normalized in seen_queued_urls:
+                continue
+            seen_queued_urls.add(normalized)
+            queued_urls.append(normalized)
+    queued = _queue_urls_for_fetch(queued_urls, discovered_via="acled-structured") if queued_urls else 0
     dedup_result = deduplicate_cross_dataset_events(days=3)
     print(f"[acled] Cross-dataset dedup: {dedup_result}")
     return {
@@ -250,4 +303,5 @@ def ingest_acled_recent(days: int = 2, limit: int = 500) -> dict:
         "fetched": len(events),
         "raw_records": meta["raw_records"],
         "inserted_or_updated": inserted,
+        "queued_for_fetch": queued,
     }
