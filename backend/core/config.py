@@ -2,9 +2,15 @@ import os
 import re
 from pathlib import Path
 
-from dotenv import load_dotenv
+from dotenv import dotenv_values, load_dotenv
 
-load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=False)
+_env_path = Path(__file__).resolve().parents[1] / ".env"
+load_dotenv(_env_path, override=False)
+# Fill in keys that exist in .env but are empty strings in the environment
+# (e.g. shell exports ANTHROPIC_API_KEY="" which blocks load_dotenv override=False)
+for _k, _v in dotenv_values(_env_path).items():
+    if _v and not os.environ.get(_k):
+        os.environ[_k] = _v
 
 
 def split_csv_env(value: str | None) -> list[str]:

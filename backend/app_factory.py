@@ -1,5 +1,6 @@
 import logging
 import os
+import socket
 import sys
 import threading
 
@@ -14,8 +15,24 @@ from api.routes.headlines import router as headlines_router
 from api.routes.health import router as health_router
 from api.routes.query import router as query_router
 from bootstrap import initialize_runtime
-from core.config import CORS_ORIGINS, INTERNAL_SCHEDULER_ENABLED
+from core.config import ADMIN_API_KEY, CORS_ORIGINS, INTERNAL_SCHEDULER_ENABLED
 from core.scheduler import build_scheduler, schedule_initial_analytics_warm
+
+
+def _bind_is_localhost() -> bool:
+    host = (
+        os.getenv("OTHELLO_HOST")
+        or os.getenv("UVICORN_HOST")
+        or os.getenv("HOST")
+        or "127.0.0.1"
+    ).strip().lower()
+    if host in {"localhost", "127.0.0.1", "::1"}:
+        return True
+    try:
+        resolved = socket.gethostbyname(host)
+    except Exception:
+        return False
+    return resolved.startswith("127.")
 
 
 def _log_runtime_environment() -> None:
@@ -87,6 +104,10 @@ def create_app() -> FastAPI:
         import os
         os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
         _log_runtime_environment()
+        if not ADMIN_API_KEY and not _bind_is_localhost():
+            logging.getLogger("runtime.startup").warning(
+                "OTHELLO_ADMIN_API_KEY is unset while server bind host appears non-local; remote write endpoints will be unauthenticated."
+            )
         initialize_runtime()
         threading.Thread(target=_prewarm_models, daemon=True).start()
         schedule_initial_analytics_warm(scheduler)

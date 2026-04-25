@@ -1,7 +1,7 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 
+from api.models import QueryRequest
 from services.query_service import (
-    QueryRequest,
     chroma_stats_payload,
     query_payload,
     timeline_payload,
@@ -16,7 +16,9 @@ def query(request: QueryRequest):
 
 
 @router.get("/timeline/{query}")
-def get_timeline(query: str):
+def get_timeline(
+    query: str = Query(..., min_length=1, max_length=500, description="Timeline query")
+):
     return timeline_payload(query)
 
 

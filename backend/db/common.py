@@ -1,17 +1,23 @@
+import atexit
 import hashlib
 import json
 import os
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
+from threading import Lock
 from urllib.parse import quote_plus, urlparse
 
 import psycopg
 from psycopg.rows import dict_row
+from psycopg_pool import ConnectionPool
 from dotenv import load_dotenv
 
 # Load environment from backend/.env by default (non-destructive)
 load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=False)
+
+_POOL: ConnectionPool | None = None
+_POOL_LOCK = Lock()
 
 
 def _database_url() -> str | None:
@@ -39,12 +45,42 @@ def _database_url() -> str | None:
 
 @contextmanager
 def _connect():
-    conn = psycopg.connect(_database_url(), row_factory=dict_row)
-    try:
-        yield conn
-        conn.commit()
-    finally:
-        conn.close()
+    with _pool().connection() as conn:
+        try:
+            yield conn
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+
+
+def _pool() -> ConnectionPool:
+    global _POOL
+    if _POOL is not None:
+        return _POOL
+
+    with _POOL_LOCK:
+        if _POOL is not None:
+            return _POOL
+
+        min_size = max(1, int(os.getenv("OTHELLO_PG_POOL_MIN", "5")))
+        max_size = max(min_size, int(os.getenv("OTHELLO_PG_POOL_MAX", "10")))
+        _POOL = ConnectionPool(
+            conninfo=_database_url() or "",
+            min_size=min_size,
+            max_size=max_size,
+            open=True,
+            kwargs={"row_factory": dict_row},
+        )
+        return _POOL
+
+
+@atexit.register
+def _close_pool() -> None:
+    global _POOL
+    if _POOL is not None:
+        _POOL.close()
+        _POOL = None
 
 
 def _canonical_url(url: str) -> str:

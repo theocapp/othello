@@ -149,9 +149,15 @@ def load_briefing(topic: str, ttl: int = 3600) -> dict | None:
     if time.time() - generated_at > ttl:
         return None
 
+    briefing_raw = row[0]
+    try:
+        briefing_val = json.loads(briefing_raw) if briefing_raw else briefing_raw
+    except (json.JSONDecodeError, TypeError):
+        briefing_val = briefing_raw
+
     return {
         "topic": topic,
-        "briefing": row[0],
+        "briefing": briefing_val,
         "sources": json.loads(row[1]),
         "article_count": row[2],
         "generated_at": generated_at,
@@ -161,13 +167,14 @@ def load_briefing(topic: str, ttl: int = 3600) -> dict | None:
 
 def save_briefing(
     topic: str,
-    briefing: str,
+    briefing: str | dict,
     sources: list,
     article_count: int,
     events: list | None = None,
 ):
     _ensure_initialized()
     conn = _connect()
+    briefing_str = json.dumps(briefing) if isinstance(briefing, dict) else briefing
     conn.execute(
         """
         INSERT OR REPLACE INTO briefing_cache (topic, briefing, sources, article_count, generated_at, events)
@@ -175,7 +182,7 @@ def save_briefing(
         """,
         (
             topic,
-            briefing,
+            briefing_str,
             json.dumps(sources),
             article_count,
             time.time(),

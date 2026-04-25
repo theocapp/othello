@@ -552,34 +552,26 @@ def get_articles_by_urls(urls: list[str], *, limit: int = 64) -> dict[str, dict]
     return out
 
 
-def _published_values(topic: str | None = None) -> list[str]:
-    params: list[object] = []
+def _count_articles_since(cutoff: datetime, topic: str | None = None) -> int:
+    clauses = ["a.published_at >= %s"]
+    params: list[object] = [cutoff.astimezone(timezone.utc).isoformat()]
     join = ""
-    where = ""
     if topic:
         join = "JOIN article_topics t ON t.article_url = a.url"
-        where = "WHERE t.topic = %s"
+        clauses.append("t.topic = %s")
         params.append(topic)
+    where = f"WHERE {' AND '.join(clauses)}"
     with _connect() as conn:
-        rows = conn.execute(
+        row = conn.execute(
             f"""
-            SELECT DISTINCT a.url, a.published_at
+            SELECT COUNT(DISTINCT a.url) AS count
             FROM articles a
             {join}
             {where}
             """,
             params,
-        ).fetchall()
-    return [row["published_at"] for row in rows if row["published_at"]]
-
-
-def _count_articles_since(cutoff: datetime, topic: str | None = None) -> int:
-    count = 0
-    for value in _published_values(topic=topic):
-        parsed = _parse_article_timestamp(value)
-        if parsed and parsed >= cutoff:
-            count += 1
-    return count
+        ).fetchone()
+    return int((row["count"] if row else 0) or 0)
 
 
 def get_article_count(topic: str | None = None, hours: int | None = None) -> int:
@@ -609,22 +601,43 @@ def get_article_count(topic: str | None = None, hours: int | None = None) -> int
 
 
 def _topic_time_bounds_python(topic: str | None = None) -> dict:
-    parsed_values = [
-        parsed
-        for parsed in (
-            _parse_article_timestamp(value) for value in _published_values(topic=topic)
-        )
-        if parsed is not None
-    ]
-    if not parsed_values:
+    params: list[object] = []
+    join = ""
+    where = ""
+    if topic:
+        join = "JOIN article_topics t ON t.article_url = a.url"
+        where = "WHERE t.topic = %s"
+        params.append(topic)
+
+    with _connect() as conn:
+        row = conn.execute(
+            f"""
+            SELECT MIN(a.published_at) AS earliest_published_at,
+                   MAX(a.published_at) AS latest_published_at
+            FROM articles a
+            {join}
+            {where}
+            """,
+            params,
+        ).fetchone()
+
+    if not row:
         return {"earliest_published_at": None, "latest_published_at": None}
-    earliest = (
-        min(parsed_values).astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
-    )
-    latest = (
-        max(parsed_values).astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
-    )
-    return {"earliest_published_at": earliest, "latest_published_at": latest}
+
+    def _to_iso_utc(value: str | None) -> str | None:
+        parsed = _parse_article_timestamp(value)
+        if parsed is None:
+            return None
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        else:
+            parsed = parsed.astimezone(timezone.utc)
+        return parsed.isoformat().replace("+00:00", "Z")
+
+    return {
+        "earliest_published_at": _to_iso_utc(row.get("earliest_published_at")),
+        "latest_published_at": _to_iso_utc(row.get("latest_published_at")),
+    }
 
 
 def get_topic_time_bounds(topic: str | None = None) -> dict:
@@ -679,7 +692,6 @@ def upsert_minimal_articles_from_urls(urls: list[str], provider: str = "structur
         return 0
     
     # Batch-check which URLs already exist
-    cap = max(1, min(len(cleaned), 180))
     existing_urls: set[str] = set()
     for idx in range(0, len(cleaned), 180):
         chunk = cleaned[idx : idx + 180]

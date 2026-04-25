@@ -51,6 +51,7 @@ def build_scheduler(
         sync_registry_mirror,
     )
     from services.briefing_service import refresh_snapshot_layer
+    from services.article_event_pipeline import populate_canonical_events_from_articles
 
     scheduler = BackgroundScheduler(
         job_defaults={
@@ -110,6 +111,15 @@ def build_scheduler(
             "interval",
             minutes=STORY_MATERIALIZATION_REFRESH_MINUTES,
             id="materialize_story_clusters",
+        )
+        scheduler.add_job(
+            populate_canonical_events_from_articles,
+            "interval",
+            minutes=30,
+            id="article_event_pipeline",
+            max_instances=1,
+            coalesce=True,
+            kwargs={"days": 3, "limit": 2000},
         )
     if include_translations:
         scheduler.add_job(

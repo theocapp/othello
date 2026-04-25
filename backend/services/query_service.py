@@ -3,9 +3,9 @@
 import os
 import re
 
+from api.models import QueryRequest
 from chroma import get_collection_stats, search_articles
 from fastapi import HTTPException
-from pydantic import BaseModel
 
 from cache import load_headlines
 from corpus import (
@@ -23,16 +23,6 @@ from core.config import (
     REQUEST_ENABLE_VECTOR_SEARCH,
     TOPICS,
 )
-
-
-class QueryRequest(BaseModel):
-    question: str
-    topic: str | None = None
-    region_context: str | None = None
-    hotspot_id: str | None = None
-    story_event_id: str | None = None
-    source_urls: list[str] | None = None
-    attention_window: str | None = None
 
 
 # ---------------------------------------------------------------------------

@@ -270,6 +270,37 @@ def get_recent_structured_events(
     return [_row_to_structured_event(row) for row in rows]
 
 
+def get_recent_canonical_events(days: int = 7, limit: int = 300) -> list[dict]:
+    """Fetch recent canonical events for map display.
+
+    Returns an empty list when canonical events are unavailable in this environment.
+    """
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    try:
+        with _connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT event_id, label, resolved_title, resolved_summary,
+                       event_type, geo_country, geo_admin1, geo_location,
+                       latitude, longitude, event_date_best,
+                       source_count, article_count, importance_score,
+                       article_urls, fatality_total
+                FROM canonical_events
+                WHERE event_date_best >= %s
+                  AND latitude IS NOT NULL
+                  AND longitude IS NOT NULL
+                  AND resolved_title IS NOT NULL
+                  AND resolved_title != ''
+                ORDER BY importance_score DESC, event_date_best DESC
+                LIMIT %s
+                """,
+                (cutoff, limit),
+            ).fetchall()
+    except Exception:
+        return []
+    return [dict(row) for row in rows]
+
+
 def get_structured_event_coordinates_by_ids(event_ids: list[str]) -> dict[str, dict]:
     ids = [str(x).strip() for x in event_ids if x and str(x).strip()]
     if not ids:

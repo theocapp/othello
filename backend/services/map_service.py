@@ -31,6 +31,7 @@ from core.runtime import parse_timestamp as _parse_timestamp
 from corpus import (
     get_articles_by_urls,
     get_articles_with_regions,
+    get_recent_canonical_events,
     get_recent_structured_events,
     get_structured_event_coordinates_by_ids,
     load_materialized_story_clusters,
@@ -45,7 +46,7 @@ from structured_story_rollups import build_map_structured_story_clusters
 # ---------------------------------------------------------------------------
 _MAP_ATTENTION_CACHE = MAP_ATTENTION_CACHE
 _STORY_LOCATION_INDEX_CACHE = STORY_LOCATION_INDEX_CACHE
-_MAP_HOTSPOT_CACHE_SCHEMA_VERSION = "v2"
+_MAP_HOTSPOT_CACHE_SCHEMA_VERSION = "v3"
 
 
 # ---------------------------------------------------------------------------
@@ -748,7 +749,7 @@ def _acled_hotspot_event_copy(event: dict) -> dict:
         if fatal and "fatal" not in title.lower():
             title = f"{title} · {fatal} fatalities"
         title = title[0].upper() + title[1:] if title else title
-    return {"summary": summary, "title": title[:220], "has_narrative": _summary_has_narrative}
+    return {"summary": summary, "title": title[:220], "has_narrative": _summary_has_narrative, "action_label": _incident_action_label()}
 
 
 def _map_headline_for_structured_cluster(cluster: dict, primary_country: str) -> str:
@@ -978,11 +979,37 @@ def _incident_hotspots_from_semantic_clusters(
                 ev_admin1 = None
 
             _ev_dataset = (ev.get("dataset") or "").strip().lower()
-            if _ev_dataset == "gdelt_gkg" and not resolved_title:
-                # GDELT events with no linked article contain only a CAMEO code
-                # and a location — there is no specific event to describe.
-                # Without an article title there is nothing factual to show the user.
-                continue
+            if _ev_dataset == "gdelt_gkg":
+                _gdelt_generic = {
+                    "battles", "fight", "fights", "protests",
+                    "explosions/remote violence", "violence against civilians",
+                    "strategic developments", "coerce", "assault", "reported development",
+                }
+                _sub_lower = (ev.get("sub_event_type") or "").strip().lower()
+                _event_lower = (ev.get("event_type") or "").strip().lower()
+
+                if not resolved_title:
+                    # No article: only allow through if sub_event_type is specific.
+                    if not _sub_lower or _sub_lower in _gdelt_generic or _sub_lower == _event_lower:
+                        continue
+                else:
+                    # Article present: verify it is actually geopolitically relevant.
+                    # GDELT codes local crime, domestic disputes, and sports as conflict
+                    # events — the article title is the ground truth for relevance.
+                    _geo_signals = frozenset({
+                        "war", "conflict", "military", "airstrike", "air strike",
+                        "missile", "troops", "rebel", "militia", "ceasefire",
+                        "casualties", "killed", "wounded", "offensive", "invasion",
+                        "siege", "sanction", "coup", "riot", "hostage",
+                        "terrorist", "massacre", "ethnic", "refugee", "displaced",
+                        "shelling", "bombing", "artillery", "drone", "nuclear",
+                        "protest", "clashes", "forces", "insurgent", "occupation",
+                        "minister", "president", "government", "parliament",
+                        "election", "diplomat", "treaty", "accord", "summit",
+                    })
+                    _article_text = (resolved_title + " " + resolved_summary).lower()
+                    if not any(sig in _article_text for sig in _geo_signals):
+                        continue
 
             if not resolved_title and not generated_has_narrative and fatality_total == 0:
                 # ACLED (and other) events with no linked article and no real narrative
@@ -1011,6 +1038,7 @@ def _incident_hotspots_from_semantic_clusters(
                 "location": ev_location,
                 "event_type": ev.get("event_type"),
                 "sub_event_type": ev.get("sub_event_type"),
+                "display_type": event_copy.get("action_label") or None,
                 "actor_primary": ev.get("actor_primary"),
                 "actor_secondary": ev.get("actor_secondary"),
                 "fatalities": fatality_total,
@@ -1734,6 +1762,106 @@ def _build_story_hotspots(window: str, now: datetime) -> tuple[list[dict], int]:
     return hotspots, story_candidates
 
 
+def _build_canonical_event_hotspots(window: str, now: datetime) -> list[dict]:
+    """Article-derived canonical events as map hotspots (source_kind='article')."""
+    normalized_window = (window or "24h").strip().lower()
+    hours = _attention_window_hours(normalized_window)
+    days = _window_days(normalized_window)
+    cutoff = now - timedelta(hours=hours)
+
+    rows = get_recent_canonical_events(days=min(days, 30), limit=200)
+    hotspots: list[dict] = []
+
+    for row in rows:
+        lat_v, lon_v = row.get("latitude"), row.get("longitude")
+        if lat_v is None or lon_v is None:
+            continue
+        try:
+            lat_f = float(lat_v)
+            lon_f = float(lon_v)
+        except (TypeError, ValueError):
+            continue
+
+        event_dt = _event_datetime_for_hotspot(str(row.get("event_date_best") or ""))
+        if event_dt is None or event_dt < cutoff:
+            continue
+
+        country = " ".join(str(row.get("geo_country") or "").split()).strip() or "Unknown country"
+        admin1 = " ".join(str(row.get("geo_admin1") or "").split()).strip() or None
+        location = " ".join(str(row.get("geo_location") or "").split()).strip() or country
+        title = " ".join(str(row.get("resolved_title") or "").split()).strip()
+        summary = " ".join(str(row.get("resolved_summary") or "").split()).strip()
+        event_type = " ".join(str(row.get("event_type") or "Political").split()).strip() or "Political"
+        source_count = int(row.get("source_count") or 1)
+        article_count = int(row.get("article_count") or 1)
+        fatalities = int(row.get("fatality_total") or 0)
+        importance = float(row.get("importance_score") or 1.0)
+        article_urls = row.get("article_urls") or []
+
+        recency = _hotspot_recency_factor(event_dt, now, hours)
+        attention_score = round(
+            (importance * 0.4)
+            + (source_count * 0.8)
+            + (article_count * 0.3)
+            + (recency * 4.0),
+            2,
+        )
+
+        aspect = "conflict" if event_type.lower() == "conflict" else "political"
+
+        material = f"ce|{row.get('event_id')}|{lat_f:.4f}|{lon_f:.4f}"
+        hotspot_id = hashlib.sha256(material.encode("utf-8")).hexdigest()[:16]
+
+        sample_event = {
+            "event_id": row.get("event_id"),
+            "event_date": str(row.get("event_date_best") or ""),
+            "country": country,
+            "admin1": admin1,
+            "location": location,
+            "event_type": event_type,
+            "fatalities": fatalities,
+            "source_count": source_count,
+            "source_urls": article_urls[:4] if isinstance(article_urls, list) else [],
+            "title": title,
+            "summary": summary or title,
+        }
+
+        hotspots.append(
+            {
+                "hotspot_id": hotspot_id,
+                "label": title[:220],
+                "headline": title[:220],
+                "country": country,
+                "admin1": admin1,
+                "location": location,
+                "latitude": round(lat_f, 4),
+                "longitude": round(lon_f, 4),
+                "event_count": article_count,
+                "fatality_total": fatalities,
+                "source_count": source_count,
+                "attention_score": attention_score,
+                "attention_share": 0.0,
+                "intensity": 0.0,
+                "event_density": 0.0,
+                "fatality_density": 0.0,
+                "cloud_radius": 0.0,
+                "cloud_density": 0.0,
+                "latest_event_date": (
+                    event_dt.isoformat().replace("+00:00", "Z") if event_dt else None
+                ),
+                "event_types": [event_type],
+                "aspect": aspect,
+                "sample_locations": [location],
+                "story_region": _world_region_for_coordinates(lat_f, lon_f),
+                "sample_events": [sample_event],
+                "source_kind": "article",
+                "topic": "economics" if aspect == "economic" else "geopolitics",
+            }
+        )
+
+    return hotspots
+
+
 def _build_hotspot_attention_map(window: str = "24h", start: str | None = None, end: str | None = None, days: int | None = None) -> dict:
     # support explicit custom timeframes via start/end ISO dates or numeric days
     normalized_window = (window or "24h").strip().lower()
@@ -1833,7 +1961,8 @@ def _build_hotspot_attention_map(window: str = "24h", start: str | None = None, 
     story_hotspots, total_story_candidates = _build_story_hotspots(
         normalized_window, now
     )
-    combined = hotspots + story_hotspots
+    canonical_hotspots = _build_canonical_event_hotspots(normalized_window, now)
+    combined = hotspots + story_hotspots + canonical_hotspots
     combined.sort(
         key=lambda item: (
             float(item.get("attention_score") or 0.0),
@@ -1868,6 +1997,15 @@ def _build_hotspot_attention_map(window: str = "24h", start: str | None = None, 
                 else 0.0
             )
 
+    latest_structured = max(
+        (h.get("latest_event_date") or "" for h in hotspots),
+        default=None,
+    )
+    latest_story = max(
+        (h.get("latest_event_date") or "" for h in story_hotspots),
+        default=None,
+    )
+
     payload = {
         "window": "custom" if custom else normalized_window,
         "hours": hours,
@@ -1875,11 +2013,19 @@ def _build_hotspot_attention_map(window: str = "24h", start: str | None = None, 
         "start": cutoff.isoformat().replace("+00:00", "Z") if custom else None,
         "end": now.isoformat().replace("+00:00", "Z") if custom else None,
         "generated_at": now.isoformat().replace("+00:00", "Z"),
-        "total_events": structured_candidate_count + total_story_candidates,
+        "total_events": structured_candidate_count + total_story_candidates + len(canonical_hotspots),
         "hotspot_count": len(combined),
         "total_fatalities": int(window_fatalities),
         "available_windows": list(ATTENTION_WINDOW_HOURS.keys()),
         "hotspots": combined,
+        "data_freshness": {
+            "generated_at": now.isoformat().replace("+00:00", "Z"),
+            "latest_structured_event": latest_structured,
+            "latest_story_event": latest_story,
+            "structured_count": len(hotspots),
+            "story_count": len(story_hotspots),
+            "article_count": len(canonical_hotspots),
+        },
     }
     _MAP_ATTENTION_CACHE[cache_key] = (now_ts, payload)
     return payload

@@ -721,11 +721,11 @@ def relatedness_score(left: dict, right: dict) -> float:
     """
     left_embedding = left.get("_embedding")
     right_embedding = right.get("_embedding")
+    left_text = left.get("text", "")
+    right_text = right.get("text", "")
 
     if left_embedding is None or right_embedding is None:
         model = get_semantic_model()
-        left_text = left.get("text", "")
-        right_text = right.get("text", "")
         if not left_text or not right_text:
             return 0.0
         embeddings = model.encode([left_text, right_text], convert_to_numpy=True)
@@ -775,31 +775,10 @@ def relatedness_score(left: dict, right: dict) -> float:
         topical_bleed_penalty *= TOPICAL_LOW_OVERLAP_MULTIPLIER
 
     context_overlap = _context_term_overlap(left_text, right_text)
-    consequence_overlap = _term_overlap(left_text, right_text, _CONSEQUENCE_TERMS)
     ongoing_context_boost = 0.0
-    # Recover low-overlap same-situation updates by boosting shared conflict context.
-    if (
-        hours_apart is not None
-        and hours_apart <= 72
-        and len(context_overlap) >= 2
-        and ({"iran", "war"} <= context_overlap or "hormuz" in context_overlap)
-        and not anchor_overlap
-        and len(keyword_overlap) <= 8
-    ):
-        pass  # BASE_CONTEXT_BOOST removed
-
     # When strong shared context exists, reduce topical-bleed penalty severity.
     if hours_apart is not None and hours_apart <= 96 and len(context_overlap) >= 2:
         topical_bleed_penalty = max(topical_bleed_penalty, CONTEXT_PENALTY_FLOOR)
-
-    # Penalize broad macro-consequence coverage that shares war context but not incident actors.
-    if (
-        len(consequence_overlap) >= 2
-        and not actor_overlap
-        and not anchor_overlap
-        and ({"iran", "war"} <= context_overlap or {"iran", "oil"} <= context_overlap)
-    ):
-        pass  # CONSEQUENCE_CONTEXT_PENALTY removed
 
     # Separate broad downstream consequence stories across different countries.
     # Rule is conflict-agnostic: any single shared GPE with different spillover locations
@@ -815,28 +794,8 @@ def relatedness_score(left: dict, right: dict) -> float:
         consequence_anchors = {"market", "policy"}
         strong_anchor_overlap = anchor_overlap - consequence_anchors
         
-        if (
-            not actor_overlap
-            and not strong_anchor_overlap
-            and left_extra_gpes
-            and right_extra_gpes
-            and len(keyword_overlap) <= 3
-        ):
-            pass  # CONSEQUENCE_IRAN_ONLY_PENALTY removed
-
-    left_labor = _term_overlap(left_text, left_text, _LABOR_TERMS)
-    right_labor = _term_overlap(right_text, right_text, _LABOR_TERMS)
-    left_military = _term_overlap(left_text, left_text, _MILITARY_TERMS)
-    right_military = _term_overlap(right_text, right_text, _MILITARY_TERMS)
-
-    # Separate labor strike coverage from military strike coverage.
-    if (left_labor and right_military) or (right_labor and left_military):
-        pass  # LABOR_MILITARY_PENALTY removed
 
     gpe_overlap = left_gpes & right_gpes
-    # Same actor + strike language in different locations is often separate incidents.
-    if anchor_overlap and actor_overlap and not gpe_overlap:
-        pass  # ACTOR_STRIKE_DIFF_GPE_PENALTY removed
 
     # Distinct strike incidents across different theaters should not merge
     # just because they share broad conflict entities.
@@ -891,16 +850,6 @@ def relatedness_score(left: dict, right: dict) -> float:
     ):
         ongoing_context_boost = max(ongoing_context_boost, LONG_CONFLICT_CONTINUITY_BOOST)
 
-    # Recover same-situation updates when shared actor/entity continuity is present.
-    if hours_apart is not None and hours_apart <= 72 and actor_overlap:
-        pass  # SHORT_ACTOR_CONTINUITY_BOOST removed
-    if (
-        hours_apart is not None
-        and hours_apart <= 192
-        and actor_overlap
-        and anchor_overlap
-    ):
-        pass  # LONG_ACTOR_ANCHOR_BOOST removed
     if (
         hours_apart is not None
         and hours_apart <= 192

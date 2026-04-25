@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, lazy, useMemo } from 'react'
 import {
   Navigate,
   Route,
@@ -9,9 +9,10 @@ import {
   useSearchParams,
 } from 'react-router-dom'
 import HomeDashboard from './components/HomeDashboard'
-import { applyTheme, buildAppStyles, C } from './constants/theme'
-import { AppContext } from './context/AppContext'
+import { buildAppStyles, C } from './constants/theme'
+import { TOPICS, THEATERS } from './constants/topics'
 import useHealth from './hooks/useHealth'
+import useAppChrome from './hooks/useAppChrome'
 import { parseDateValue } from './lib/formatters'
 
 const DeepDive = lazy(() => import('./pages/DeepDive'))
@@ -21,40 +22,6 @@ const ContradictionOverlay = lazy(() => import('./pages/ContradictionOverlay'))
 const TimelinePage = lazy(() => import('./pages/TimelinePage'))
 const ForesightPage = lazy(() => import('./pages/ForesightPage'))
 const EventDebugOverlay = lazy(() => import('./pages/EventDebugOverlay'))
-
-const TOPICS = [
-  {
-    id: 'geopolitics',
-    kind: 'briefing',
-    label: 'Political Briefing',
-    tag: 'Political',
-    accent: '#60a5fa',
-    description: 'Power shifts, state moves, pressure campaigns, and diplomatic signaling.',
-  },
-  {
-    id: 'economics',
-    kind: 'briefing',
-    label: 'Economic Briefing',
-    tag: 'Economic',
-    accent: '#fbbf24',
-    description: 'Markets, sanctions, supply chains, and economic coercion shaping the story.',
-  },
-  {
-    id: 'conflict',
-    kind: 'conflict',
-    label: 'Conflict Briefing',
-    tag: 'Conflict',
-    accent: '#ef4444',
-    description: 'Hotspots, incident tempo, fatalities, and fractures around active conflict zones.',
-  },
-]
-
-const THEATERS = [
-  { label: 'US-Iran Military Conflict', query: 'US Iran military conflict war strikes' },
-  { label: 'Russia-Ukraine War', query: 'Russia Ukraine war conflict' },
-  { label: 'Federal Reserve & Interest Rates', query: 'Federal Reserve interest rates monetary policy' },
-  { label: 'China-Taiwan Tensions', query: 'China Taiwan tensions military' },
-]
 
 function OverlayFallback() {
   return (
@@ -186,108 +153,8 @@ function EventDebugRoute() {
 
 export default function App() {
   const location = useLocation()
-  const [themeMode, setThemeMode] = useState(() => {
-    if (typeof window === 'undefined') return 'dark'
-    return window.localStorage.getItem('othello-theme-mode') === 'light' ? 'light' : 'dark'
-  })
-  const [time, setTime] = useState(new Date())
-  const [headerVisible, setHeaderVisible] = useState(true)
-  const [animationPhase, setAnimationPhase] = useState(() => {
-    if (typeof window === 'undefined') return 'title'
-    return window.sessionStorage.getItem('othello-splashed') ? 'complete' : 'title'
-  })
+  const chrome = useAppChrome()
   const { data: healthSnapshot, error: healthFetchError } = useHealth()
-
-  const [deepDive, setDeepDive] = useState(null)
-  const [briefingPage, setBriefingPage] = useState(null)
-  const [selectedContradiction, setSelectedContradiction] = useState(null)
-  const [timelinePage, setTimelinePage] = useState(null)
-  const [foresightPage, setForesightPage] = useState(null)
-  const [eventDebugPage, setEventDebugPage] = useState(null)
-
-  const lastScrollY = useRef(0)
-  const localTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
-
-  useEffect(() => {
-    applyTheme(themeMode)
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem('othello-theme-mode', themeMode)
-    }
-  }, [themeMode])
-
-  useEffect(() => {
-    if (animationPhase === 'title') {
-      const timer = setTimeout(() => setAnimationPhase('date'), 1000)
-      return () => clearTimeout(timer)
-    }
-    if (animationPhase === 'date') {
-      const timer = setTimeout(() => setAnimationPhase('moving'), 1000)
-      return () => clearTimeout(timer)
-    }
-    if (animationPhase === 'moving') {
-      const timer = setTimeout(() => setAnimationPhase('complete'), 1400)
-      return () => clearTimeout(timer)
-    }
-    if (animationPhase === 'complete' && typeof window !== 'undefined') {
-      window.sessionStorage.setItem('othello-splashed', '1')
-    }
-  }, [animationPhase])
-
-  useEffect(() => {
-    const timer = setInterval(() => setTime(new Date()), 1000)
-    return () => clearInterval(timer)
-  }, [])
-
-  useEffect(() => {
-    function handleScroll() {
-      const currentY = window.scrollY
-      if (currentY < 60) {
-        setHeaderVisible(true)
-        lastScrollY.current = currentY
-        return
-      }
-      setHeaderVisible(currentY < lastScrollY.current)
-      lastScrollY.current = currentY
-    }
-
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
-
-  useEffect(() => {
-    const state = location.state || null
-    if (location.pathname.startsWith('/deep-dive')) setDeepDive(state)
-    if (location.pathname.startsWith('/briefing/')) setBriefingPage(state)
-    if (location.pathname === '/contradiction') setSelectedContradiction(state?.event || null)
-    if (location.pathname === '/timeline') setTimelinePage(state)
-    if (location.pathname.startsWith('/foresight/')) setForesightPage(state)
-    if (location.pathname.startsWith('/debug/')) setEventDebugPage(state)
-  }, [location.pathname, location.state])
-
-  const contextValue = useMemo(
-    () => ({
-      deepDive,
-      setDeepDive,
-      briefingPage,
-      setBriefingPage,
-      selectedContradiction,
-      setSelectedContradiction,
-      timelinePage,
-      setTimelinePage,
-      foresightPage,
-      setForesightPage,
-      eventDebugPage,
-      setEventDebugPage,
-    }),
-    [
-      briefingPage,
-      deepDive,
-      eventDebugPage,
-      foresightPage,
-      selectedContradiction,
-      timelinePage,
-    ]
-  )
 
   const lastUpdated = useMemo(() => {
     try {
@@ -299,10 +166,6 @@ export default function App() {
     }
   }, [healthSnapshot])
 
-  function toggleThemeMode() {
-    setThemeMode(current => (current === 'dark' ? 'light' : 'dark'))
-  }
-
   function toErrorText(error, fallback) {
     if (!error) return null
     if (typeof error === 'string') return error
@@ -312,24 +175,18 @@ export default function App() {
   }
 
   return (
-    <AppContext.Provider value={contextValue}>
-      <div style={{ background: C.bg, minHeight: '100vh', color: C.textPrimary }}>
-        <style>{buildAppStyles()}</style>
+    <div style={{ background: C.bg, minHeight: '100vh', color: C.textPrimary }}>
+      <style>{buildAppStyles()}</style>
 
-        <Routes>
+      <Routes>
           <Route
             path="/"
             element={
               <HomeDashboard
-                time={time}
-                headerVisible={headerVisible}
-                animationPhase={animationPhase}
-                localTimeZone={localTimeZone}
+                {...chrome}
                 lastUpdated={lastUpdated}
                 healthSnapshot={healthSnapshot}
                 healthFetchError={toErrorText(healthFetchError, 'Unable to load health status.')}
-                themeMode={themeMode}
-                onToggleThemeMode={toggleThemeMode}
               />
             }
           />
@@ -389,8 +246,7 @@ export default function App() {
           />
 
           <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </div>
-    </AppContext.Provider>
+      </Routes>
+    </div>
   )
 }

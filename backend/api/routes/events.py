@@ -1,7 +1,19 @@
 import time
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 from pydantic import BaseModel
 
+from api.models import (
+    GetCanonicalEventsMapRequest,
+    GetCanonicalEventsRequest,
+    GetEventsRequest,
+    GetInstabilityDetailRequest,
+    GetInstabilityRequest,
+    GetMaterializedStoryClustersRequest,
+    GetStructuredEventsRequest,
+    GetTopicEventsRequest,
+    MergeEventRequest,
+    SplitArticleRequest,
+)
 from db.common import _connect
 from services.analytics_service import (
     get_correlations_payload,
@@ -27,15 +39,6 @@ from services.map_service import (
 router = APIRouter()
 
 
-# ── Request models for analyst corrections ────────────────────────
-class MergeEventRequest(BaseModel):
-    merge_with_event_id: str
-
-
-class SplitArticleRequest(BaseModel):
-    article_url: str
-
-
 @router.post("/events/{event_id}/merge")
 def merge_events(event_id: str, body: MergeEventRequest):
     """Queue a merge correction: combine event_id and body.merge_with_event_id."""
@@ -59,7 +62,10 @@ def split_article(event_id: str, body: SplitArticleRequest):
 
 
 @router.get("/events")
-def get_events(limit: int = 12, include_factual: bool = False):
+def get_events(
+    limit: int = Query(12, ge=1, le=100, description="Maximum number of events"),
+    include_factual: bool = Query(False, description="Include factual claim contradictions")
+):
     payload = get_events_payload(limit=limit)
     filtered_events = []
     for event in payload.get("events", []):
@@ -89,10 +95,10 @@ def get_events(limit: int = 12, include_factual: bool = False):
 
 @router.get("/events/structured")
 def get_structured_events(
-    days: int = 3,
-    limit: int = 12,
-    country: str | None = None,
-    event_type: str | None = None,
+    days: int = Query(3, ge=1, le=365, description="Number of days to look back"),
+    limit: int = Query(12, ge=1, le=500, description="Maximum number of events"),
+    country: str | None = Query(None, description="Country filter"),
+    event_type: str | None = Query(None, description="Event type filter"),
 ):
     return get_structured_events_payload(
         days=days, limit=limit, country=country, event_type=event_type
@@ -100,33 +106,49 @@ def get_structured_events(
 
 
 @router.get("/coverage/regions")
-def get_region_attention(window: str = "24h"):
+def get_region_attention(
+    window: str = Query("24h", pattern=r"^(24h|7d|30d|90d|365d)$", description="Time window")
+):
     return get_region_attention_payload(window)
 
 
 @router.get("/coverage/map")
-def get_hotspot_attention_map(window: str = "24h", start: str | None = None, end: str | None = None, days: int | None = None):
+def get_hotspot_attention_map(
+    window: str = Query("24h", pattern=r"^(24h|7d|30d|90d|365d)$", description="Time window"),
+    start: str | None = Query(None, description="Start date (ISO format)"),
+    end: str | None = Query(None, description="End date (ISO format)"),
+    days: int | None = Query(None, ge=1, le=365, description="Number of days"),
+):
     return get_hotspot_attention_map_payload(window, start=start, end=end, days=days)
 
 
 @router.get("/instability")
-def get_country_instability(days: int = 3):
+def get_country_instability(
+    days: int = Query(3, ge=1, le=365, description="Number of days to look back")
+):
     return get_instability_payload(days)
 
 
 @router.get("/instability/{country}")
-def get_country_instability_detail(country: str, days: int = 3):
+def get_country_instability_detail(
+    country: str,
+    days: int = Query(3, ge=1, le=365, description="Number of days to look back")
+):
     return get_instability_detail_payload(country, days)
 
 
 @router.get("/correlations")
-def get_correlations(days: int = 3):
+def get_correlations(
+    days: int = Query(3, ge=1, le=365, description="Number of days to look back")
+):
     return get_correlations_payload(days)
 
 
 @router.get("/events/materialized")
 def get_materialized_story_clusters(
-    topic: str | None = None, window_hours: int | None = None, limit: int = 40
+    topic: str | None = Query(None, description="Topic filter"),
+    window_hours: int | None = Query(None, ge=1, le=8760, description="Time window in hours"),
+    limit: int = Query(40, ge=1, le=200, description="Maximum number of clusters"),
 ):
     return get_materialized_story_clusters_payload(
         topic=topic, window_hours=window_hours, limit=limit
@@ -135,13 +157,18 @@ def get_materialized_story_clusters(
 
 @router.get("/events/canonical")
 def get_canonical_events_route(
-    topic: str | None = None, status: str | None = None, limit: int = 40
+    topic: str | None = Query(None, description="Topic filter"),
+    status: str | None = Query(None, description="Status filter"),
+    limit: int = Query(40, ge=1, le=200, description="Maximum number of events"),
 ):
     return get_canonical_events_payload(topic=topic, status=status, limit=limit)
 
 
 @router.get("/events/canonical/map")
-def get_canonical_events_map_route(days: int = 7, limit: int = 500):
+def get_canonical_events_map_route(
+    days: int = Query(7, ge=1, le=365, description="Number of days to look back"),
+    limit: int = Query(500, ge=1, le=1000, description="Maximum number of events"),
+):
     return get_canonical_map_payload(days=days, limit=limit)
 
 
@@ -161,5 +188,8 @@ def get_canonical_event_debug_route(event_id: str):
 
 
 @router.get("/events/{topic}")
-def get_events_for_topic(topic: str, limit: int = 8):
+def get_events_for_topic(
+    topic: str,
+    limit: int = Query(8, ge=1, le=50, description="Maximum number of events"),
+):
     return get_topic_events_payload(topic, limit=limit)

@@ -3,21 +3,13 @@ import sys
 import time
 
 from bootstrap import initialize_runtime
+from bootstrap_jobs import build_bootstrap_jobs
 from core.config import (
     WORKER_BOOTSTRAP_MODE,
     WORKER_ENABLE_INGESTION,
     WORKER_ENABLE_TRANSLATIONS,
 )
 from core.scheduler import build_worker_scheduler
-from services.ingest_service import (
-    ingest_all_topics,
-    refresh_acled_events,
-    refresh_direct_feed_layer,
-    refresh_official_updates,
-    refresh_recent_translations,
-    run_incremental_gdelt_backfill,
-    sync_registry_mirror,
-)
 
 
 def initialize_worker_state() -> None:
@@ -29,27 +21,7 @@ def main() -> int:
 
     # Keep launch memory predictable: do the minimum needed to keep ingestion warm,
     # and let the scheduler handle the rest over time.
-    bootstrap_jobs = []
-    if WORKER_ENABLE_INGESTION and WORKER_BOOTSTRAP_MODE in {"ingest", "full"}:
-        bootstrap_jobs.extend(
-            [
-                ("ingest_all_topics", ingest_all_topics),
-                ("gdelt_backfill", run_incremental_gdelt_backfill),
-                ("refresh_direct_feed_layer", refresh_direct_feed_layer),
-            ]
-        )
-    if WORKER_ENABLE_INGESTION and WORKER_BOOTSTRAP_MODE == "full":
-        bootstrap_jobs.extend(
-            [
-                ("sync_registry_mirror", sync_registry_mirror),
-                ("refresh_official_updates", refresh_official_updates),
-                ("refresh_acled_events", refresh_acled_events),
-            ]
-        )
-        if WORKER_ENABLE_TRANSLATIONS:
-            bootstrap_jobs.append(
-                ("refresh_recent_translations", refresh_recent_translations)
-            )
+    bootstrap_jobs = build_bootstrap_jobs()
 
     for label, job in bootstrap_jobs:
         try:

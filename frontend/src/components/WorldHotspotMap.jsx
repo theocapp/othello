@@ -76,6 +76,7 @@ export default function WorldHotspotMap({ data, error, loading, selectedHotspotI
   const zoomRef = useRef(null)
 
   const allHotspots = Array.isArray(data?.hotspots) ? data.hotspots : EMPTY_HOTSPOTS
+  const dataFreshness = data?.data_freshness || null
 
   // search + continent filter state
   const [countryQuery, setCountryQuery] = useState('')
@@ -138,6 +139,105 @@ export default function WorldHotspotMap({ data, error, loading, selectedHotspotI
     }
     return list
   }, [allHotspots, activeAspects, countryQuery, selectedContinents])
+
+  const conflictHotspots = useMemo(() => hotspots.filter(h => getHotspotAspect(h) === 'conflict'), [hotspots])
+
+  const conflictClusters = useMemo(() => {
+    const clusters = []
+    const visited = new Set()
+    const CLUSTER_DISTANCE_KM = 350
+
+    function haversineDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371
+      const dLat = (lat2 - lat1) * Math.PI / 180
+      const dLon = (lon2 - lon1) * Math.PI / 180
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2)
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+      return R * c
+    }
+
+    for (const hotspot of conflictHotspots) {
+      if (visited.has(hotspot.hotspot_id)) continue
+
+      const cluster = [hotspot]
+      visited.add(hotspot.hotspot_id)
+
+      let added = true
+      while (added) {
+        added = false
+        for (const other of conflictHotspots) {
+          if (visited.has(other.hotspot_id)) continue
+
+          for (const member of cluster) {
+            const dist = haversineDistance(
+              Number(member.latitude),
+              Number(member.longitude),
+              Number(other.latitude),
+              Number(other.longitude)
+            )
+            if (dist <= CLUSTER_DISTANCE_KM) {
+              cluster.push(other)
+              visited.add(other.hotspot_id)
+              added = true
+              break
+            }
+          }
+        }
+      }
+
+      if (cluster.length > 0) {
+        clusters.push(cluster)
+      }
+    }
+
+    return clusters
+  }, [conflictHotspots])
+
+  const conflictZones = useMemo(() => {
+    return conflictClusters.map(cluster => {
+      const points = cluster.map(h => {
+        const pt = project(h.latitude, h.longitude)
+        return [pt.x, pt.y]
+      }).filter(p => p[0] !== 0 || p[1] !== 0)
+
+      if (points.length < 3) return null
+
+      const hull = d3.polygonHull(points)
+      if (!hull) return null
+
+      const BUFFER_PX = 25 * transform.k
+      const center = d3.polygonCentroid(hull)
+      const buffered = hull.map(([x, y]) => {
+        const dx = x - center[0]
+        const dy = y - center[1]
+        const dist = Math.sqrt(dx * dx + dy * dy)
+        const scale = (dist + BUFFER_PX) / Math.max(dist, 0.1)
+        return [center[0] + dx * scale, center[1] + dy * scale]
+      })
+
+      return {
+        path: `M${buffered.map(([x, y]) => `${x},${y}`).join(' L')} Z`,
+        hotspots: cluster
+      }
+    }).filter(Boolean)
+  }, [conflictClusters, project, transform.k])
+
+  const freshnessLabel = useMemo(() => {
+    const generatedAt = dataFreshness?.generated_at
+    if (!generatedAt) return null
+    const parsed = new Date(generatedAt)
+    if (!Number.isFinite(parsed.getTime())) return null
+    const ageMs = Math.max(0, Date.now() - parsed.getTime())
+    const ageMinutes = Math.floor(ageMs / 60000)
+    if (ageMinutes < 1) return 'Updated just now'
+    if (ageMinutes < 60) return `Updated ${ageMinutes} minute${ageMinutes === 1 ? '' : 's'} ago`
+    const ageHours = Math.floor(ageMinutes / 60)
+    if (ageHours < 24) return `Updated ${ageHours} hour${ageHours === 1 ? '' : 's'} ago`
+    const ageDays = Math.floor(ageHours / 24)
+    return `Updated ${ageDays} day${ageDays === 1 ? '' : 's'} ago`
+  }, [dataFreshness])
 
   const selected = hotspots.find(h => h.hotspot_id === selectedHotspotId) || hotspots[0] || null
   const isLightTheme = C.bg === '#f3f5f8'
@@ -433,18 +533,40 @@ export default function WorldHotspotMap({ data, error, loading, selectedHotspotI
           <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" onClick={handleMapSvgClick} onMouseMove={handleMapSvgMouseMove} onMouseLeave={() => setHoveredHotspot(null)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', cursor: hoveredHotspot ? 'pointer' : 'grab' }}>
             <defs>
               <clipPath id="mapClip"><rect x="0" y="0" width={W} height={H} /></clipPath>
+              <filter id="conflictZoneGlow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur" />
+                <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.94 0 0 0 0 0.27 0 0 0 0 0.27 0 0 0 0.35 0" result="coloredBlur" />
+                <feMerge>
+                  <feMergeNode in="coloredBlur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
             </defs>
             <g clipPath="url(#mapClip)">
               <g ref={zoomGRef} transform={`translate(${transform.x},${transform.y}) scale(${transform.k})`}>
                 {pathGen && worldData && <path d={pathGen(worldData.land)} fill={isLightTheme ? 'rgba(102,115,134,0.13)' : 'rgba(166,177,190,0.14)'} stroke="none" />}
                 {pathGen && worldData && <path d={pathGen(worldData.borders)} fill="none" stroke={isLightTheme ? 'rgba(57,69,86,0.24)' : 'rgba(195,202,211,0.22)'} strokeWidth={0.4 / transform.k} />}
               </g>
+              {!loading && !error && conflictZones.map((zone, idx) => (
+                <g key={`zone-${idx}`} style={{ pointerEvents: 'none' }}>
+                  <path
+                    d={zone.path}
+                    fill="rgba(239,68,68,0.12)"
+                    stroke="rgba(239,68,68,0.35)"
+                    strokeWidth={1.2}
+                    strokeLinejoin="round"
+                    filter="url(#conflictZoneGlow)"
+                    style={{ mixBlendMode: 'multiply' }}
+                  />
+                </g>
+              ))}
               {!loading && !error && hotspots.map(hotspot => {
                 const palette = getHotspotPalette(hotspot)
                 const pt = project(hotspot.latitude, hotspot.longitude)
                 const isSelected = hotspot.hotspot_id === selected?.hotspot_id
                 const isHovered = !isSelected && hotspot.hotspot_id === hoveredHotspot?.hotspot_id
-                const markerRadius = isSelected ? 4 : isHovered ? 3.4 : 2.8
+                const isConflict = getHotspotAspect(hotspot) === 'conflict'
+                const markerRadius = isConflict ? (isSelected ? 2.2 : isHovered ? 1.8 : 1.4) : (isSelected ? 4 : isHovered ? 3.4 : 2.8)
                 return (
                   <g key={hotspot.hotspot_id} style={{ pointerEvents: 'none' }}>
                     <circle cx={pt.x} cy={pt.y} r={markerRadius} fill={palette.core} opacity={1} />
@@ -457,12 +579,27 @@ export default function WorldHotspotMap({ data, error, loading, selectedHotspotI
             </g>
           </svg>
           {loading && <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.85rem', color: C.textSecondary, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Map loading{animatedDots}</div></div>}
-          {!loading && error && <div style={{ position: 'absolute', left: '1rem', right: '1rem', bottom: '1rem', border: `1px solid ${C.redDeep}`, background: `${C.redDeep}1c`, padding: '0.85rem 1rem', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.56rem', color: C.textSecondary, lineHeight: 1.6 }}>{error}</div>}
+          {!loading && error && <div style={{ position: 'absolute', left: '1rem', right: '1rem', bottom: '1rem', border: `1px solid ${C.redDeep}`, background: `${C.redDeep}1c`, padding: '0.85rem 1rem', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.56rem', color: C.textSecondary, lineHeight: 1.6 }}>{error instanceof Error ? error.message : String(error)}</div>}
           {!loading && !error && hotspots.length === 0 && <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'JetBrains Mono', monospace", fontSize: '0.58rem', color: C.textSecondary, letterSpacing: '0.08em' }}>No mapped incident or story hotspots yet for this time window.</div>}
           {hoveredHotspot && <div style={{ position: 'absolute', left: tooltipPos.x, top: tooltipPos.y, zIndex: 10, pointerEvents: 'none', maxWidth: 240, border: `1px solid ${C.borderMid}`, background: tooltipBg, backdropFilter: 'blur(12px)', padding: '0.6rem 0.75rem' }}>
             <div style={{ fontFamily: "'Libre Baskerville', serif", fontSize: '0.88rem', color: C.textPrimary, lineHeight: 1.3, marginBottom: '0.35rem' }}>{hotspotDisplayHeadline(hoveredHotspot)}</div>
             <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.43rem', color: HOTSPOT_TYPE_PALETTE[getHotspotAspect(hoveredHotspot)]?.core || C.silver, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '0.25rem' }}>{hoveredHotspot.admin1 ? `${hoveredHotspot.admin1} · ${hoveredHotspot.country}` : hoveredHotspot.country}</div>
             {hoveredHotspot.location && hotspotDisplayHeadline(hoveredHotspot) !== hoveredHotspot.location ? <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.4rem', color: C.textMuted, letterSpacing: '0.06em', marginBottom: hoveredHotspot.sample_events?.[0] ? '0.35rem' : 0 }}>{hoveredHotspot.location}</div> : null}
+            {(() => {
+              const ev = hoveredHotspot.sample_events?.[0]
+              if (!ev) return null
+              const displayType = String(ev.display_type || ev.sub_event_type || '').trim()
+              const eventType = String(ev.event_type || '').trim()
+              const primary = displayType && displayType.toLowerCase() !== eventType.toLowerCase() ? displayType : displayType || ''
+              const secondary = ''
+              if (!primary) return null
+              return (
+                <div style={{ marginBottom: '0.35rem' }}>
+                  {primary ? <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.43rem', color: C.textSecondary, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{primary}</div> : null}
+                  {secondary ? <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.38rem', color: C.textMuted, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{secondary}</div> : null}
+                </div>
+              )
+            })()}
             {hoveredHotspot.sample_events?.[0] && <div style={{ fontFamily: "'Source Serif 4', serif", fontSize: '0.75rem', color: C.textSecondary, lineHeight: 1.5 }}>{truncateText(hotspotEventDescription(hoveredHotspot.sample_events[0]), 120)}</div>}
             <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.4rem', color: C.textMuted, letterSpacing: '0.08em', marginTop: '0.35rem' }}>{hoveredHotspot.event_count} events · click to select</div>
           </div>}
@@ -617,6 +754,21 @@ export default function WorldHotspotMap({ data, error, loading, selectedHotspotI
               return <button key={item.id} onClick={() => onWindowChange(item.id)} style={{ background: active ? `${C.red}18` : C.bgRaised, border: `1px solid ${active ? C.red : C.borderMid}`, color: active ? C.textPrimary : C.textMuted, fontFamily: "'JetBrains Mono', monospace", fontSize: '0.49rem', letterSpacing: '0.08em', padding: '0.45rem 0.6rem', cursor: 'pointer', borderRadius: 999, transition: 'all 0.15s ease' }}>{item.label}</button>
             })}
           </div>
+
+          {(freshnessLabel || (dataFreshness && Number(dataFreshness.structured_count) === 0)) && (
+            <div style={{ position: 'absolute', left: '1rem', bottom: '3.3rem', zIndex: 4, display: 'flex', flexDirection: 'column', gap: '0.22rem' }}>
+              {freshnessLabel ? (
+                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.43rem', color: C.textMuted, letterSpacing: '0.06em' }}>
+                  {freshnessLabel}
+                </div>
+              ) : null}
+              {dataFreshness && Number(dataFreshness.structured_count) === 0 ? (
+                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.42rem', color: C.textMuted, letterSpacing: '0.05em' }}>
+                  Conflict data pending - run ingestion to refresh
+                </div>
+              ) : null}
+            </div>
+          )}
 
           <div style={{ position: 'absolute', right: '1rem', bottom: '1rem', display: 'flex', gap: '0.6rem', alignItems: 'center', zIndex: 4 }}>
             <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.46rem', color: C.textMuted, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Filter</div>

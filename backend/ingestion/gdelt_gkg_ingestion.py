@@ -604,7 +604,8 @@ def _parse_events_csv(zip_bytes: bytes) -> list[dict]:
                     mention_desc = f" Covered by {num_articles} sources with {num_mentions} mentions."
                 elif num_articles >= 3:
                     mention_desc = f" Reported by {num_articles} sources."
-                summary_line = f"{event_type} reported in {place_detail} on {event_date}.{goldstein_desc}{mention_desc}"
+                display_action = sub_event_type if sub_event_type and sub_event_type != event_type else event_type
+                summary_line = f"{display_action} reported in {place_detail} on {event_date}.{goldstein_desc}{mention_desc}"
 
                 events.append(
                     {

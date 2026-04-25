@@ -126,6 +126,125 @@ SOURCE_SEEDS = [
         },
     ),
     _seed(
+        "AP News",
+        "apnews.com",
+        "article",
+        "tier_1",
+        "global",
+        "en",
+        # rsshub.app proxied AP feeds returned 403 — AP has no public RSS.
+        # gdelt_enriched pulls AP content via GDELT's news index instead.
+        {"adapter": "gdelt_enriched", "pack": "global_wires"},
+    ),
+    _seed(
+        "The Guardian (World)",
+        "theguardian.com",
+        "article",
+        "tier_1",
+        "global",
+        "en",
+        {
+            "adapter": "rss",
+            "pack": "global_wires",
+            "feeds": [
+                {"url": "https://www.theguardian.com/world/rss", "topic_hints": ["geopolitics"]},
+                {"url": "https://www.theguardian.com/business/rss", "topic_hints": ["economics"]},
+            ],
+        },
+    ),
+    _seed(
+        "Al Jazeera English",
+        "aljazeera.com",
+        "article",
+        "tier_1",
+        "middle-east",
+        "en",
+        {
+            "adapter": "rss",
+            "pack": "conflict_region_outlets",
+            "feeds": [
+                {"url": "https://www.aljazeera.com/xml/rss/all.xml", "topic_hints": ["geopolitics"]},
+            ],
+        },
+    ),
+    _seed(
+        "Foreign Policy",
+        "foreignpolicy.com",
+        "article",
+        "tier_2",
+        "global",
+        "en",
+        {
+            "adapter": "rss",
+            "pack": "regional_flagships",
+            "feeds": [
+                {"url": "https://foreignpolicy.com/feed/", "topic_hints": ["geopolitics"]},
+            ],
+        },
+    ),
+    _seed(
+        "Defense One",
+        "defenseone.com",
+        "article",
+        "tier_2",
+        "global",
+        "en",
+        {
+            "adapter": "rss",
+            "pack": "conflict_region_outlets",
+            "feeds": [
+                {"url": "https://www.defenseone.com/rss/all/", "topic_hints": ["geopolitics"]},
+            ],
+        },
+    ),
+    _seed(
+        "Radio Free Europe / Radio Liberty",
+        "rferl.org",
+        "article",
+        "tier_2",
+        "eurasia",
+        "en",
+        {
+            "adapter": "rss",
+            "pack": "conflict_region_outlets",
+            "feeds": [
+                {"url": "https://www.rferl.org/api/epiqq", "topic_hints": ["geopolitics"]},
+            ],
+        },
+    ),
+    _seed(
+        "Middle East Eye",
+        "middleeasteye.net",
+        "article",
+        "tier_2",
+        "middle-east",
+        "en",
+        {
+            "adapter": "rss",
+            "pack": "conflict_region_outlets",
+            "feeds": [
+                {"url": "https://www.middleeasteye.net/rss", "topic_hints": ["geopolitics"]},
+            ],
+        },
+    ),
+    _seed(
+        "Dawn (Pakistan)",
+        "dawn.com",
+        "article",
+        "tier_2",
+        "south-asia",
+        "en",
+        {
+            "adapter": "rss",
+            "pack": "conflict_region_outlets",
+            # Transient 403 observed on first run — cooldown engaged, not a permanent block.
+            "feeds": [
+                {"url": "https://www.dawn.com/feeds/home", "topic_hints": ["geopolitics"]},
+                {"url": "https://www.dawn.com/feed", "topic_hints": ["geopolitics"]},
+            ],
+        },
+    ),
+    _seed(
         "Reuters",
         "reuters.com",
         "article",

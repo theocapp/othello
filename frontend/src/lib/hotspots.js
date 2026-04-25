@@ -124,7 +124,7 @@ export function hotspotEventDescription(ev) {
   if (s && s.length > 20) return s
   const et = (ev?.event_type || 'Event').trim()
   const sub = (ev?.sub_event_type || '').trim()
-  const action = sub && sub.toLowerCase() !== et.toLowerCase() ? sub : et
+  const action = sub || et
   const place = (ev?.location || ev?.admin1 || ev?.country || '').trim()
   const a1 = (ev?.actor_primary || '').trim()
   const a2 = (ev?.actor_secondary || '').trim()

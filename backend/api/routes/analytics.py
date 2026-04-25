@@ -6,6 +6,7 @@ from services.analytics_service import (
     narrative_drift_payload,
     source_reliability_payload,
 )
+from services.article_event_pipeline import populate_canonical_events_from_articles
 from services.ingest_service import (
     acled_refresh_payload,
     gdelt_gkg_refresh_payload,
@@ -50,6 +51,13 @@ def trigger_canonical_refresh(_: None = Depends(require_write_access_dep)):
     from services.canonical_events_pipeline import populate_canonical_events
 
     return populate_canonical_events(days=7, limit=500)
+
+
+@router.post("/ingest/article-events")
+def trigger_article_event_pipeline(
+    days: int = 3, limit: int = 2000, _: None = Depends(require_write_access_dep)
+):
+    return populate_canonical_events_from_articles(days=days, limit=limit)
 
 
 @router.get("/sources/registry")

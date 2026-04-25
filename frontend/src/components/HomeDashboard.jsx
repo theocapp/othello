@@ -1,5 +1,4 @@
 import { Suspense, lazy, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import BriefingLaunchPanel from './BriefingLaunchPanel'
 import ContradictionsPanel from './ContradictionsPanel'
 import CorrelationPanel from './CorrelationPanel'
@@ -9,51 +8,12 @@ import InstabilityPanel from './InstabilityPanel'
 import MapSummaryPanel from './MapSummaryPanel'
 import NewsColumn from './NewsColumn'
 import { C } from '../constants/theme'
-import { useAppContext } from '../context/AppContext'
+import { TOPICS, THEATERS } from '../constants/topics'
 import { formatClock, formatDateLabel, formatRelativeUpdate } from '../lib/formatters'
-import {
-  buildHotspotClusterAnalysisQuery,
-  collectHotspotSourceUrls,
-  mapAspectToQueryTopic,
-  normalizeStoryTopicForQuery,
-} from '../lib/hotspots'
 import useMapAttention from '../hooks/useMapAttention'
+import useHomeNavigation from '../hooks/useHomeNavigation'
 
 const WorldHotspotMap = lazy(() => import('./WorldHotspotMap'))
-
-const TOPICS = [
-  {
-    id: 'geopolitics',
-    kind: 'briefing',
-    label: 'Political Briefing',
-    tag: 'Political',
-    accent: '#60a5fa',
-    description: 'Power shifts, state moves, pressure campaigns, and diplomatic signaling.',
-  },
-  {
-    id: 'economics',
-    kind: 'briefing',
-    label: 'Economic Briefing',
-    tag: 'Economic',
-    accent: '#fbbf24',
-    description: 'Markets, sanctions, supply chains, and economic coercion shaping the story.',
-  },
-  {
-    id: 'conflict',
-    kind: 'conflict',
-    label: 'Conflict Briefing',
-    tag: 'Conflict',
-    accent: '#ef4444',
-    description: 'Hotspots, incident tempo, fatalities, and fractures around active conflict zones.',
-  },
-]
-
-const THEATERS = [
-  { label: 'US-Iran Military Conflict', query: 'US Iran military conflict war strikes' },
-  { label: 'Russia-Ukraine War', query: 'Russia Ukraine war conflict' },
-  { label: 'Federal Reserve & Interest Rates', query: 'Federal Reserve interest rates monetary policy' },
-  { label: 'China-Taiwan Tensions', query: 'China Taiwan tensions military' },
-]
 
 const navBtnStyle = {
   border: 'none',
@@ -82,19 +42,20 @@ export default function HomeDashboard({
   healthFetchError,
   healthSnapshot,
   themeMode,
-  onToggleThemeMode,
+  toggleThemeMode,
 }) {
-  const navigate = useNavigate()
-  const {
-    setBriefingPage,
-    setDeepDive,
-    setSelectedContradiction,
-    setTimelinePage,
-    setForesightPage,
-    setEventDebugPage,
-  } = useAppContext()
-
   const [mapAttentionWindow, setMapAttentionWindow] = useState('24h')
+
+  const {
+    openBriefingByTopic,
+    openForesight,
+    openTimeline,
+    openContradiction,
+    openDeepDive,
+    openStoryDeepDive,
+    openEventDebug,
+    openHotspotClusterAnalysis,
+  } = useHomeNavigation({ mapAttentionWindow })
   const [selectedMapHotspot, setSelectedMapHotspot] = useState(null)
   const {
     data: mapAttention,
@@ -123,31 +84,6 @@ export default function HomeDashboard({
     { label: 'Tokyo', zone: 'Asia/Tokyo' },
   ]
 
-  const authButtonStyle = {
-    fontFamily: "'JetBrains Mono', monospace",
-    fontSize: '0.8rem',
-    fontWeight: 700,
-    color: C.bg,
-    background: C.gold,
-    border: `1px solid ${C.gold}`,
-    borderRadius: '999px',
-    padding: '0.62rem 1rem',
-    cursor: 'pointer',
-    lineHeight: 1,
-    minWidth: 104,
-    minHeight: 40,
-    boxShadow: '0 10px 24px rgba(212, 175, 55, 0.18)',
-    transition: 'background 160ms ease, border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease',
-  }
-
-  const loginButtonStyle = {
-    ...authButtonStyle,
-    color: C.textPrimary,
-    background: 'linear-gradient(135deg, rgba(97,165,255,0.2), rgba(60,120,255,0.14))',
-    border: `1px solid rgba(97,165,255,0.65)`,
-    boxShadow: '0 10px 24px rgba(60, 120, 255, 0.14)',
-  }
-
   const themeToggleStyle = {
     width: 40,
     height: 40,
@@ -168,78 +104,6 @@ export default function HomeDashboard({
     const el = document.getElementById(id)
     if (!el) return
     el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
-
-  function openBriefingByTopic(topicId, state = {}) {
-    const topic = briefingById[topicId] || briefingById.geopolitics
-    setBriefingPage(topic)
-    navigate(`/briefing/${topic.id}`, { state })
-  }
-
-  function openForesight(mode) {
-    setForesightPage(mode)
-    navigate(`/foresight/${mode}`)
-  }
-
-  function openTimeline(query) {
-    setTimelinePage({ query })
-    navigate('/timeline', { state: { query } })
-  }
-
-  function openContradiction(event) {
-    if (!event) return
-    setSelectedContradiction(event)
-    navigate('/contradiction', { state: { event } })
-  }
-
-  function openDeepDive(payload) {
-    if (!payload) return
-    setDeepDive(payload)
-    navigate('/deep-dive', { state: payload })
-  }
-
-  function openStoryDeepDive(story) {
-    const sourceUrls = (story.sources || [])
-      .map(source => source?.url)
-      .filter(url => typeof url === 'string' && url.startsWith('http'))
-      .slice(0, 12)
-
-    const queryTopic = normalizeStoryTopicForQuery(story.topic)
-
-    openDeepDive({
-      title: story.headline,
-      query: `Give me a comprehensive intelligence deep-dive on this story: "${story.headline}". Cover: what is actually happening beyond the surface narrative, key actors and motivations, what mainstream media is missing or underreporting, historical parallels, geopolitical implications, and probability assessments for how this develops. Be direct, analytical, and specific.`,
-      queryTopic: queryTopic || undefined,
-      storyEventId: story.event_id || undefined,
-      sourceUrls: sourceUrls.length ? sourceUrls : undefined,
-      regionContext: story.dominant_region || undefined,
-    })
-  }
-
-  function openEventDebug(eventLike) {
-    const eventId = String(eventLike?.event_id || '').trim()
-    if (!eventId) return
-    const payload = { eventId, label: eventLike?.headline || eventLike?.label || eventId }
-    setEventDebugPage(payload)
-    navigate(`/debug/${eventId}`, { state: payload })
-  }
-
-  function openHotspotClusterAnalysis(hotspot) {
-    if (!hotspot) return
-    const queryTopic = mapAspectToQueryTopic(hotspot?.aspect || '')
-    const sourceUrls = collectHotspotSourceUrls(hotspot)
-
-    openDeepDive({
-      title: `Cluster: ${hotspot.location || hotspot.label || 'Hotspot'}`,
-      query: buildHotspotClusterAnalysisQuery(hotspot),
-      queryTopic,
-      regionContext: [hotspot.location || hotspot.label, hotspot.admin1, hotspot.country]
-        .filter(Boolean)
-        .join(', ') || undefined,
-      hotspotId: hotspot.hotspot_id || undefined,
-      attentionWindow: mapAttentionWindow,
-      sourceUrls: sourceUrls.length ? sourceUrls : undefined,
-    })
   }
 
   return (
@@ -370,7 +234,7 @@ export default function HomeDashboard({
         <div style={{ position: 'absolute', right: '1rem', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
           <button
             type="button"
-            onClick={onToggleThemeMode}
+            onClick={toggleThemeMode}
             style={themeToggleStyle}
             aria-label={themeMode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
             title={themeMode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
@@ -386,8 +250,6 @@ export default function HomeDashboard({
               </svg>
             )}
           </button>
-          <button type="button" onClick={() => { window.location.hash = 'signup' }} style={authButtonStyle}>Sign up</button>
-          <button type="button" onClick={() => { window.location.hash = 'login' }} style={loginButtonStyle}>Log in</button>
         </div>
       </div>
 

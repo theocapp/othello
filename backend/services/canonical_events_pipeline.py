@@ -518,6 +518,17 @@ def populate_canonical_events(*, days: int = 7, limit: int = 500) -> dict:
                     source_urls.append(url)
 
             title, summary, article_urls, article_count, source_count = _resolve_best_article(conn, source_urls)
+            if not title:
+                summaries = [_clean(ev.get("summary")) for ev in events if ev.get("summary")]
+                if summaries:
+                    summary = max(summaries, key=len)
+                place = location or admin1 or country or ""
+                if event_type and place:
+                    title = f"{event_type} in {place}"
+                elif event_type:
+                    title = event_type
+                elif place:
+                    title = f"Developing situation in {place}"
             article_rows: list[dict] = []
             if article_urls:
                 placeholders = ", ".join(["%s"] * len(article_urls))
@@ -601,10 +612,11 @@ def populate_canonical_events(*, days: int = 7, limit: int = 500) -> dict:
 
 
 def get_canonical_events_map_payload(*, days: int = 7, limit: int = 500) -> dict:
-    safe_days = max(1, min(int(days), 30))
-    safe_limit = max(1, min(int(limit), 1000))
+    safe_days = max(1, min(int(days), 90))
+    safe_limit = max(1, min(int(limit), 3000))
     with _connect() as conn:
-        rows = conn.execute(
+        # Canonical events (article-derived, enriched with geo)
+        canon_rows = conn.execute(
             """
             SELECT
                 event_id,
@@ -622,31 +634,58 @@ def get_canonical_events_map_payload(*, days: int = 7, limit: int = 500) -> dict
                 actor_primary,
                 actor_secondary,
                 importance_score,
-                                geo_precision,
-                                fatality_total
+                geo_precision,
+                fatality_total
             FROM canonical_events
             WHERE latitude IS NOT NULL
               AND longitude IS NOT NULL
               AND COALESCE(geo_precision, 5) <= 5
-                            AND event_date_best IS NOT NULL
-                            AND event_date_best >= NOW() - (%s * INTERVAL '1 day')
+              AND event_date_best IS NOT NULL
+              AND event_date_best >= NOW() - (%s * INTERVAL '1 day')
               AND COALESCE(status, 'developing') != 'superseded'
-                            AND (
-                                    resolved_title IS NOT NULL
-                                  OR fatality_total > 0
-                            )
             ORDER BY COALESCE(importance_score, 0) DESC, COALESCE(event_date_best, NOW()) DESC
             LIMIT %s
             """,
-            (safe_days, safe_limit),
+            (safe_days, min(safe_limit, 500)),
+        ).fetchall()
+
+        # GDELT structured events — cluster by rounded coordinates to avoid overplotting
+        cutoff_date = (datetime.now(timezone.utc) - timedelta(days=safe_days)).strftime("%Y-%m-%d")
+        struct_rows = conn.execute(
+            """
+            SELECT
+                ROUND(latitude::numeric, 1) AS lat_bucket,
+                ROUND(longitude::numeric, 1) AS lng_bucket,
+                country,
+                event_type,
+                MAX(location) AS location,
+                COUNT(*) AS event_count,
+                MAX(summary) AS summary
+            FROM structured_events
+            WHERE latitude IS NOT NULL
+              AND longitude IS NOT NULL
+              AND event_date >= %s
+            GROUP BY lat_bucket, lng_bucket, country, event_type
+            ORDER BY event_count DESC
+            LIMIT %s
+            """,
+            (cutoff_date, safe_limit),
         ).fetchall()
 
     hotspots = []
-    for row in rows:
+
+    for row in canon_rows:
         event_id = str(row.get("event_id") or "").strip()
         if not event_id:
             continue
-        title = _clean(row.get("resolved_title")) or "Developing event"
+        title = _clean(row.get("resolved_title"))
+        # Skip events that have no real title — they add noise without signal
+        if not title or title.lower().startswith("developing event") or title.lower().startswith("developing situation"):
+            # Allow through only if there are multiple sources backing it
+            if int(row.get("source_count") or 0) < 2:
+                continue
+        if not title:
+            title = "Developing event"
         summary = _clean(row.get("resolved_summary"))
         event_type = _clean(row.get("event_type"))
         country = _clean(row.get("geo_country"))
@@ -686,16 +725,107 @@ def get_canonical_events_map_payload(*, days: int = 7, limit: int = 500) -> dict
             }
         )
 
+    # Generic GDELT event types that produce noise without real signal
+    _NOISY_STRUCT_TYPES = {
+        "strategic developments",
+        "non-violent action",
+        "headquarters or base established",
+    }
+    # Substrings in location names that indicate GDELT geocoded to an org/bureau
+    # rather than an actual conflict site
+    _NOISY_LOCATION_SUBSTRINGS = (
+        "world bank",
+        "united nations",
+        "international monetary fund",
+        "european commission",
+        "district of columbia",
+        "washington, d.c",
+    )
+    # Locations that are major news bureau hubs — GDELT frequently misattributes
+    # conflict events here when the story was *reported from* that location.
+    # Only filter these for combat/violence event types where misattribution is obvious.
+    _NEWS_HUB_LOCATIONS = {
+        "new york",
+        "new york, united states",
+        "southwark, united kingdom",
+        "london, united kingdom",
+        "washington",
+        "california, united states",
+        "united kingdom",
+        "united states",
+        "france",
+        "germany",
+        "australia",
+        "canada",
+    }
+    _COMBAT_STRUCT_TYPES = {"battles", "explosions/remote violence", "violence against civilians"}
+
+    seen_struct_ids: set[str] = set()
+    for row in struct_rows:
+        lat = float(row.get("lat_bucket") or 0)
+        lng = float(row.get("lng_bucket") or 0)
+        event_type = _clean(row.get("event_type"))
+        country = _clean(row.get("country"))
+        event_count = int(row.get("event_count") or 1)
+        location = _clean(row.get("location"))
+
+        # Skip noisy generic event types
+        if event_type.lower() in _NOISY_STRUCT_TYPES:
+            continue
+        # Skip buckets with only one event — too sparse to be meaningful
+        if event_count < 2:
+            continue
+        # Skip international-org locations (substring check)
+        location_lower = location.lower()
+        if any(sub in location_lower for sub in _NOISY_LOCATION_SUBSTRINGS):
+            continue
+        # Skip major news bureau cities for combat events — GDELT geocodes
+        # stories *reported from* these cities as events occurring there
+        if event_type.lower() in _COMBAT_STRUCT_TYPES:
+            if location_lower in _NEWS_HUB_LOCATIONS or country.lower() in {"united states", "united kingdom", "france", "germany", "australia", "canada"}:
+                continue
+
+        # Deduplicate against canonical event locations (within ~50km)
+        struct_id = f"se-{round(lat,1)}-{round(lng,1)}-{event_type}"
+        if struct_id in seen_struct_ids:
+            continue
+        seen_struct_ids.add(struct_id)
+        summary = _clean(row.get("summary"))
+        label = f"{event_type} — {location or country}" if event_type else (location or country or "Signal cluster")
+        hotspots.append(
+            {
+                "hotspot_id": struct_id,
+                "source_kind": "structured_event",
+                "label": label,
+                "headline": label,
+                "summary": summary,
+                "event_types": [event_type] if event_type else [],
+                "event_count": event_count,
+                "article_count": 0,
+                "source_count": 0,
+                "attention_score": float(event_count),
+                "country": country,
+                "admin1": None,
+                "location": location,
+                "latitude": lat,
+                "longitude": lng,
+                "fatality_total": 0,
+                "aspect": _aspect_for_event_type(event_type),
+                "sample_events": [],
+            }
+        )
+
     total_attention = sum(float(item.get("attention_score") or 0.0) for item in hotspots) or 1.0
     for item in hotspots:
         item["attention_share"] = round(float(item.get("attention_score") or 0.0) / total_attention, 4)
 
     return {
-        "window": "7d",
+        "window": f"{safe_days}d",
         "days": safe_days,
         "hours": safe_days * 24,
         "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "hotspot_count": len(hotspots),
         "total_events": len(hotspots),
         "hotspots": hotspots,
+        "stories": [],
     }
